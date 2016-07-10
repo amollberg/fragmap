@@ -41,9 +41,9 @@ class FragmentHeader():
         if match.group(4):
           newlength = int(match.group(4))
         return FragmentHeader(Range(int(match.group(1)), oldlength),
-                              Range(int(match.group(3)), newlength)), 1
+                              Range(int(match.group(3)), newlength)), lines[1:]
     print "Not fragment header"
-    return None, 0
+    return None, lines
     
     
 class Fragment():
@@ -57,11 +57,9 @@ class Fragment():
   @staticmethod
   def parse(lines):
     print "Fragment? ", lines[0]
-    header, i = FragmentHeader.parse(lines)
-    # Consume lines according to FragmentHeader
-    #print "Header:", header
-    lines = lines[i:]
+    header, lines = FragmentHeader.parse(lines)
     #print i
+    i = 0
     if header is not None:
       for line in lines:
         #print "line: '%s', length: %d" % (line, len(line))
@@ -71,9 +69,9 @@ class Fragment():
         else:
           #print "not in fragment: '%s'" % line, i
           break
-      return Fragment(header), i
+      return Fragment(header), lines[i:]
     print "Not fragment"
-    return None, 0
+    return None, lines
 
 class FilePatchHeader():
   _oldfile = None
@@ -95,8 +93,8 @@ class FilePatchHeader():
         match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
         if match is not None:
           newfile = match.group(1)
-          return FilePatchHeader(oldfile, newfile), 2
-    return None, 0
+        return FilePatchHeader(oldfile, newfile), lines[2:]
+    return None, lines
 
   
 class FilePatch():
@@ -113,27 +111,26 @@ class FilePatch():
   @staticmethod
   def parse(lines):
     print "FilePatch? ", lines[0]
-    i = 0
-    header, j = FilePatchHeader.parse(lines)
-    # Consume lines
-    lines = lines[j:]
-    i += j
+    header, lines = FilePatchHeader.parse(lines)
     if header is not None:
       fragments = []
       while len(lines) > 0:
         #print i,j, lines
-        fragment, j = Fragment.parse(lines)
-        print "Fragment: ", fragment, j
+        fragment, lines = Fragment.parse(lines)
+        #print "Fragment: ", fragment
         # Consume lines
         #print len(lines)
-        lines = lines[j:]
         #print "After:",len(lines)
-        i += j
         if fragment is None:
-          # No more fragments; return
-          return FilePatch(header, fragments), i
+          # No more fragments; stop
+          break
         fragments += [fragment]
-    return None, 0
+        #print "Fragments:", fragments
+      p = FilePatch(header, fragments), lines
+      #print "Returned patch:", p
+      return p
+    else:
+      return None, lines
 
   
 class AST():
@@ -146,35 +143,27 @@ class AST():
 
   @staticmethod
   def parse(lines):
-    i = 0
     filePatches = []
     while len(lines) > 0:
-      filePatch, lines_consumed = FilePatch.parse(lines)
+      filePatch, lines = FilePatch.parse(lines)
       print "Filepatch: ", filePatch
-      if lines_consumed > 0:
-        # Consume lines
-        lines = lines[lines_consumed:]
-        i += lines_consumed
-        if filePatch is None:
-          # No more file patches; return
-          return AST(filePatches), i
+      if filePatch is not None:
         filePatches += [filePatch]
       else:
         # Remove a line and retry parsing
         lines = lines[1:]
-        i += 1
         continue
-    return None, 0
+    return AST(filePatches), lines
   
 class PatchParser():
   _ast = None
 
   @staticmethod
   def parse(lines):
-    ast, lines_consumed = AST.parse(lines)
-    if lines_consumed == 0:
-      print "No lines consumed!"
-    if lines_consumed < len(lines):
+    ast, lines_after = AST.parse(lines)
+    if len(lines_after) == len(lines):
+      print "No lines parsed!"
+    if len(lines_after) > 0:
       print "Unparsable content left at end of file."
     return ast
 
