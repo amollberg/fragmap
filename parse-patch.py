@@ -9,14 +9,19 @@ import re
 
 class Range():
   _start = 0
-  _length = 0
+  _end = 0
 
   def __init__(self, start, length):
     self._start = start
-    self._length = length
+    self._end = start + length
 
   def __repr__(self):
-    return "[Range: %d, %d]" % (self._start, self._length,)
+    return "[Range: %d to %d]" % (self._start, self._end,)
+
+  def update_positions(self, start_delta, end_delta):
+    self._start += start_delta
+    self._end += end_delta
+
 
 class FragmentHeader():
   _oldrange = None
@@ -53,6 +58,10 @@ class Fragment():
 
   def __repr__(self):
     return "[Fragment: %s]" % (self._header,)
+
+  def update_positions(self, start_delta, length_delta):
+    self._header._newrange.update_positions(start_delta, length_delta)
+    self._header._oldrange.update_positions(start_delta, length_delta)
 
   @staticmethod
   def parse(lines):
@@ -106,7 +115,7 @@ class FilePatch():
     self._fragments = fragments
 
   def __repr__(self):
-    return "[FilePatch: %s]" % (self._fragments,)
+    return "[FilePatch: %s, %s]" % (self._header, self._fragments,)
 
   @staticmethod
   def parse(lines):
@@ -141,6 +150,12 @@ class AST():
   def __repr__(self):
     return "[AST: %s]" % (self._filePatches,)
 
+  def find_patch_by_old_file(self, old_file_name):
+    for file_patch in self._filePatches:
+      if file_patch._header._oldfile == old_file_name:
+        return file_patch
+    return None
+
   @staticmethod
   def parse(lines):
     filePatches = []
@@ -165,7 +180,7 @@ class PatchParser():
       print "No lines parsed!"
     if len(lines_after) > 0:
       print "Unparsable content left at end of file."
-    return ast
+    return [ast]
 
 def main():
   pp = PatchParser()
