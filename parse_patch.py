@@ -95,15 +95,24 @@ class FilePatchHeader():
   @staticmethod
   def parse(lines):
     print "FilePatchHeader? ", lines[0]
-    if lines[0][0:4] == '--- ':
-      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
-      if match is not None:
-        oldfile = match.group(1)
-        match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
-        if match is not None:
-          newfile = match.group(1)
-        return FilePatchHeader(oldfile, newfile), lines[2:]
-    return None, lines
+    if lines[0][0:11] != 'diff --git ':
+      return None, lines
+    lines = lines[1:]
+    while lines[0] != '' and lines[0][0:4] != '--- ':
+      lines = lines[1:]
+      
+    if lines[0][0:4] != '--- ':
+      return None, lines
+    
+    match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
+    if match is None:
+      return None, lines
+    oldfile = match.group(1)
+    
+    match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
+    if match is not None:
+      newfile = match.group(1)
+    return FilePatchHeader(oldfile, newfile), lines[2:]
 
   
 class FilePatch():
@@ -141,34 +150,93 @@ class FilePatch():
     else:
       return None, lines
 
-  
-class AST():
-  _filePatches = None
-  def __init__(self, filePatches):
-    self._filePatches = filePatches
+class PatchHeader():
+  _hash = None
+
+  def __init__(self, hash):
+    self._hash = hash
 
   def __repr__(self):
-    return "[AST: %s]" % (self._filePatches,)
+    return "[PatchHeader: %s]" %(self._hash,)
+
+  @staticmethod
+  def parse(lines):
+    print "PatchHeader?", lines[0]
+    match = re.match("^([0-9a-f]{40})", lines[0][0:40])
+    if match is not None:
+      lines = lines[1:]
+
+    match = re.match("^commit ([0-9a-f]{40})", lines[0])
+    if match is None:
+      return None, lines
+    hash = match.group(1)
+
+    if lines[1][0:8] != 'Author: ':
+      print "'%s'!='Author: '" %(lines[1][0:8],)
+      return None, lines
+    if lines[2][0:6] != 'Date: ':
+      print "##2"
+      return None, lines
+    lines = lines[3:]
+    while lines[0] == '' or lines[0][0] == ' ':
+      print "in PatchHeader:", lines[0]
+      lines = lines[1:]
+    return PatchHeader(hash), lines
+        
+class Patch():
+  _header = None
+  _filepatches = None
+
+  def __init__(self, filepatches):
+    self._filepatches = filepatches
+
+  def __repr__(self):
+    return "[Patch: %s]" % (self._filepatches,)
 
   def find_patch_by_old_file(self, old_file_name):
-    for file_patch in self._filePatches:
+    for file_patch in self._filepatches:
       if file_patch._header._oldfile == old_file_name:
         return file_patch
     return None
 
   @staticmethod
   def parse(lines):
-    filePatches = []
+    print "Patch?", lines[0]
+    header, lines = PatchHeader.parse(lines)
+    print "PatchHeader: ", header
+    if header is None:
+      return None, lines
+    filepatches = []
+    while True:
+      filepatch, lines = FilePatch.parse(lines)
+      print "FilePatch:", filepatch
+      if filepatch is not None:
+        filepatches += [filepatch]
+      else:
+        # No more parsable filepatches; return
+        return Patch(filepatches), lines
+  
+class AST():
+  _patches = None
+  def __init__(self, patches):
+    self._patches = patches
+
+  def __repr__(self):
+    return "[AST: %s]" % (self._patches,)
+
+  @staticmethod
+  def parse(lines):
+    patches = []
     while len(lines) > 0:
-      filePatch, lines = FilePatch.parse(lines)
-      print "Filepatch: ", filePatch
-      if filePatch is not None:
-        filePatches += [filePatch]
+      patch, lines = Patch.parse(lines)
+      print "Patch: ", patch
+      if patch is not None:
+        patches += [patch]
       else:
         # Remove a line and retry parsing
         lines = lines[1:]
         continue
-    return AST(filePatches), lines
+    return AST(patches), lines
   
 class PatchParser():
   _ast = None
@@ -180,7 +248,7 @@ class PatchParser():
       print "No lines parsed!"
     if len(lines_after) > 0:
       print "Unparsable content left at end of file."
-    return [ast]
+    return ast
 
 def main():
   pp = PatchParser()
