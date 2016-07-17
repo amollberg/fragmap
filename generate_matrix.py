@@ -32,7 +32,7 @@ def update_positions(old_ast, patch):
   pass
           
 
-def update_positions_to_latest(old_ast, patch_list):
+def update_positions_to_latest(old_diff, patch_list):
   """
   Update the positions of the AST old_ast through every patch
   in patch_list that is more recent than it.
@@ -45,18 +45,18 @@ def update_positions_to_latest(old_ast, patch_list):
 
 def update_all_positions_to_latest(ast_list):
   """
-  Update all ASTs to the latest patch, letting
-  newer ASTs act as patches for older ASTs.
-  Assumes ast_list is sorted in ascending time.
+  Update all diffs to the latest patch, letting
+  newer diffs act as patches for older diffs.
+  Assumes diff_list is sorted in ascending time.
   """
-  # For all ASTs except the last which is already up to date.
-  for i in range(len(ast_list) - 1):
-    update_positions_to_latest(ast_list[i], ast_list[i+1:])
-  return ast_list
+  # For all diffs except the last which is already up to date.
+  for i in range(len(diff_list) - 1):
+    update_positions_to_latest(diff_list[i], diff_list[i+1:])
+  return diff_list
 
 class FragmentBoundNode():
-  # References back into the ASTs
-  _AST_i = None
+  # References back into the diffs
+  _diff_i = None
   _file_i = None
   _fragment_i = None
   
@@ -75,12 +75,12 @@ class FragmentBoundNode():
     return a._filename < b._filename or a._line < b._line
 
 
-  def __init__(self, AST_list, AST_i, file_i, fragment_i, kind):
-    self._AST_i = AST_i
+  def __init__(self, diff_list, diff_i, file_i, fragment_i, kind):
+    self._diff_i = diff_i
     self._file_i = file_i
     self._fragment_i = fragment_i
-    self._filename = AST_list[AST_i]._filePatches[file_i]._header._oldfile
-    fragment_range = AST_list[AST_i]._filePatches[file_i]._fragments[fragment_i]._header._oldrange
+    self._filename = diff_list[diff_i]._filepatches[file_i]._header._oldfile
+    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._oldrange
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
     elif kind == FragmentBoundNode.END:
@@ -88,34 +88,35 @@ class FragmentBoundNode():
     self._kind = kind
 
   def __repr__(self):
-    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._AST_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
+    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
     
 
-def extract_fragments(ast_list):
+def extract_fragments(ast):
   fragment_list = []
-  for ast_i in range(len(ast_list)):
-    for file_i in range(len(ast_list[ast_i]._filePatches)):
-      for fragment_i in range(len(ast_list[ast_i]._filePatches[file_i]._fragments)):
+  diff_list = ast._patches
+  for diff_i in range(len(diff_list)):
+    for file_i in range(len(diff_list[diff_i]._filepatches)):
+      for fragment_i in range(len(diff_list[diff_i]._filepatches[file_i]._fragments)):
         fragment_list += [
-          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.START),
-          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.END)
+          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.START),
+          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.END)
         ]
   return fragment_list
 
-def generate_fragment_bound_list(ast_list):
+def generate_fragment_bound_list(ast):
   """
-  Takes an up-to date list of ASTs.
+  Takes an up-to date list of diffs.
   Returns a list with ordered fragment bounds.
   """
-  return sorted(extract_fragments(ast_list))
+  return sorted(extract_fragments(ast))
 
       
 # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
 
-def generate_matrix(ast_list):
-  bound_list = generate_fragment_bound_list(ast_list)
+def generate_matrix(ast):
+  bound_list = generate_fragment_bound_list(ast)
   print "bound list:", bound_list
-  n_rows = len(ast_list)
+  n_rows = len(ast._patches)
   n_cols = len(bound_list)
   print "Matrix size: rows, cols: ", n_rows, n_cols
   matrix = [['.'] * n_cols] * n_rows
@@ -123,7 +124,7 @@ def generate_matrix(ast_list):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._AST_i == r)
+      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._diff_i == r)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
@@ -131,9 +132,9 @@ def generate_matrix(ast_list):
 def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
-  ast_list =  pp.parse(lines)
-  print ast_list
-  matrix = generate_matrix(ast_list)
+  diff_list =  pp.parse(lines)
+  print diff_list
+  matrix = generate_matrix(diff_list)
   for row in matrix:
     print ''.join(row)
   

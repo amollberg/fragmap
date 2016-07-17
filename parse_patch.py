@@ -207,14 +207,15 @@ class Patch():
     if header is None:
       return None, lines
     filepatches = []
-    while True:
+    while len(lines) > 0:
       filepatch, lines = FilePatch.parse(lines)
       print "FilePatch:", filepatch
       if filepatch is not None:
         filepatches += [filepatch]
       else:
         # No more parsable filepatches; return
-        return Patch(filepatches), lines
+        break
+    return Patch(filepatches), lines
   
 class AST():
   _patches = None
