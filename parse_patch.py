@@ -37,7 +37,7 @@ class FragmentHeader():
   def parse(lines):
     print "FragmentHeader? ", lines[0]
     if lines[0][0:4] == '@@ -':
-      match = re.match('^@@ -(\d+)(?:,(\d+)) \+(\d+)(?:,(\d+)) @@', lines[0])
+      match = re.match('^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', lines[0])
       if match is not None:
         oldlength = 1
         if match.group(2):

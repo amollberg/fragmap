@@ -1,0 +1,13 @@
+commit 62904f443d9640b734b19c5cb541a6046c2cf621
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 15:45:08 2016 +0200
+
+    Added one line to empty file
+
+diff --git a/other.txt b/other.txt
+index e69de29..6769dd6 100644
+--- a/other.txt
++++ b/other.txt
+@@ -0,0 +1 @@
++Hello world!
+\ No newline at end of file

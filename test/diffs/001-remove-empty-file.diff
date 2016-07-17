@@ -1,0 +1,9 @@
+commit b69d42dd9fc5f628add915bdf16b2b1462fc1e94
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 15:38:53 2016 +0200
+
+    Removed empty.txt
+
+diff --git a/empty.txt b/empty.txt
+deleted file mode 100644
+index e69de29..0000000

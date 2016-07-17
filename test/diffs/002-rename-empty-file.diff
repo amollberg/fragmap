@@ -1,0 +1,10 @@
+commit 1639e6c774eaa60771e6e36da9090eb269a63170
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 15:43:23 2016 +0200
+
+    Renamed empty.txt other.txt
+
+diff --git a/empty.txt b/other.txt
+similarity index 100%
+rename from empty.txt
+rename to other.txt
