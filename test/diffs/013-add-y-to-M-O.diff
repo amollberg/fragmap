@@ -1,0 +1,20 @@
+commit 0233de91c52f17c88df60b0001b81164443272ba
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:14:08 2016 +0200
+
+    Added y to M-O
+
+diff --git a/change-lines.txt b/change-lines.txt
+index 6d8e0aa..b2689b1 100644
+--- a/change-lines.txt
++++ b/change-lines.txt
+@@ -10,6 +10,6 @@ iy
+ jx
+ kx
+ l
+-m
+-nx
+-o
++my
++nxy
++oy

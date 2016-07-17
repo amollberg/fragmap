@@ -1,0 +1,20 @@
+commit bd8e7c98d0b56a94060d2d2b27a905db9a5afe08
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 22:07:33 2016 +0200
+
+    Twenty file: removed lines 15-17
+
+diff --git a/twenty-lines.txt b/twenty-lines.txt
+index 3edbf23..7e83b27 100644
+--- a/twenty-lines.txt
++++ b/twenty-lines.txt
+@@ -12,9 +12,6 @@ eleven
+ twelve
+ thirteen
+ fourteen
+-fifteen
+-sixteen
+-seventeen
+ eighteen
+ nineteen
+ twenty

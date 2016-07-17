@@ -1,0 +1,27 @@
+commit 75f66732e0e95dfd6f2d2535bc06098997e98711
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:04:25 2016 +0200
+
+    Added y to E-I
+
+diff --git a/change-lines.txt b/change-lines.txt
+index f6b976b..aef8357 100644
+--- a/change-lines.txt
++++ b/change-lines.txt
+@@ -2,11 +2,11 @@ a
+ b
+ cx
+ dx
+-ex
+-fx
+-g
+-h
+-i
++exy
++fxy
++gy
++hy
++iy
+ j
+ k
+ l

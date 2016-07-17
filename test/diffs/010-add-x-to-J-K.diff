@@ -1,0 +1,21 @@
+commit 1f5a1c5b6d0404525cbde219de1a839f4b08b376
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:06:00 2016 +0200
+
+    Added x to J-K
+
+diff --git a/change-lines.txt b/change-lines.txt
+index aef8357..b5b5133 100644
+--- a/change-lines.txt
++++ b/change-lines.txt
+@@ -7,8 +7,8 @@ fxy
+ gy
+ hy
+ iy
+-j
+-k
++jx
++kx
+ l
+ m
+ n

@@ -1,0 +1,23 @@
+commit 85219d00d3ee71cbd9b7dfbe6ea0673b40c99569
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:08:04 2016 +0200
+
+    Added x to A and N
+
+diff --git a/change-lines.txt b/change-lines.txt
+index b5b5133..58c71d0 100644
+--- a/change-lines.txt
++++ b/change-lines.txt
+@@ -1,4 +1,4 @@
+-a
++ax
+ b
+ cx
+ dx
+@@ -11,5 +11,5 @@ jx
+ kx
+ l
+ m
+-n
++nx
+ o
