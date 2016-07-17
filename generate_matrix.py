@@ -119,12 +119,12 @@ def generate_matrix(ast):
   n_rows = len(ast._patches)
   n_cols = len(bound_list)
   print "Matrix size: rows, cols: ", n_rows, n_cols
-  matrix = [['.'] * n_cols] * n_rows
+  matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
   for r in range(n_rows):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._diff_i == r)
+      inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START and bound_list[c]._diff_i == r)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
