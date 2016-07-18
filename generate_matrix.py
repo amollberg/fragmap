@@ -89,7 +89,7 @@ class FragmentBoundNode():
     self._kind = kind
 
   def __repr__(self):
-    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
+    return "\n<Node: %d, %d, %d, (%s, %d), %d>" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
     
 
 def extract_fragments(ast):

@@ -16,7 +16,7 @@ class Range():
     self._end = start + length
 
   def __repr__(self):
-    return "[Range: %d to %d]" % (self._start, self._end,)
+    return "<Range: %d to %d>" % (self._start, self._end,)
 
   def update_positions(self, start_delta, end_delta):
     self._start += start_delta
@@ -31,7 +31,7 @@ class FragmentHeader():
     self._newrange = newrange
 
   def __repr__(self):
-    return "[FragmentHeader: %s, %s]" % (self._oldrange, self._newrange,)
+    return "<FragmentHeader: %s, %s>" % (self._oldrange, self._newrange,)
 
   @staticmethod
   def parse(lines):
@@ -57,7 +57,7 @@ class Fragment():
     self._header = header
 
   def __repr__(self):
-    return "[Fragment: %s]" % (self._header,)
+    return "\n   <Fragment: %s>" % (self._header,)
 
   def update_positions(self, start_delta, length_delta):
     self._header._newrange.update_positions(start_delta, length_delta)
@@ -90,7 +90,7 @@ class FilePatchHeader():
     self._newfile = newfile
 
   def __repr__(self):
-    return "[FilePatchHeader: %s -> %s]" % (self._oldfile, self._newfile,)
+    return "<FilePatchHeader: %s -> %s>" % (self._oldfile, self._newfile,)
 
   @staticmethod
   def parse(lines):
@@ -124,7 +124,7 @@ class FilePatch():
     self._fragments = fragments
 
   def __repr__(self):
-    return "[FilePatch: %s, %s]" % (self._header, self._fragments,)
+    return "\n  <FilePatch: %s, %s>" % (self._header, self._fragments,)
 
   @staticmethod
   def parse(lines):
@@ -157,7 +157,7 @@ class PatchHeader():
     self._hash = hash
 
   def __repr__(self):
-    return "[PatchHeader: %s]" %(self._hash,)
+    return "<PatchHeader: %s>" %(self._hash,)
 
   @staticmethod
   def parse(lines):
@@ -191,7 +191,7 @@ class Patch():
     self._filepatches = filepatches
 
   def __repr__(self):
-    return "[Patch: %s]" % (self._filepatches,)
+    return "\n <Patch: %s>" % (self._filepatches,)
 
   def find_patch_by_old_file(self, old_file_name):
     for file_patch in self._filepatches:
@@ -223,7 +223,7 @@ class AST():
     self._patches = patches
 
   def __repr__(self):
-    return "[AST: %s]" % (self._patches,)
+    return "<AST: %s>" % (self._patches,)
 
   @staticmethod
   def parse(lines):
