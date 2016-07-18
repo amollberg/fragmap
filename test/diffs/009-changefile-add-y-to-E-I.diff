@@ -8,10 +8,7 @@ diff --git a/change-lines.txt b/change-lines.txt
 index f6b976b..aef8357 100644
 --- a/change-lines.txt
 +++ b/change-lines.txt
-@@ -2,11 +2,11 @@ a
- b
- cx
- dx
+@@ -5,5 +5,5 @@
 -ex
 -fx
 -g
@@ -22,6 +19,3 @@ index f6b976b..aef8357 100644
 +gy
 +hy
 +iy
- j
- k
- l

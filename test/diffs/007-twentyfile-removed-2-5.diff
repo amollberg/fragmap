@@ -8,12 +8,9 @@ diff --git a/twenty-lines.txt b/twenty-lines.txt
 index 3edbf23..e88f868 100644
 --- a/twenty-lines.txt
 +++ b/twenty-lines.txt
-@@ -1,8 +1,4 @@
- one
+@@ -2,4 +2,0 @@
 -two
 -three
 -four
 -five
- six
- seven
- eight
+
