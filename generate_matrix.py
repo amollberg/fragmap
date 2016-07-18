@@ -56,9 +56,10 @@ def update_all_positions_to_latest(ast_list):
 
 class FragmentBoundNode():
   # References back into the diffs
+  _diff = None
   _diff_i = None
-  _file_i = None
-  _fragment_i = None
+  _file = None
+  _fragment = None
   
   # Info to sort on
   _filename = None
@@ -76,12 +77,12 @@ class FragmentBoundNode():
            a._filename == b._filename and a._line < b._line)
 
 
-  def __init__(self, diff_list, diff_i, file_i, fragment_i, kind):
+  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, filename, kind):
+    self._diff = diff
     self._diff_i = diff_i
-    self._file_i = file_i
-    self._fragment_i = fragment_i
-    self._filename = diff_list[diff_i]._filepatches[file_i]._header._newfile
-    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._newrange
+    self._file = file_patch
+    self._fragment = fragment
+    self._filename = filename
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
     elif kind == FragmentBoundNode.END:
@@ -89,19 +90,27 @@ class FragmentBoundNode():
     self._kind = kind
 
   def __repr__(self):
-    return "\n<Node: %d, %d, %d, (%s, %d), %d>" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
+    return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
     
 
 def extract_fragments(ast):
   fragment_list = []
   diff_list = ast._patches
-  for diff_i in range(len(diff_list)):
-    for file_i in range(len(diff_list[diff_i]._filepatches)):
-      for fragment_i in range(len(diff_list[diff_i]._filepatches[file_i]._fragments)):
+  diff_i = 0
+  for diff in diff_list:
+    for file_patch in diff._filepatches:
+      for fragment in file_patch._fragments:
         fragment_list += [
-          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.START),
-          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.END)
+          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+                            file_patch._header._oldfile, FragmentBoundNode.START),
+          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+                            file_patch._header._oldfile, FragmentBoundNode.END),
+          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
+                            file_patch._header._newfile, FragmentBoundNode.START),
+          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
+                            file_patch._header._newfile, FragmentBoundNode.END)
         ]
+    diff_i += 1
   return fragment_list
 
 def generate_fragment_bound_list(ast):
