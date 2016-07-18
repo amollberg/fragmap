@@ -18,17 +18,17 @@ def read_diff(filename):
 
 class Test(unittest.TestCase):
 
-  #def test_003(self):
-  #  self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
-  #
-  #def test_004(self):
-  #  self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
-  #
-  #def test_003_004(self):
-  #  self.check_diffs(['003-add-one-line-to-empty-file.diff',
-  #                    '004-remove-one-line-empty-file.diff'], 
-  #                   ['#.',
-  #                    '#.'])
+  def test_003(self):
+    self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
+
+  def test_004(self):
+    self.check_diff('004-remove-one-line-empty-file.diff', ['.'])
+
+  def test_003_004(self):
+    self.check_diffs(['003-add-one-line-to-empty-file.diff',
+                      '004-remove-one-line-empty-file.diff'], 
+                     ['#.',
+                      '..'])
 
   def test_011(self):
     self.check_diff('011-add-x-to-A-and-N.diff', ['#.#.'])

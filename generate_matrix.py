@@ -80,8 +80,8 @@ class FragmentBoundNode():
     self._diff_i = diff_i
     self._file_i = file_i
     self._fragment_i = fragment_i
-    self._filename = diff_list[diff_i]._filepatches[file_i]._header._oldfile
-    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._oldrange
+    self._filename = diff_list[diff_i]._filepatches[file_i]._header._newfile
+    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._newrange
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
     elif kind == FragmentBoundNode.END:
@@ -115,6 +115,8 @@ def generate_fragment_bound_list(ast):
   last_key = None
   last_i = 0
   for node in node_list:
+    if node._line == 0:
+      continue
     key = (node._filename, node._line)
     if last_key is None:
       last_key = key
