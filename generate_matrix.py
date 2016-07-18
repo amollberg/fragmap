@@ -72,7 +72,8 @@ class FragmentBoundNode():
 
   # Sort by filename then by line
   def __lt__(a, b):
-    return a._filename < b._filename or a._line < b._line
+    return a._filename < b._filename or (
+           a._filename == b._filename and a._line < b._line)
 
 
   def __init__(self, diff_list, diff_i, file_i, fragment_i, kind):
