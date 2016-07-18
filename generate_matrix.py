@@ -112,9 +112,25 @@ def extract_fragments(ast):
 def generate_fragment_bound_list(ast):
   """
   Takes an up-to date list of diffs.
-  Returns a list with ordered fragment bounds.
+  Returns a list with ordered fragment bounds
+  grouped by position (file, line).
   """
-  return sorted(extract_fragments(ast))
+  node_list = sorted(extract_fragments(ast))
+  grouped_list = [[]]
+  last_key = None
+  last_i = 0
+  for node in node_list:
+    key = (node._filename, node._line)
+    if last_key is None:
+      last_key = key
+    if key != last_key:
+      last_i += 1
+      # Append new sublist
+      grouped_list += [[]]
+    # Append to sublist at index last_i
+    grouped_list[last_i] += [node]
+    last_key = key
+  return grouped_list
 
       
 # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
@@ -130,9 +146,10 @@ def generate_matrix(ast):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      # If node belongs in on this row
-      if bound_list[c]._diff_i == r:
-        inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START)
+      for node in bound_list[c]:
+        # If node belongs in on this row
+        if node._diff_i == r:
+          inside_fragment = (node._kind == FragmentBoundNode.START)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
