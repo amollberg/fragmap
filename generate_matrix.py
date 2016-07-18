@@ -124,7 +124,9 @@ def generate_matrix(ast):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START and bound_list[c]._diff_i == r)
+      # If node belongs in on this row
+      if bound_list[c]._diff_i == r:
+        inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
