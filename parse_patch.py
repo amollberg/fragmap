@@ -7,6 +7,8 @@
 import sys
 import re
 
+DEBUG_PARSER=False
+
 class Range():
   _start = 0
   _end = 0
@@ -35,7 +37,8 @@ class FragmentHeader():
 
   @staticmethod
   def parse(lines):
-    print "FragmentHeader? ", lines[0]
+    if DEBUG_PARSER:
+      print "FragmentHeader? ", lines[0]
     if lines[0][0:4] == '@@ -':
       match = re.match('^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', lines[0])
       if match is not None:
@@ -47,7 +50,8 @@ class FragmentHeader():
           newlength = int(match.group(4))
         return FragmentHeader(Range(int(match.group(1)), oldlength),
                               Range(int(match.group(3)), newlength)), lines[1:]
-    print "Not fragment header"
+    if DEBUG_PARSER:
+      print "Not fragment header"
     return None, lines
     
     
@@ -65,7 +69,8 @@ class Fragment():
 
   @staticmethod
   def parse(lines):
-    print "Fragment? ", lines[0]
+    if DEBUG_PARSER:
+      print "Fragment? ", lines[0]
     header, lines = FragmentHeader.parse(lines)
     #print i
     i = 0
@@ -79,7 +84,8 @@ class Fragment():
           #print "not in fragment: '%s'" % line, i
           break
       return Fragment(header), lines[i:]
-    print "Not fragment"
+    if DEBUG_PARSER:
+      print "Not fragment"
     return None, lines
 
 class FilePatchHeader():
@@ -94,7 +100,8 @@ class FilePatchHeader():
 
   @staticmethod
   def parse(lines):
-    print "FilePatchHeader? ", lines[0]
+    if DEBUG_PARSER:
+      print "FilePatchHeader? ", lines[0]
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
@@ -128,24 +135,18 @@ class FilePatch():
 
   @staticmethod
   def parse(lines):
-    print "FilePatch? ", lines[0]
+    if DEBUG_PARSER:
+      print "FilePatch? ", lines[0]
     header, lines = FilePatchHeader.parse(lines)
     if header is not None:
       fragments = []
       while len(lines) > 0:
-        #print i,j, lines
         fragment, lines = Fragment.parse(lines)
-        #print "Fragment: ", fragment
-        # Consume lines
-        #print len(lines)
-        #print "After:",len(lines)
         if fragment is None:
           # No more fragments; stop
           break
         fragments += [fragment]
-        #print "Fragments:", fragments
       p = FilePatch(header, fragments), lines
-      #print "Returned patch:", p
       return p
     else:
       return None, lines
@@ -161,7 +162,8 @@ class PatchHeader():
 
   @staticmethod
   def parse(lines):
-    print "PatchHeader?", lines[0]
+    if DEBUG_PARSER:
+      print "PatchHeader?", lines[0]
     match = re.match("^([0-9a-f]{40})", lines[0][0:40])
     if match is not None:
       lines = lines[1:]
@@ -179,7 +181,8 @@ class PatchHeader():
       return None, lines
     lines = lines[3:]
     while lines[0] == '' or lines[0][0] == ' ':
-      print "in PatchHeader:", lines[0]
+      if DEBUG_PARSER:
+        print "in PatchHeader:", lines[0]
       lines = lines[1:]
     return PatchHeader(hash), lines
         
@@ -201,15 +204,18 @@ class Patch():
 
   @staticmethod
   def parse(lines):
-    print "Patch?", lines[0]
+    if DEBUG_PARSER:
+      print "Patch?", lines[0]
     header, lines = PatchHeader.parse(lines)
-    print "PatchHeader: ", header
+    if DEBUG_PARSER:
+      print "PatchHeader: ", header
     if header is None:
       return None, lines
     filepatches = []
     while len(lines) > 0:
       filepatch, lines = FilePatch.parse(lines)
-      print "FilePatch:", filepatch
+      if DEBUG_PARSER:
+        print "FilePatch:", filepatch
       if filepatch is not None:
         filepatches += [filepatch]
       else:
@@ -230,7 +236,8 @@ class AST():
     patches = []
     while len(lines) > 0:
       patch, lines = Patch.parse(lines)
-      print "Patch: ", patch
+      if DEBUG_PARSER:
+        print "Patch: ", patch
       if patch is not None:
         patches += [patch]
       else:
@@ -245,9 +252,9 @@ class PatchParser():
   @staticmethod
   def parse(lines):
     ast, lines_after = AST.parse(lines)
-    if len(lines_after) == len(lines):
+    if DEBUG_PARSER and len(lines_after) == len(lines):
       print "No lines parsed!"
-    if len(lines_after) > 0:
+    if DEBUG_PARSER and len(lines_after) > 0:
       print "Unparsable content left at end of file."
     return ast
 

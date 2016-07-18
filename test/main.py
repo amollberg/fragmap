@@ -60,6 +60,8 @@ class Test(unittest.TestCase):
     
   def check_matrix(self, matrix, reference):
     joined_matrix = [''.join(row) for row in matrix]
+    for row in joined_matrix:
+      print row
     self.assertEqual(joined_matrix, reference)
 
             
