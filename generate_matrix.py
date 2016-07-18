@@ -85,12 +85,7 @@ class FragmentBoundNode():
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
     elif kind == FragmentBoundNode.END:
-      # +1 because the bounds indicated are inclusive and
-      # we want bounds that are zero-impulse, i.e. we don't have to look at
-      # bounds that mention the previous line to decide what happens on this one
-      # which means that the inclusive end markers have to be "one-past" the end,
-      # i.e. [start, end[ .
-      self._line = fragment_range._end + 1
+      self._line = fragment_range._end
     self._kind = kind
 
   def __repr__(self):
@@ -136,6 +131,7 @@ def generate_fragment_bound_list(ast):
 # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
 
 def generate_matrix(ast):
+  print "AST:", ast
   bound_list = generate_fragment_bound_list(ast)
   print "bound list:", bound_list
   n_rows = len(ast._patches)
