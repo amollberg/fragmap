@@ -1,0 +1,13 @@
+commit 14e73ef5f144f7acd6b05a235c66517d59782320
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 21:41:58 2016 +0200
+
+    Modfile: Re-added first line
+
+diff --git a/c.txt b/c.txt
+index 6bb86a7..c8524bc 100644
+--- a/c.txt
++++ b/c.txt
+@@ -1 +1,2 @@
++a
+ bx

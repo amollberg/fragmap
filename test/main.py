@@ -41,7 +41,25 @@ class Test(unittest.TestCase):
                       '012-add-x-to-A-C.diff'],
                      ['#..#.', 
                       '##...'])
-    
+
+  def test_020(self):
+    self.check_diff('020-modfile-create.diff', ['#.'])
+
+  def test_021(self):
+    self.check_diff('021-modfile-remove-first-line.diff', ['#.'])
+
+  def test_020_021(self):
+    self.check_diffs(['020-modfile-create.diff',
+                      '021-modfile-remove-first-line.diff'],
+                     ['##.',
+                      '#..'])
+
+  def test_022_023(self):
+    self.check_diffs(['022-modfile-mod-second-line.diff',
+                      '023-modfile-readd-first-line.diff'],
+                     ['.#.',
+                      '#..'])
+
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)

@@ -1,0 +1,14 @@
+commit 61e57104dd521ae7f644bf22b4604e5fadcf4f5d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 21:31:00 2016 +0200
+
+    Added new file c.txt with 2 lines
+
+diff --git a/c.txt b/c.txt
+new file mode 100644
+index 0000000..c30dea8
+--- /dev/null
++++ b/c.txt
+@@ -0,0 +1,2 @@
++a
++b
