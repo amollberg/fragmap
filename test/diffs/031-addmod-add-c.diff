@@ -1,0 +1,12 @@
+commit 01d109df05859dc63725908c470d89954b97238b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 14:47:58 2016 +0200
+
+    Addmod: Added c
+
+diff --git a/addmod-file.txt b/addmod-file.txt
+index c30dea8..b5eff57 100644
+--- a/addmod-file.txt
++++ b/addmod-file.txt
+@@ -2,0 +3 @@ b
++c

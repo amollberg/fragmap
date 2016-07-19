@@ -20,6 +20,14 @@ from parse_patch import *
 #        _start
 #        _end
 
+# TODO:
+# Generate nodes as we update the diff list, not just after every one 
+# Each update has to also update each node and sort new nodes into the
+# list of existing. We may be able to work recursively, patching older 
+# diffs and adding new nodes. We probably will never remove nodes as to
+# signal that fragments have been joined together. They still need to
+# be represented at the last level as separate (?).
+
 def nonnull_file(file_patch_header):
   def is_null(fn):
     return fn == '/dev/null'

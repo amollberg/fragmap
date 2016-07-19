@@ -1,0 +1,15 @@
+commit 253303673413d91dd05282a38969976d06e15461
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 14:49:11 2016 +0200
+
+    Changed bc to xy
+
+diff --git a/addmod-file.txt b/addmod-file.txt
+index b5eff57..ea78952 100644
+--- a/addmod-file.txt
++++ b/addmod-file.txt
+@@ -2,2 +2,2 @@ a
+-b
+-c
++x
++y

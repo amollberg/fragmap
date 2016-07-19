@@ -61,6 +61,36 @@ class Test(unittest.TestCase):
                       '#..'])
 
 
+  def test_030(self):
+    self.check_diff('030-addmod-create-with-ab.diff', ['#.'])
+
+  def test_030_031(self):
+    self.check_diffs(['030-addmod-create-with-ab.diff',
+                      '031-addmod-add-c.diff'], 
+                     [['#..'],
+                      ['.#.']])
+
+  def test_030_032(self):
+    self.check_diffs(['030-addmod-create-with-ab.diff',
+                      '031-addmod-add-c.diff',
+                      '032-addmod-change-bc-to-xy.diff'], 
+                     [['#...'],
+                      ['..#.'],
+                      ['###.']])
+
+
+  def test_030_033(self):
+    self.check_diffs(['030-addmod-create-with-ab.diff',
+                      '031-addmod-add-c.diff',
+                      '032-addmod-change-bc-to-xy.diff',
+                      '033-addmod-add-z-between-xy.diff'], 
+                     [['#....'],
+                      ['..#..'],
+                      ['###..'],
+                      ['####.']])
+
+
+
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
     pp = PatchParser()
