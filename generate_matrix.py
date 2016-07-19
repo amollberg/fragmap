@@ -19,6 +19,9 @@ from parse_patch import *
 #       Range _newrange
 #        _start
 #        _end
+# FragmentNodeLine
+#  FragmentNode
+#  _startdiff_i
 
 # TODO:
 # Generate nodes as we update the diff list, not just after every one 
@@ -38,63 +41,91 @@ def nonnull_file(file_patch_header):
   # Both files are null files
   return None
 
-def update_positions(old_diff, patch):
-  def update_file_positions(file_ast, file_patch):
-    """
-    Update the AST to how it should look after the patch has been applied.
-    """
-    def update_range(fragment_range, file_patch):
-      # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
-      # previous lines are unaffected, mapping e -> e
-      # start lines inside fragment map e -> c
-      # end lines inside fragment map e -> d
-      # subsequent lines map as e -> e-b+d
-      marker = None
-      for patch_fragment in file_patch._fragments:
-        if patch_fragment._header._oldrange._start <= fragment_range._start:
-          marker = patch_fragment._header
-        else:
-          break
-      if marker is None:
-        # No fragments before the given range
-        return
-      if fragment_range._start < marker._oldrange._end:
-        fragment_range._start = marker._newrange._start
-      else:
-        fragment_range._start += marker._newrange._end - marker._oldrange._end
-      if fragment_range._end < marker._oldrange._end:
-        fragment_range._end = marker._newrange._end
-      else:
-        fragment_range._end += marker._newrange._end - marker._oldrange._end
-      
-    # TODO: Verify that filenames are the same
-    # TODO Ensure sorted fragments
-    for ast_fragment in file_ast._fragments:
-      print "Header before:", ast_fragment._header
-      update_range(ast_fragment._header._oldrange, file_patch)
-      update_range(ast_fragment._header._newrange, file_patch)
-      print "Patch:", file_patch
-      print "Header after:", ast_fragment._header
+def update_line(line, bound_kind, file_patch):
+  """
+  Update one line in a file with a file patch.
+  """
+  # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
+  # previous lines are unaffected, mapping e -> e
+  # start lines inside fragment map e -> c
+  # end lines inside fragment map e -> d
+  # subsequent lines map as e -> e-b+d
+  marker = None
+  for patch_fragment in file_patch._fragments:
+    if patch_fragment._header._oldrange._start <= line:
+      marker = patch_fragment._header
+    else:
+      break
+  if marker is not None:
+    if line < marker._oldrange._end:
+      # line is inside the range
+      if bound_kind == FragmentBoundNode.START:
+        line = marker._newrange._start
+      elif bound_kind == FragmentBoundNode.END:
+        line = marker._newrange._end
+    else:
+      # line is after the range
+      line += marker._newrange._end - marker._oldrange._en
+  return line
 
+
+def update_file_positions(file_node_lines, file_patch):
+  """
+  Update all the nodes belonging in a file with a file patch.
+  """
+  # TODO: Verify that filenames are the same
+  # TODO Ensure sorted fragments
+  for node_line in file_node_lines:
+    print "Node before:", node_line.last()
+    node_line.update(diff_i, file_patch._header._newfile,
+                     update_line(node_line.last(), file_patch))
+    print "Node after:", node_line.last()
+
+
+def extract_nodes(diff, diff_i):
+  node_list = []
+  for file_patch in diff._filepatches:
+    for fragment in file_patch._fragments:
+      node_list += [
+        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+                          file_patch._header._oldfile, FragmentBoundNode.START),
+        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+                          file_patch._header._oldfile, FragmentBoundNode.END),
+        ]
+  return node_list
+
+
+def extract_node_lines(diff, diff_i):
+  return map(FragmentBoundLine, extract_nodes(diff, diff_i))
+
+
+def update_positions(node_lines, patch):
+  """
+  Update all node lines with a multi-file patch.
+  """
   for file_patch in patch._filepatches:
-    for file_ast in old_diff._filepatches:
-      if nonnull_file(file_ast._header) == file_patch._header._oldfile:
-        update_file_positions(file_ast, file_patch)
-        file_ast._header._oldfile = file_patch._header._newfile
-        file_ast._header._newfile = file_patch._header._newfile
-          
+    oldfile = file_patch._header._oldfile
+    file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
+    update_file_positions(file_node_lines, file_patch)
 
-def update_positions_to_latest(old_diff, patch_list):
-  """
-  Update the positions of the AST old_ast through every patch
-  in patch_list that is more recent than it.
-  """
-  for patch in patch_list:
-    # TODO: Sort and filter by timestamp
-    update_positions(old_diff, patch)
+
+#def update_positions_to_latest(node_lines, patch_list):
+#  """
+#  Update the positions of the AST old_ast through every patch
+#  in patch_list that is more recent than it.
+#  """
+#  for patch in patch_list:
+#    # TODO: Sort and filter by timestamp
+#    update_positions(node_lines, patch)
+
+
   
 # For each commit: project fragment positions iteratively up past the latest commit
 #  => a list of nodes, each pointing to commit and kind (start or end of fragment)
+# Need to generate the nodes as we iterate through. What order?
+# * Starting diff : new to old, propagation: old to new
+# * Starting diff : old to new, propagation: old to new
+#   + Can get all nodes from a patch in one go
 
 def update_all_positions_to_latest(diff_list):
   """
@@ -102,10 +133,12 @@ def update_all_positions_to_latest(diff_list):
   newer diffs act as patches for older diffs.
   Assumes diff_list is sorted in ascending time.
   """
-  # For all diffs except the last which is already up to date.
-  for i in range(len(diff_list) - 1):
-    update_positions_to_latest(diff_list[i], diff_list[i+1:])
-  return diff_list
+  node_line_list = []
+  for i in range(len(diff_list)):
+    #update_positions_to_latest(diff_list[i], diff_list[i+1:])
+    node_line_list += extract_node_lines(diff_list[i], i)
+    update_positions(node_line_list, diff_list[i])
+  return node_line_list
 
 class FragmentBoundNode():
   # References back into the diffs
@@ -145,9 +178,10 @@ class FragmentBoundNode():
   def __repr__(self):
     return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
 
-def FragmentBoundLine():
+class FragmentBoundLine():
   _nodehistory = None
   _startdiff_i = None
+  _kind = None
 
   def __lt__(a, b):
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
@@ -162,8 +196,15 @@ def FragmentBoundLine():
     return a_file < b_file or (a_file == b_file and a_line < b_line)
 
   def __init__(self, node):
-    self._startdiff_i
+    self._startdiff_i = node._diff_i
     self._nodehistory = {self._startdiff_i : node}
+    self._kind = node._kind
+
+  def __repr__(self):
+    return " \n<FragmentBoundLine: %d, %s>" % (self._startdiff_i, self._nodehistory)
+
+  def last(self):
+    return self._nodehistory[max(self._nodehistory.viewkeys())]
 
   def update(self, diff_i, filename, line):
     # Shallow copy previous
@@ -173,29 +214,11 @@ def FragmentBoundLine():
     updated_node._line = line
     self._nodehistory[diff_i] = updated_node
 
-def extract_fragments(ast):
-  fragment_list = []
-  diff_list = ast._patches
-  diff_i = 0
-  for diff in diff_list:
-    for file_patch in diff._filepatches:
-      for fragment in file_patch._fragments:
-        fragment_list += [
-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
-                            file_patch._header._oldfile, FragmentBoundNode.START),
-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
-                            file_patch._header._oldfile, FragmentBoundNode.END),
-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
-                            file_patch._header._newfile, FragmentBoundNode.START),
-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
-                            file_patch._header._newfile, FragmentBoundNode.END)
-        ]
-    diff_i += 1
-  return fragment_list
 
+# TODO: Convert to just grouping. Howto group nodes in node lines?
 def generate_fragment_bound_list(ast):
   """
-  Takes an up-to date list of diffs.
+  Takes a list of  up-to date list of diffs.
   Returns a list with ordered fragment bounds
   grouped by position (file, line).
   """
@@ -223,22 +246,21 @@ def generate_fragment_bound_list(ast):
 
 def generate_matrix(ast):
   print "AST:", ast
-  ast._patches = update_all_positions_to_latest(ast._patches)
-  print "AST after update:", ast
-  bound_list = generate_fragment_bound_list(ast)
-  print "bound list:", bound_list
+  node_lines = update_all_positions_to_latest(ast._patches)
+  print "Node lines:", node_lines
+  #bound_list = generate_fragment_bound_list(ast)
   n_rows = len(ast._patches)
-  n_cols = len(bound_list)
+  n_cols = len(node_lines) # TODO: Reduce this after they have been grouped
   print "Matrix size: rows, cols: ", n_rows, n_cols
   matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
   for r in range(n_rows):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      for node in bound_list[c]:
+      for node_line in node_lines:
         # If node belongs in on this row
-        if node._diff_i == r:
-          inside_fragment = (node._kind == FragmentBoundNode.START)
+        if node_line._startdiff_i == r:
+          inside_fragment = (node_line._kind == FragmentBoundNode.START)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
