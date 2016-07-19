@@ -56,20 +56,30 @@ def update_line(line, bound_kind, file_patch):
       marker = patch_fragment._header
     else:
       break
+  is_creation = (marker._oldrange._start == marker._oldrange._end)
+  print "Update_line:", line, bound_kind, file_patch
+  print "Marker:", marker
   if marker is not None:
-    if line < marker._oldrange._end:
+    if line < marker._oldrange._end or (
+      is_creation and line == marker._oldrange._end):
+
       # line is inside the range
+      print "Line %d is inside range %s" %(line, marker._oldrange)
       if bound_kind == FragmentBoundNode.START:
         line = marker._newrange._start
+        print "Setting start line to", line
       elif bound_kind == FragmentBoundNode.END:
         line = marker._newrange._end
+        print "Setting end line to", line
     else:
       # line is after the range
-      line += marker._newrange._end - marker._oldrange._en
+      print "Line %d is after range %s; shifting %d" % (
+        line, marker._oldrange, marker._newrange._end - marker._oldrange._end)
+      line += marker._newrange._end - marker._oldrange._end
   return line
 
 
-def update_file_positions(file_node_lines, file_patch):
+def update_file_positions(file_node_lines, file_patch, diff_i):
   """
   Update all the nodes belonging in a file with a file patch.
   """
@@ -78,7 +88,9 @@ def update_file_positions(file_node_lines, file_patch):
   for node_line in file_node_lines:
     print "Node before:", node_line.last()
     node_line.update(diff_i, file_patch._header._newfile,
-                     update_line(node_line.last(), file_patch))
+                     update_line(node_line.last()._line,
+                                 node_line.last()._kind,
+                                 file_patch))
     print "Node after:", node_line.last()
 
 
@@ -99,14 +111,22 @@ def extract_node_lines(diff, diff_i):
   return map(FragmentBoundLine, extract_nodes(diff, diff_i))
 
 
-def update_positions(node_lines, patch):
+def update_positions(node_lines, patch, diff_i):
   """
   Update all node lines with a multi-file patch.
   """
   for file_patch in patch._filepatches:
     oldfile = file_patch._header._oldfile
-    file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
-    update_file_positions(file_node_lines, file_patch)
+    #file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
+    file_node_lines = []
+    for nl in node_lines:
+      print "last:", nl.last()._filename
+      if nl.last()._filename == oldfile:
+        file_node_lines += [nl]
+    print "Updating file:", oldfile
+    print "Node lines:", file_node_lines
+    update_file_positions(file_node_lines, file_patch, diff_i)
+    print "Updated node lines:", file_node_lines
 
 
 #def update_positions_to_latest(node_lines, patch_list):
@@ -137,7 +157,9 @@ def update_all_positions_to_latest(diff_list):
   for i in range(len(diff_list)):
     #update_positions_to_latest(diff_list[i], diff_list[i+1:])
     node_line_list += extract_node_lines(diff_list[i], i)
-    update_positions(node_line_list, diff_list[i])
+    print "All extracted:", i, node_line_list
+    update_positions(node_line_list, diff_list[i], i)
+    #print "All updated:", node_line_list
   return node_line_list
 
 class FragmentBoundNode():
@@ -176,7 +198,10 @@ class FragmentBoundNode():
     self._kind = kind
 
   def __repr__(self):
-    return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
+    kind_str = "START"
+    if self._kind == FragmentBoundNode.END:
+      kind_str = "END"
+    return "\n <Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -208,7 +233,9 @@ class FragmentBoundLine():
 
   def update(self, diff_i, filename, line):
     # Shallow copy previous
-    updated_node = copy.copy(self._nodehstory[diff_i-1])
+    if diff_i <= 0:
+      diff_i = 1
+    updated_node = copy.copy(self._nodehistory[diff_i-1])
 
     updated_node._file = filename
     updated_node._line = line

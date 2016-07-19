@@ -18,6 +18,22 @@ def read_diff(filename):
 
 class Test(unittest.TestCase):
 
+  def test_update_line_1(self):
+    oldrange = Range(0,0)
+    newrange = Range(1,1)
+    frag1header = FragmentHeader(oldrange, newrange)
+    frag1 = Fragment(frag1header)
+    oldfile = "dummy"
+    newfile = "dummy"
+    fileheader = FilePatchHeader(oldfile, newfile)
+    filepatch = FilePatch(fileheader, [frag1])
+
+    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch),
+                     1)
+    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch),
+                     2)
+
+
   def test_003(self):
     self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
 
