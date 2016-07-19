@@ -1,35 +1,79 @@
 #!/usr/bin/env python
 
+import copy
 from parse_patch import *
+# Hierarchy:
+# AST
+#  Patch
+#   PatchHeader
+#    _hash
+#   FilePatch
+#     FilePatchHeader
+#      _oldfile
+#      _newfile
+#     Fragment
+#      FragmentHeader
+#       Range _oldrange
+#        _start
+#        _end
+#       Range _newrange
+#        _start
+#        _end
 
-def update_positions(old_ast, patch):
-  ast = copy(old_ast)
+def nonnull_file(file_patch_header):
+  def is_null(fn):
+    return fn == '/dev/null'
+  if not is_null(file_patch_header._newfile):
+    return file_patch_header._newfile
+  if not is_null(file_patch_header._oldfile):
+    return file_patch_header._oldfile
+  # Both files are null files
+  return None
+
+def update_positions(old_diff, patch):
   def update_file_positions(file_ast, file_patch):
     """
     Update the AST to how it should look after the patch has been applied.
     """
-    # TODO: Remove this return
-    # Naive version - no update
-    return
-    
+    def update_range(fragment_range, file_patch):
+      # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
+      # previous lines are unaffected, mapping e -> e
+      # start lines inside fragment map e -> c
+      # end lines inside fragment map e -> d
+      # subsequent lines map as e -> e-b+d
+      marker = None
+      for patch_fragment in file_patch._fragments:
+        if patch_fragment._header._oldrange._start <= fragment_range._start:
+          marker = patch_fragment._header
+        else:
+          break
+      if marker is None:
+        # No fragments before the given range
+        return
+      if fragment_range._start < marker._oldrange._end:
+        fragment_range._start = marker._newrange._start
+      else:
+        fragment_range._start += marker._newrange._end - marker._oldrange._end
+      if fragment_range._end < marker._oldrange._end:
+        fragment_range._end = marker._newrange._end
+      else:
+        fragment_range._end += marker._newrange._end - marker._oldrange._end
+      
     # TODO: Verify that filenames are the same
-    # patch fragment +a,b -c,d means the map [a,a+b] -> [c,c+d]
-    # previous lines are unaffected, mapping e -> e
-    # subsequent lines map as e -> e-(a+b)+c+d
     # TODO Ensure sorted fragments
-    #for patch_fragment in file_patch._fragments:
-    #  for ast_fragment in file_ast:
-    #    updated_header = ast_fragment._header
-    #    if ast_fragment._header._oldrange._start >= patch_fragment._header._oldrange._start:
-    #      if ast_fragment._header._oldrange._start <= patch_fragment._header._oldrange._end:
-    #        # Old start is inside patch fragment; absorb to the patch start
-    #        updated_header._oldrange._start = patch_fragment._header._newrange._start
-    #        # New start has to absorb to patch start as well
-    #        updated_header._newrange._start = patch_fragment._header._newrange._start
-    #      else:
-    #        # Old start is after the patch fragment; shift the starts
-  # TODO
-  pass
+    for ast_fragment in file_ast._fragments:
+      print "Header before:", ast_fragment._header
+      update_range(ast_fragment._header._oldrange, file_patch)
+      update_range(ast_fragment._header._newrange, file_patch)
+      print "Patch:", file_patch
+      print "Header after:", ast_fragment._header
+
+  for file_patch in patch._filepatches:
+    for file_ast in old_diff._filepatches:
+      if nonnull_file(file_ast._header) == file_patch._header._oldfile:
+        update_file_positions(file_ast, file_patch)
+        file_ast._header._oldfile = file_patch._header._newfile
+        file_ast._header._newfile = file_patch._header._newfile
           
 
 def update_positions_to_latest(old_diff, patch_list):
@@ -37,13 +81,14 @@ def update_positions_to_latest(old_diff, patch_list):
   Update the positions of the AST old_ast through every patch
   in patch_list that is more recent than it.
   """
-  # TODO
-  pass
+  for patch in patch_list:
+    # TODO: Sort and filter by timestamp
+    update_positions(old_diff, patch)
   
 # For each commit: project fragment positions iteratively up past the latest commit
 #  => a list of nodes, each pointing to commit and kind (start or end of fragment)
 
-def update_all_positions_to_latest(ast_list):
+def update_all_positions_to_latest(diff_list):
   """
   Update all diffs to the latest patch, letting
   newer diffs act as patches for older diffs.
@@ -143,6 +188,8 @@ def generate_fragment_bound_list(ast):
 
 def generate_matrix(ast):
   print "AST:", ast
+  ast._patches = update_all_positions_to_latest(ast._patches)
+  print "AST after update:", ast
   bound_list = generate_fragment_bound_list(ast)
   print "bound list:", bound_list
   n_rows = len(ast._patches)

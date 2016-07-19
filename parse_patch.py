@@ -4,6 +4,24 @@
 
 # AST -> Patch
 
+# Hierarchy:
+# AST
+#  Patch
+#   PatchHeader
+#    _hash
+#   FilePatch
+#     FilePatchHeader
+#      _oldfile
+#      _newfile
+#     Fragment
+#      FragmentHeader
+#       Range _oldrange
+#        _start
+#        _end
+#       Range _newrange
+#        _start
+#        _end
+
 import sys
 import re
 
