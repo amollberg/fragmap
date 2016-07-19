@@ -144,7 +144,34 @@ class FragmentBoundNode():
 
   def __repr__(self):
     return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
-    
+
+def FragmentBoundLine():
+  _nodehistory = None
+  _startdiff_i = None
+
+  def __lt__(a, b):
+    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    first_common_diff_i = min(common_diffs)
+    last_common_diff_i = max(common_diffs)
+    # Order by filename at latest diff and then by
+    # line at earliest common diff
+    a_file = a._nodehistory[last_common_diff_i]._filename
+    b_file = b._nodehistory[last_common_diff_i]._filename
+    a_line = a._nodehistory[first_common_diff_i]._line
+    b_line = b._nodehistory[first_common_diff_i]._line
+    return a_file < b_file or (a_file == b_file and a_line < b_line)
+
+  def __init__(self, node):
+    self._startdiff_i
+    self._nodehistory = {self._startdiff_i : node}
+
+  def update(self, diff_i, filename, line):
+    # Shallow copy previous
+    updated_node = copy.copy(self._nodehstory[diff_i-1])
+
+    updated_node._file = filename
+    updated_node._line = line
+    self._nodehistory[diff_i] = updated_node
 
 def extract_fragments(ast):
   fragment_list = []
