@@ -18,20 +18,20 @@ def read_diff(filename):
 
 class Test(unittest.TestCase):
 
-  def test_update_line_1(self):
-    oldrange = Range(0,0)
-    newrange = Range(1,1)
-    frag1header = FragmentHeader(oldrange, newrange)
-    frag1 = Fragment(frag1header)
-    oldfile = "dummy"
-    newfile = "dummy"
-    fileheader = FilePatchHeader(oldfile, newfile)
-    filepatch = FilePatch(fileheader, [frag1])
+  def test_update_line_create_at_beginning(self):
+    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+        Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
 
-    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch),
-                     1)
-    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch),
-                     2)
+    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch), 1)
+    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch), 2)
+
+
+  def test_update_line_create_at_middle(self):
+    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+        Fragment(FragmentHeader(Range(3,3), Range(4,1)))])
+
+    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 4)
+    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 5)
 
 
   def test_003(self):
