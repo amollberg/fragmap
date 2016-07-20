@@ -153,6 +153,7 @@ def update_all_positions_to_latest(diff_list):
   newer diffs act as patches for older diffs.
   Assumes diff_list is sorted in ascending time.
   """
+  print "update_all_positions:", diff_list
   node_line_list = []
   for i in range(len(diff_list)):
     #update_positions_to_latest(diff_list[i], diff_list[i+1:])
