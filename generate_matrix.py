@@ -202,7 +202,7 @@ class FragmentBoundNode():
     kind_str = "START"
     if self._kind == FragmentBoundNode.END:
       kind_str = "END"
-    return "\n <Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
+    return "<Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -227,7 +227,10 @@ class FragmentBoundLine():
     self._kind = node._kind
 
   def __repr__(self):
-    return " \n<FragmentBoundLine: %d, %s>" % (self._startdiff_i, self._nodehistory)
+    return " \n<FragmentBoundLine: %d, %s>" % (
+      self._startdiff_i,
+      ''.join(["\n %d: %s" %(key, val)
+              for key,val in self._nodehistory.iteritems()]))
 
   def last(self):
     return self._nodehistory[max(self._nodehistory.viewkeys())]
