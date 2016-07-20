@@ -24,9 +24,9 @@ from parse_patch import *
 #  _startdiff_i
 
 # TODO:
-# Generate nodes as we update the diff list, not just after every one 
+# Generate nodes as we update the diff list, not just after every one
 # Each update has to also update each node and sort new nodes into the
-# list of existing. We may be able to work recursively, patching older 
+# list of existing. We may be able to work recursively, patching older
 # diffs and adding new nodes. We probably will never remove nodes as to
 # signal that fragments have been joined together. They still need to
 # be represented at the last level as separate (?).
@@ -139,7 +139,7 @@ def update_positions(node_lines, patch, diff_i):
 #    update_positions(node_lines, patch)
 
 
-  
+
 # For each commit: project fragment positions iteratively up past the latest commit
 #  => a list of nodes, each pointing to commit and kind (start or end of fragment)
 # Need to generate the nodes as we iterate through. What order?
@@ -169,11 +169,11 @@ class FragmentBoundNode():
   _diff_i = None
   _file = None
   _fragment = None
-  
+
   # Info to sort on
   _filename = None
   _line = None
-  
+
   # Other attributes
   _kind = None
   # Two kinds of fragment bounds:
@@ -276,7 +276,7 @@ def generate_fragment_bound_list(ast):
     last_key = key
   return grouped_list
 
-      
+
 # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
 
 def generate_matrix(ast):
@@ -301,7 +301,7 @@ def generate_matrix(ast):
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
- 
+
 def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
@@ -310,7 +310,7 @@ def main():
   matrix = generate_matrix(diff_list)
   for row in matrix:
     print ''.join(row)
-  
+
 
 if __name__ == '__main__':
   main()

@@ -77,8 +77,8 @@ class FragmentHeader():
     if DEBUG_PARSER:
       print "Not fragment header"
     return None, lines
-    
-    
+
+
 class Fragment():
   _header = None
   def __init__(self, header):
@@ -131,25 +131,25 @@ class FilePatchHeader():
     lines = lines[1:]
     while lines[0] != '' and lines[0][0:4] != '--- ':
       lines = lines[1:]
-      
+
     if lines[0][0:4] != '--- ':
       return None, lines
-    
+
     match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
     if match is None:
       return None, lines
     oldfile = match.group(1)
-    
+
     match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
     if match is not None:
       newfile = match.group(1)
     return FilePatchHeader(oldfile, newfile), lines[2:]
 
-  
+
 class FilePatch():
   _fragments = None
   _header = None
-  
+
   def __init__(self, header, fragments):
     self._header = header
     self._fragments = fragments
@@ -209,7 +209,7 @@ class PatchHeader():
         print "in PatchHeader:", lines[0]
       lines = lines[1:]
     return PatchHeader(hash), lines
-        
+
 class Patch():
   _header = None
   _filepatches = None
@@ -246,7 +246,7 @@ class Patch():
         # No more parsable filepatches; return
         break
     return Patch(filepatches), lines
-  
+
 class AST():
   _patches = None
   def __init__(self, patches):
@@ -269,7 +269,7 @@ class AST():
         lines = lines[1:]
         continue
     return AST(patches), lines
-  
+
 class PatchParser():
   _ast = None
 
