@@ -32,6 +32,12 @@ class Range():
   _end = 0
 
   def __init__(self, start, length):
+    # Fix for inconvenient notation of empty lines
+    # This eliminates the need for special cases in
+    # some calculations.
+    if length == 0:
+      start += 1
+
     self._start = start
     self._end = start + length
 

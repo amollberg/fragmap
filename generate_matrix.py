@@ -56,10 +56,10 @@ def update_line(line, bound_kind, file_patch):
       marker = patch_fragment._header
     else:
       break
-  is_creation = (marker._oldrange._start == marker._oldrange._end)
   print "Update_line:", line, bound_kind, file_patch
   print "Marker:", marker
   if marker is not None:
+    is_creation = (marker._oldrange._start == marker._oldrange._end)
     if line < marker._oldrange._end or (
       is_creation and line == marker._oldrange._end):
 

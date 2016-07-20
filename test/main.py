@@ -22,16 +22,24 @@ class Test(unittest.TestCase):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
         Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
 
-    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch), 1)
-    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch), 2)
+    self.assertEqual(update_line(1, FragmentBoundNode.START, filepatch), 1)
+    self.assertEqual(update_line(1, FragmentBoundNode.END, filepatch), 2)
 
 
   def test_update_line_create_at_middle(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(3,3), Range(4,1)))])
+        Fragment(FragmentHeader(Range(3,0), Range(4,1)))])
 
-    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 4)
-    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 5)
+    # Previous lines unaffected
+    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 3)
+    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 3)
+    # Creation bounds moved
+    self.assertEqual(update_line(4, FragmentBoundNode.START, filepatch), 4)
+    self.assertEqual(update_line(4, FragmentBoundNode.END, filepatch), 5)
+    # Subsequent lines shifted
+    self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
+    self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
+    
 
 
   def test_003(self):
