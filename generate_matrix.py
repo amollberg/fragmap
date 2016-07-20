@@ -223,7 +223,10 @@ class FragmentBoundLine():
 
   def __init__(self, node):
     self._startdiff_i = node._diff_i
-    self._nodehistory = {self._startdiff_i : node}
+    # Initialize history with a base node that was created
+    # by some previous diff (startdiff - 1) so that
+    # when this node gets updated with startdiff it will be in sync.
+    self._nodehistory = {self._startdiff_i-1 : node}
     self._kind = node._kind
 
   def __repr__(self):
@@ -237,10 +240,11 @@ class FragmentBoundLine():
 
   def update(self, diff_i, filename, line):
     # Shallow copy previous
-    if diff_i <= 0:
-      diff_i = 1
+    if diff_i < 0:
+      diff_i = 0
     updated_node = copy.copy(self._nodehistory[diff_i-1])
 
+    updated_node._diff_i = diff_i
     updated_node._file = filename
     updated_node._line = line
     self._nodehistory[diff_i] = updated_node
@@ -285,13 +289,15 @@ def generate_matrix(ast):
   print "Matrix size: rows, cols: ", n_rows, n_cols
   matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
   for r in range(n_rows):
+    diff_i = r
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      for node_line in node_lines:
-        # If node belongs in on this row
-        if node_line._startdiff_i == r:
-          inside_fragment = (node_line._kind == FragmentBoundNode.START)
+      node_line = node_lines[c]
+      print "%d,%d: %s" %(r,c, node_line)
+      # If node belongs in on this row
+      if node_line._startdiff_i == diff_i:
+        inside_fragment = (node_line._kind == FragmentBoundNode.START)
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
