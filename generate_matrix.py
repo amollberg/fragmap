@@ -209,6 +209,7 @@ class FragmentBoundLine():
   _startdiff_i = None
   _kind = None
 
+  # Note: This ordering is not transitive so bound lines cannot be sorted!
   def __lt__(a, b):
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     first_common_diff_i = min(common_diffs)
@@ -219,7 +220,23 @@ class FragmentBoundLine():
     b_file = b._nodehistory[last_common_diff_i]._filename
     a_line = a._nodehistory[first_common_diff_i]._line
     b_line = b._nodehistory[first_common_diff_i]._line
+    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
     return a_file < b_file or (a_file == b_file and a_line < b_line)
+
+  def __eq__(a, b):
+    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    first_common_diff_i = min(common_diffs)
+    # Order by filename at latest diff and then by
+    # line at earliest common diff
+    a_file = a._nodehistory[first_common_diff_i]._filename
+    b_file = b._nodehistory[first_common_diff_i]._filename
+    a_line = a._nodehistory[first_common_diff_i]._line
+    b_line = b._nodehistory[first_common_diff_i]._line
+    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+    print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
+    return a_file == b_file and a_line == b_line and a._kind == b._kind
+
 
   def __init__(self, node):
     self._startdiff_i = node._diff_i
@@ -251,30 +268,29 @@ class FragmentBoundLine():
 
 
 # TODO: Convert to just grouping. Howto group nodes in node lines?
-def generate_fragment_bound_list(ast):
+# Group node lines that are equal, i.e. that at the first
+# common diff are at the same position and of the same kind.
+# As a note, at any subsequent diffs they will consequently be the same too.
+def group_fragment_bound_lines(node_lines):
   """
-  Takes a list of  up-to date list of diffs.
-  Returns a list with ordered fragment bounds
-  grouped by position (file, line).
+  Takes a list of up-to date list of bound node lines.
+  Returns a list with ordered bound node lines
+  grouped by position (file, line) at first common diff.
   """
-  node_list = sorted(extract_fragments(ast))
-  grouped_list = [[]]
-  last_key = None
-  last_i = 0
-  for node in node_list:
-    if node._line == 0:
-      continue
-    key = (node._filename, node._line)
-    if last_key is None:
-      last_key = key
-    if key != last_key:
-      last_i += 1
-      # Append new sublist
-      grouped_list += [[]]
-    # Append to sublist at index last_i
-    grouped_list[last_i] += [node]
-    last_key = key
-  return grouped_list
+  groups = []
+  for node_line in node_lines:
+    added = False
+    for group in groups:
+      if node_line == group[0]:
+        # Append to group
+        group += [node_line]
+        added = True
+        break
+    if not added:
+      # Create new group
+      print "New group for", node_line
+      groups += [[node_line]]
+  return groups
 
 
 # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
@@ -283,9 +299,11 @@ def generate_matrix(ast):
   print "AST:", ast
   node_lines = update_all_positions_to_latest(ast._patches)
   print "Node lines:", node_lines
+  grouped_node_lines = group_fragment_bound_lines(node_lines)
+  print "Grouped lines:", grouped_node_lines
   #bound_list = generate_fragment_bound_list(ast)
   n_rows = len(ast._patches)
-  n_cols = len(node_lines) # TODO: Reduce this after they have been grouped
+  n_cols = len(grouped_node_lines)
   print "Matrix size: rows, cols: ", n_rows, n_cols
   matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
   for r in range(n_rows):
@@ -293,11 +311,13 @@ def generate_matrix(ast):
     inside_fragment = False
     item_i = 0
     for c in range(n_cols):
-      node_line = node_lines[c]
-      print "%d,%d: %s" %(r,c, node_line)
-      # If node belongs in on this row
-      if node_line._startdiff_i == diff_i:
-        inside_fragment = (node_line._kind == FragmentBoundNode.START)
+      node_line_group = grouped_node_lines[c]
+      print "%d,%d: %s" %(r,c, node_line_group)
+      for node_line in node_line_group:
+        # If node belongs in on this row
+        if node_line._startdiff_i == diff_i:
+          inside_fragment = (node_line._kind == FragmentBoundNode.START)
+          break
       if inside_fragment:
         matrix[r][c] = '#'
   return matrix
