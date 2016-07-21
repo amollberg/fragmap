@@ -39,9 +39,28 @@ def nonnull_file(file_patch_header):
   # Both files are null files
   return None
 
-def update_line(line, bound_kind, file_patch):
+
+def update_new_bound(fragment_i, bound_kind, file_patch):
   """
-  Update one line in a file with a file patch.
+  Update a bound that belongs to the current diff. Simply apply whatever
+  fragment it belongs to.
+  """
+  line = 0
+  marker = file_patch._fragments[fragment_i]._header
+  if bound_kind == FragmentBoundNode.START:
+    line = marker._newrange._start
+    print "Setting new start line to", line
+  elif bound_kind == FragmentBoundNode.END:
+    line = marker._newrange._end
+    print "Setting new end line to", line
+  return line
+
+
+def update_inherited_bound(line, bound_kind, file_patch):
+  """
+  Update a bound inherited from an older patch. Must never be
+  called for bounds belonging to the newest patch. Use
+  update_new_bound for them.
   """
   # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
   # previous lines are unaffected, mapping e -> e
@@ -58,10 +77,7 @@ def update_line(line, bound_kind, file_patch):
   print "Marker:", marker
   # TODO: Fix sorting of node line groups after this.
   if marker is not None:
-    is_creation = (marker._oldrange._start == marker._oldrange._end + 1)
-    if line < marker._oldrange._end or (
-      is_creation and line == marker._oldrange._start):
-
+    if line <= marker._oldrange._end:
       # line is inside the range
       print "Line %d is inside range %s" %(line, marker._oldrange)
       if bound_kind == FragmentBoundNode.START:
@@ -80,6 +96,15 @@ def update_line(line, bound_kind, file_patch):
     pass
   return line
 
+def update_line(line, bound_kind, fragment_i, startdiff_i, diff_i, file_patch):
+  # If the current diff is the start diff of the
+  # affected node line:
+  if diff_i == startdiff_i:
+    # The bound is new
+    return update_new_bound(fragment_i, bound_kind, file_patch)
+  else:
+    # The bound is inherited
+    return update_inherited_bound(line, bound_kind, file_patch)
 
 def update_file_positions(file_node_lines, file_patch, diff_i):
   """
@@ -92,6 +117,9 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
     node_line.update(diff_i, file_patch._header._newfile,
                      update_line(node_line.last()._line,
                                  node_line.last()._kind,
+                                 node_line.last()._fragment_i,
+                                 node_line._startdiff_i,
+                                 diff_i,
                                  file_patch))
     print "Node after:", node_line.last()
 
@@ -99,11 +127,12 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
 def extract_nodes(diff, diff_i):
   node_list = []
   for file_patch in diff._filepatches:
-    for fragment in file_patch._fragments:
+    for fragment_i in range(len(file_patch._fragments)):
+      fragment = file_patch._fragments[fragment_i]
       node_list += [
-        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
                           FragmentBoundNode.START),
-        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
                           FragmentBoundNode.END),
         ]
   return node_list
@@ -187,12 +216,12 @@ class FragmentBoundNode():
     return a._filename < b._filename or (
            a._filename == b._filename and a._line < b._line)
 
-
-  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, kind):
+  def __init__(self, diff, diff_i, file_patch, fragment_i, fragment_range, kind):
     self._diff = diff
     self._diff_i = diff_i
     self._file = file_patch
-    self._fragment = fragment
+    self._fragment = file_patch._fragments[fragment_i]
+    self._fragment_i = fragment_i
     self._filename = nonnull_file(file_patch._header)
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
@@ -268,6 +297,7 @@ class FragmentBoundLine():
     updated_node._file = filename
     updated_node._line = line
     self._nodehistory[diff_i] = updated_node
+
 
 def earliest_diff(node_lines):
   return min([nl._startdiff_i for nl in node_lines])

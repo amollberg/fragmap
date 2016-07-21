@@ -18,28 +18,47 @@ def read_diff(filename):
 
 class Test(unittest.TestCase):
 
-  def test_update_line_create_at_beginning(self):
+  def test_update_inherited_bound_create_at_beginning(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
         Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
 
-    self.assertEqual(update_line(1, FragmentBoundNode.START, filepatch), 1)
-    self.assertEqual(update_line(1, FragmentBoundNode.END, filepatch), 2)
+    # Subsequent lines shifted
+    self.assertEqual(update_inherited_bound(1, FragmentBoundNode.START, filepatch), 2)
+    self.assertEqual(update_inherited_bound(1, FragmentBoundNode.END, filepatch), 2)
 
 
-  def test_update_line_create_at_middle(self):
+  def test_update_inherited_bound_create_at_middle(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
         Fragment(FragmentHeader(Range(3,0), Range(4,1)))])
 
     # Previous lines unaffected
-    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 3)
-    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 3)
-    # Creation bounds moved
-    self.assertEqual(update_line(4, FragmentBoundNode.START, filepatch), 4)
-    self.assertEqual(update_line(4, FragmentBoundNode.END, filepatch), 5)
+    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
+    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.END, filepatch), 3)
     # Subsequent lines shifted
-    self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
-    self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
+    self.assertEqual(update_inherited_bound(10, FragmentBoundNode.START, filepatch), 11)
+    self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 14)
 
+  def test_update_inherited_bound_expand_at_middle(self):
+    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+
+    # Previous lines unaffected
+    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
+    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.END, filepatch), 3)
+    # Contained fragments expanded
+    self.assertEqual(update_inherited_bound(5, FragmentBoundNode.START, filepatch), 4)
+    self.assertEqual(update_inherited_bound(5, FragmentBoundNode.END, filepatch), 7)
+    # Subsequent lines shifted
+    self.assertEqual(update_inherited_bound(10, FragmentBoundNode.START, filepatch), 12)
+    self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 15)
+
+  def test_update_new_bound(self):
+    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+
+    # Related bounds updated
+    self.assertEqual(update_new_bound(0, FragmentBoundNode.START, filepatch), 4)
+    self.assertEqual(update_new_bound(0, FragmentBoundNode.END, filepatch), 7)
 
 
   def test_003(self):
