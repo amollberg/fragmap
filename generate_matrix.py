@@ -258,6 +258,7 @@ class FragmentBoundLine():
     # Shallow copy previous
     if diff_i < 0:
       diff_i = 0
+    print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
     updated_node = copy.copy(self._nodehistory[diff_i-1])
 
     updated_node._diff_i = diff_i
@@ -290,7 +291,7 @@ def group_fragment_bound_lines(node_lines):
         break
     if not added:
       # Create new group
-      print "New group for", node_line
+      #print "New group for", node_line
       groups += [[node_line]]
   return groups
 
