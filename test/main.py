@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
     # Subsequent lines shifted
     self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
     self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
-    
+
 
 
   def test_003(self):
@@ -50,7 +50,7 @@ class Test(unittest.TestCase):
 
   def test_003_004(self):
     self.check_diffs(['003-add-one-line-to-empty-file.diff',
-                      '004-remove-one-line-empty-file.diff'], 
+                      '004-remove-one-line-empty-file.diff'],
                      ['#.',
                       '#.'])
 
@@ -61,9 +61,9 @@ class Test(unittest.TestCase):
     self.check_diff('012-add-x-to-A-C.diff', ['#.'])
 
   def test_011_012(self):
-    self.check_diffs(['011-add-x-to-A-and-N.diff', 
+    self.check_diffs(['011-add-x-to-A-and-N.diff',
                       '012-add-x-to-A-C.diff'],
-                     ['#..#.', 
+                     ['#..#.',
                       '##...'])
 
   def test_020(self):
@@ -90,28 +90,28 @@ class Test(unittest.TestCase):
 
   def test_030_031(self):
     self.check_diffs(['030-addmod-create-with-ab.diff',
-                      '031-addmod-add-c.diff'], 
-                     [['#..'],
-                      ['.#.']])
+                      '031-addmod-add-c.diff'],
+                     ['#..',
+                      '.#.'])
 
   def test_030_032(self):
     self.check_diffs(['030-addmod-create-with-ab.diff',
                       '031-addmod-add-c.diff',
-                      '032-addmod-change-bc-to-xy.diff'], 
-                     [['#...'],
-                      ['..#.'],
-                      ['###.']])
+                      '032-addmod-change-bc-to-xy.diff'],
+                     ['#...',
+                      '..#.',
+                      '###.'])
 
 
   def test_030_033(self):
     self.check_diffs(['030-addmod-create-with-ab.diff',
                       '031-addmod-add-c.diff',
                       '032-addmod-change-bc-to-xy.diff',
-                      '033-addmod-add-z-between-xy.diff'], 
-                     [['#....'],
-                      ['..#..'],
-                      ['###..'],
-                      ['####.']])
+                      '033-addmod-add-z-between-xy.diff'],
+                     ['#....',
+                      '..#..',
+                      '###..',
+                      '####.'])
 
 
 
@@ -129,13 +129,13 @@ class Test(unittest.TestCase):
     actual_matrix = generate_matrix(pp.parse(diff))
     self.check_matrix(actual_matrix, matrix)
 
-    
+
   def check_matrix(self, matrix, reference):
     joined_matrix = [''.join(row) for row in matrix]
     for row in joined_matrix:
       print row
     self.assertEqual(joined_matrix, reference)
 
-            
+
 if __name__ == '__main__':
   unittest.main()
