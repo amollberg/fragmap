@@ -56,6 +56,7 @@ def update_line(line, bound_kind, file_patch):
       break
   print "Update_line:", line, bound_kind, file_patch
   print "Marker:", marker
+  # TODO: Dont move end markers from non-creation lines when updating with start of other
   if marker is not None:
     is_creation = (marker._oldrange._start == marker._oldrange._end)
     if line < marker._oldrange._end or (
