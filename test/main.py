@@ -114,6 +114,13 @@ class Test(unittest.TestCase):
                       '####.'])
 
 
+  def test_041_042_043(self):
+    self.check_diffs(['041-successivemod-mod-ab.diff',
+                      '042-successivemod-mod-cd.diff',
+                      '043-successivemod-mod-ef.diff'],
+                     ['#..',
+                      '.#.',
+                      '..#'])
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)

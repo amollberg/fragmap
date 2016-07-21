@@ -1,0 +1,20 @@
+commit edf2bdc2cb385688f13997ebfe0c2774249bcd23
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 12:22:26 2016 +0200
+
+    Added successivemod.txt
+
+diff --git a/successivemod.txt b/successivemod.txt
+new file mode 100644
+index 0000000..95801b0
+--- /dev/null
++++ b/successivemod.txt
+@@ -0,0 +1,8 @@
++a
++b
++c
++d
++e
++f
++g
++h

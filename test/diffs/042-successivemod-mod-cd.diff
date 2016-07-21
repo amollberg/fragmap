@@ -1,0 +1,15 @@
+commit 562345b50c075650920c06c3cca4ac93b7c4b6aa
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 13:17:52 2016 +0200
+
+    Successivemod: mod CD
+
+diff --git a/successivemod.txt b/successivemod.txt
+index fdc5652..f5d5d9d 100644
+--- a/successivemod.txt
++++ b/successivemod.txt
+@@ -3,2 +3,2 @@ bx
+-c
+-d
++cx
++dx

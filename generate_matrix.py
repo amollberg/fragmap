@@ -56,11 +56,11 @@ def update_line(line, bound_kind, file_patch):
       break
   print "Update_line:", line, bound_kind, file_patch
   print "Marker:", marker
-  # TODO: Dont move end markers from non-creation lines when updating with start of other
+  # TODO: Fix sorting of node line groups after this.
   if marker is not None:
-    is_creation = (marker._oldrange._start == marker._oldrange._end)
+    is_creation = (marker._oldrange._start == marker._oldrange._end + 1)
     if line < marker._oldrange._end or (
-      is_creation and line == marker._oldrange._end):
+      is_creation and line == marker._oldrange._start):
 
       # line is inside the range
       print "Line %d is inside range %s" %(line, marker._oldrange)
@@ -75,6 +75,9 @@ def update_line(line, bound_kind, file_patch):
       print "Line %d is after range %s; shifting %d" % (
         line, marker._oldrange, marker._newrange._end - marker._oldrange._end)
       line += marker._newrange._end - marker._oldrange._end
+  else:
+    # line is before any fragment; no update required
+    pass
   return line
 
 

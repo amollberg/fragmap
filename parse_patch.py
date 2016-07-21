@@ -44,7 +44,7 @@ class Range():
       start += 1
 
     self._start = start
-    self._end = start + length
+    self._end = start + length - 1
 
   def __repr__(self):
     return "<Range: %d to %d>" % (self._start, self._end,)

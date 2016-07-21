@@ -1,0 +1,15 @@
+commit f7f17fd1b4e1f9782bc6a8c35cc92994b05e08f9
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 13:18:47 2016 +0200
+
+    Successivemod: mod EF
+
+diff --git a/successivemod.txt b/successivemod.txt
+index f5d5d9d..0efdb9a 100644
+--- a/successivemod.txt
++++ b/successivemod.txt
+@@ -5,2 +5,2 @@ dx
+-e
+-f
++ex
++fx
