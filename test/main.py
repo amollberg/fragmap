@@ -81,7 +81,7 @@ class Test(unittest.TestCase):
   def test_022_023(self):
     self.check_diffs(['022-modfile-mod-second-line.diff',
                       '023-modfile-readd-first-line.diff'],
-                     ['.#.',
+                     ['##.',
                       '#..'])
 
 

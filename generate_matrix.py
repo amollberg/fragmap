@@ -210,16 +210,16 @@ class FragmentBoundLine():
   # Note: This ordering is not transitive so bound lines cannot be sorted!
   def __lt__(a, b):
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
-    first_common_diff_i = min(common_diffs)
+    #first_common_diff_i = min(common_diffs)
     last_common_diff_i = max(common_diffs)
     # Order by filename at latest diff and then by
     # line at earliest common diff
     a_file = a._nodehistory[last_common_diff_i]._filename
     b_file = b._nodehistory[last_common_diff_i]._filename
-    a_line = a._nodehistory[first_common_diff_i]._line
-    b_line = b._nodehistory[first_common_diff_i]._line
-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
-    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+    a_line = a._nodehistory[last_common_diff_i]._line
+    b_line = b._nodehistory[last_common_diff_i]._line
+    #print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
+    #print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
     return a_file < b_file or (a_file == b_file and a_line < b_line)
 
   def __eq__(a, b):
@@ -231,8 +231,8 @@ class FragmentBoundLine():
     b_file = b._nodehistory[first_common_diff_i]._filename
     a_line = a._nodehistory[first_common_diff_i]._line
     b_line = b._nodehistory[first_common_diff_i]._line
-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
-    print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
+    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+    #print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
     return a_file == b_file and a_line == b_line and a._kind == b._kind
 
 
@@ -248,7 +248,7 @@ class FragmentBoundLine():
     return " \n<FragmentBoundLine: %d, %s>" % (
       self._startdiff_i,
       ''.join(["\n %d: %s" %(key, val)
-              for key,val in self._nodehistory.iteritems()]))
+              for key,val in sorted(self._nodehistory.iteritems())]))
 
   def last(self):
     return self._nodehistory[max(self._nodehistory.viewkeys())]
@@ -264,6 +264,8 @@ class FragmentBoundLine():
     updated_node._line = line
     self._nodehistory[diff_i] = updated_node
 
+def earliest_diff(node_lines):
+  return min([nl._startdiff_i for nl in node_lines])
 
 # TODO: Convert to just grouping. Howto group nodes in node lines?
 # Group node lines that are equal, i.e. that at the first
@@ -275,6 +277,7 @@ def group_fragment_bound_lines(node_lines):
   Returns a list with ordered bound node lines
   grouped by position (file, line) at first common diff.
   """
+  node_lines = sorted(node_lines)
   groups = []
   for node_line in node_lines:
     added = False
@@ -307,17 +310,18 @@ def generate_matrix(ast):
   for r in range(n_rows):
     diff_i = r
     inside_fragment = False
-    item_i = 0
     for c in range(n_cols):
       node_line_group = grouped_node_lines[c]
-      print "%d,%d: %s" %(r,c, node_line_group)
-      for node_line in node_line_group:
-        # If node belongs in on this row
-        if node_line._startdiff_i == diff_i:
-          inside_fragment = (node_line._kind == FragmentBoundNode.START)
-          break
-      if inside_fragment:
-        matrix[r][c] = '#'
+      print "%d,%d: %s" %(r, c, node_line_group)
+      if True: #earliest_diff(node_line_group) <= diff_i:
+        for node_line in node_line_group:
+          # If node belongs in on this row
+          if node_line._startdiff_i == diff_i:
+            inside_fragment = (node_line._kind == FragmentBoundNode.START)
+            break
+        print "%d,%d: %d" %(r, c, inside_fragment)
+        if inside_fragment:
+          matrix[r][c] = '#'
   return matrix
 
 def main():
