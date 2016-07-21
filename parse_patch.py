@@ -27,6 +27,11 @@ import re
 
 DEBUG_PARSER=False
 
+
+def is_nullfile(fn):
+  return fn == '/dev/null'
+
+
 class Range():
   _start = 0
   _end = 0
@@ -116,6 +121,14 @@ class FilePatchHeader():
   _oldfile = None
   _newfile = None
   def __init__(self, oldfile, newfile):
+    # A fix to avoid special cases for null files
+    # TODO: If file creation is important, this needs
+    # to be signaled in another way, like _iscreation.
+    if is_nullfile(oldfile):
+      oldfile = newfile
+    elif is_nullfile(newfile):
+      newfile = oldfile
+
     self._oldfile = oldfile
     self._newfile = newfile
 

@@ -32,12 +32,10 @@ from parse_patch import *
 # be represented at the last level as separate (?).
 
 def nonnull_file(file_patch_header):
-  def is_null(fn):
-    return fn == '/dev/null'
-  if not is_null(file_patch_header._newfile):
-    return file_patch_header._newfile
-  if not is_null(file_patch_header._oldfile):
+  if not is_nullfile(file_patch_header._oldfile):
     return file_patch_header._oldfile
+  if not is_nullfile(file_patch_header._newfile):
+    return file_patch_header._newfile
   # Both files are null files
   return None
 
@@ -100,9 +98,9 @@ def extract_nodes(diff, diff_i):
     for fragment in file_patch._fragments:
       node_list += [
         FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
-                          file_patch._header._oldfile, FragmentBoundNode.START),
+                          FragmentBoundNode.START),
         FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
-                          file_patch._header._oldfile, FragmentBoundNode.END),
+                          FragmentBoundNode.END),
         ]
   return node_list
 
@@ -186,12 +184,12 @@ class FragmentBoundNode():
            a._filename == b._filename and a._line < b._line)
 
 
-  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, filename, kind):
+  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, kind):
     self._diff = diff
     self._diff_i = diff_i
     self._file = file_patch
     self._fragment = fragment
-    self._filename = filename
+    self._filename = nonnull_file(file_patch._header)
     if kind == FragmentBoundNode.START:
       self._line = fragment_range._start
     elif kind == FragmentBoundNode.END:
