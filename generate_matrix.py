@@ -262,6 +262,7 @@ class FragmentBoundLine():
 
   def __eq__(a, b):
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     # Order by filename at latest diff and then by
     # line at earliest common diff
