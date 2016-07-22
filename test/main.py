@@ -110,8 +110,8 @@ class Test(unittest.TestCase):
   def test_030_031(self):
     self.check_diffs(['030-addmod-create-with-ab.diff',
                       '031-addmod-add-c.diff'],
-                     ['#..',
-                      '.#.'])
+                     ['#.',
+                      '.#'])
 
   def test_030_032(self):
     self.check_diffs(['030-addmod-create-with-ab.diff',
@@ -137,9 +137,9 @@ class Test(unittest.TestCase):
     self.check_diffs(['041-successivemod-mod-ab.diff',
                       '042-successivemod-mod-cd.diff',
                       '043-successivemod-mod-ef.diff'],
-                     ['#..',
-                      '.#.',
-                      '..#'])
+                     ['#...',
+                      '.#..',
+                      '..#.'])
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
