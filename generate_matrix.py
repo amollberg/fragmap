@@ -276,7 +276,7 @@ class FragmentBoundLine():
       b_line += 1
 
     print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
-    print "Keys:", (a_file, a_line, a._kind), "==", (b_file, b_line, b._kind)
+    print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
     # If a start and an end does not share a startdiff then it is safe to
     # group them even though their kinds differ because it will still be
     # possible to distinguish the bounds.
@@ -368,7 +368,12 @@ def generate_matrix(ast):
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
             inside_fragment = (node_line._kind == FragmentBoundNode.START)
-            break
+            print "Setting inside_fragment =", inside_fragment
+            # If it was updated to False:
+            if not inside_fragment:
+              # False overrides True so that if start and end from same diff
+              # appear in same group we don't get stuck at True
+              break
         print "%d,%d: %d" %(r, c, inside_fragment)
         if inside_fragment:
           matrix[r][c] = '#'
