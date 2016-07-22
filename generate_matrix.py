@@ -251,12 +251,20 @@ class FragmentBoundLine():
     b_file = b._nodehistory[last_common_diff_i]._filename
     a_line = a._nodehistory[last_common_diff_i]._line
     b_line = b._nodehistory[last_common_diff_i]._line
+
+    if a._kind == FragmentBoundNode.END:
+      a_line += 1
+    if b._kind == FragmentBoundNode.END:
+      b_line += 1
     #print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
     #print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
     return a_file < b_file or (a_file == b_file and a_line < b_line)
 
   def __eq__(a, b):
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    # Remove base diffs
+    #common_diffs -= {a._startdiff_i -1,
+    #                 b._startdiff_i -1}
     first_common_diff_i = min(common_diffs)
     # Order by filename at latest diff and then by
     # line at earliest common diff
@@ -264,8 +272,8 @@ class FragmentBoundLine():
     b_file = b._nodehistory[first_common_diff_i]._filename
     a_line = a._nodehistory[first_common_diff_i]._line
     b_line = b._nodehistory[first_common_diff_i]._line
-    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
-    #print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
+    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+    print "Keys:", (a_file, a_line, a._kind), "==", (b_file, b_line, b._kind)
     return a_file == b_file and a_line == b_line and a._kind == b._kind
 
 
