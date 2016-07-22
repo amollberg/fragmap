@@ -256,8 +256,8 @@ class FragmentBoundLine():
       a_line += 1
     if b._kind == FragmentBoundNode.END:
       b_line += 1
-    #print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
-    #print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+    print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
+    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
     return a_file < b_file or (a_file == b_file and a_line < b_line)
 
   def __eq__(a, b):

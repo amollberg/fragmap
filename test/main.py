@@ -18,6 +18,9 @@ def read_diff(filename):
 
 class Test(unittest.TestCase):
 
+  # Append instead of replace default assertion failure message
+  longMessage = True
+
   def test_update_inherited_bound_create_at_beginning(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
         Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
@@ -68,10 +71,17 @@ class Test(unittest.TestCase):
     self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
 
   def test_003_004(self):
-    self.check_diffs(['003-add-one-line-to-empty-file.diff',
-                      '004-remove-one-line-empty-file.diff'],
+    files = ['003-add-one-line-to-empty-file.diff',
+             '004-remove-one-line-empty-file.diff']
+    self.check_diffs(files,
                      ['#.',
                       '#.'])
+
+  def test_003_004_groups(self):
+    files = ['003-add-one-line-to-empty-file.diff',
+             '004-remove-one-line-empty-file.diff']
+    self.check_node_group_kinds(files, [(2,0), (0,2)])
+
 
   def test_011(self):
     self.check_diff('011-add-x-to-A-and-N.diff', ['#.#.'])
@@ -140,6 +150,38 @@ class Test(unittest.TestCase):
                      ['#...',
                       '.#..',
                       '..#.'])
+
+  def get_node_lines(self, diff_filenames):
+    diff = []
+    for fn in diff_filenames:
+      diff += read_diff(fn)
+    print diff
+    pp = PatchParser()
+    return update_all_positions_to_latest(pp.parse(diff)._patches)
+
+  def check_node_group_kinds(self, diff_filenames, kinds):
+    START = 0
+    END = 1
+    node_lines = self.get_node_lines(diff_filenames)
+    grouped_node_lines = group_fragment_bound_lines(node_lines)
+    self.assertEqual(len(grouped_node_lines), len(kinds))
+    i = 0
+    actual_kinds = [None]*len(grouped_node_lines)
+    for group in grouped_node_lines:
+      n_start = 0
+      n_end = 0
+      for node_line in group:
+        if node_line._kind == FragmentBoundNode.START:
+          n_start += 1
+        elif node_line._kind == FragmentBoundNode.END:
+          n_end += 1
+
+      actual_kinds[i] = (n_start, n_end)
+      #self.assertEqual(n_start, kinds[i][START], "Wrong number of starts in group %d: %s" % (i, grouped_node_lines))
+      #self.assertEqual(n_end, kinds[i][END], "Wrong number of ends in group %d: %s" % (i, grouped_node_lines))
+      i += 1
+    self.assertListEqual(actual_kinds, kinds, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
+
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
