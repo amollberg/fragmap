@@ -94,6 +94,11 @@ class Test(unittest.TestCase):
                       '012-add-x-to-A-C.diff'],
                      ['#..#.',
                       '##...'])
+  def test_011_012_groups(self):
+    self.check_node_group_kinds(['011-add-x-to-A-and-N.diff',
+                                 '012-add-x-to-A-C.diff'],
+                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
+
 
   def test_020(self):
     self.check_diff('020-modfile-create.diff', ['#.'])
