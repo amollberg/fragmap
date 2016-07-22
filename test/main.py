@@ -117,9 +117,9 @@ class Test(unittest.TestCase):
     self.check_diffs(['030-addmod-create-with-ab.diff',
                       '031-addmod-add-c.diff',
                       '032-addmod-change-bc-to-xy.diff'],
-                     ['#...',
+                     ['##..',
                       '..#.',
-                      '###.'])
+                      '.##.'])
 
 
   def test_030_033(self):
