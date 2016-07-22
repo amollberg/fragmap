@@ -15,6 +15,8 @@ def read_diff(filename):
     lines = [line.rstrip() for line in f]
     return lines
 
+START = 0
+END = 1
 
 class Test(unittest.TestCase):
 
@@ -80,7 +82,7 @@ class Test(unittest.TestCase):
   def test_003_004_groups(self):
     files = ['003-add-one-line-to-empty-file.diff',
              '004-remove-one-line-empty-file.diff']
-    self.check_node_group_kinds(files, [(2,0), (0,2)])
+    self.check_node_group_kinds(files, [[START,START], [END,END]]) # ((h))
 
 
   def test_011(self):
@@ -97,7 +99,7 @@ class Test(unittest.TestCase):
   def test_011_012_groups(self):
     self.check_node_group_kinds(['011-add-x-to-A-and-N.diff',
                                  '012-add-x-to-A-C.diff'],
-                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
+                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
 
 
   def test_020(self):
@@ -165,13 +167,21 @@ class Test(unittest.TestCase):
     return update_all_positions_to_latest(pp.parse(diff)._patches)
 
   def check_node_group_kinds(self, diff_filenames, kinds):
-    START = 0
-    END = 1
+    def histogram_kinds(kinds):
+      hist = []
+      for group in kinds:
+        group_hist = {START : 0, END : 0}
+        print group_hist
+        for node_line_kind in group:
+          group_hist[node_line_kind] += 1
+        hist += [(group_hist[START], group_hist[END])]
+      return hist
+    kinds_hist = histogram_kinds(kinds)
     node_lines = self.get_node_lines(diff_filenames)
     grouped_node_lines = group_fragment_bound_lines(node_lines)
-    self.assertEqual(len(grouped_node_lines), len(kinds))
+    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
     i = 0
-    actual_kinds = [None]*len(grouped_node_lines)
+    actual_kinds_hist = [None]*len(grouped_node_lines)
     for group in grouped_node_lines:
       n_start = 0
       n_end = 0
@@ -181,11 +191,11 @@ class Test(unittest.TestCase):
         elif node_line._kind == FragmentBoundNode.END:
           n_end += 1
 
-      actual_kinds[i] = (n_start, n_end)
+      actual_kinds_hist[i] = (n_start, n_end)
       #self.assertEqual(n_start, kinds[i][START], "Wrong number of starts in group %d: %s" % (i, grouped_node_lines))
       #self.assertEqual(n_end, kinds[i][END], "Wrong number of ends in group %d: %s" % (i, grouped_node_lines))
       i += 1
-    self.assertListEqual(actual_kinds, kinds, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
+    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
 
 
   def check_diff(self, diff_filename, matrix):
