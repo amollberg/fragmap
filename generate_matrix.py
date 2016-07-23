@@ -317,6 +317,22 @@ class FragmentBoundLine():
 def earliest_diff(node_lines):
   return min([nl._startdiff_i for nl in node_lines])
 
+def print_node_line_relation_table(node_lines):
+  """
+  Print a grid of '=' indicating which node_line
+  is equal to which.
+  """
+  N = len(node_lines)
+  grid = [['.' for i in xrange(N)] for j in xrange(N)]
+  for r in range(N):
+    for c in range(N):
+      if node_lines[r] == node_lines[c]:
+        grid[r][c] = '='
+  for row in grid:
+    print ''.join(row)
+
+
+
 # TODO: Convert to just grouping. Howto group nodes in node lines?
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
@@ -355,10 +371,13 @@ def group_fragment_bound_lines(node_lines):
 def generate_matrix(ast):
   print "AST:", ast
   node_lines = update_all_positions_to_latest(ast._patches)
+  print_node_line_relation_table(node_lines)
   print "Node lines:", node_lines
+
   grouped_node_lines = group_fragment_bound_lines(node_lines)
   print "Grouped lines:", grouped_node_lines
   #bound_list = generate_fragment_bound_list(ast)
+
   n_rows = len(ast._patches)
   n_cols = len(grouped_node_lines)
   print "Matrix size: rows, cols: ", n_rows, n_cols
