@@ -149,10 +149,10 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c.diff',
                       '032-addmod-change-bc-to-xy.diff',
                       '033-addmod-add-z-between-xy.diff'],
-                     ['#....',
-                      '..#..',
-                      '###..',
-                      '####.'])
+                     ['##....',
+                      '..###.',
+                      '.####.',
+                      '...#..'])
 
 
   def test_030_033_groups(self):
@@ -160,8 +160,8 @@ class Test(unittest.TestCase):
                                  '031-addmod-add-c.diff',
                                  '032-addmod-change-bc-to-xy.diff',
                                  '033-addmod-add-z-between-xy.diff'],
-                                # (a((x(z)y)))
-                                [[START],[START,START],[START],[END],[END,END,END]])
+                                # 5a3.54x2z2y43
+                                [[START],[START],[END,START],[START],[END],[END,END]])
 
 
   def test_041_042_043(self):
