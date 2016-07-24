@@ -23,6 +23,10 @@ from parse_patch import *
 #  FragmentNode
 #  _startdiff_i
 
+DEBUG_SORTING = True
+DEBUG_GROUPING = False
+
+
 # TODO:
 # Generate nodes as we update the diff list, not just after every one
 # Each update has to also update each node and sort new nodes into the
@@ -242,23 +246,43 @@ class FragmentBoundLine():
 
   # Note: This ordering is not transitive so bound lines cannot be sorted!
   def __lt__(a, b):
+    def lt_at_diff(a, b, diff_i):
+      a_file = a._nodehistory[diff_i]._filename
+      b_file = b._nodehistory[diff_i]._filename
+      a_line = a._nodehistory[diff_i]._line
+      b_line = b._nodehistory[diff_i]._line
+      if a._kind == FragmentBoundNode.END:
+        a_line += 1
+      if b._kind == FragmentBoundNode.END:
+        b_line += 1
+      if a_file < b_file:
+        if DEBUG_SORTING:
+          print "file %s < %s at diff %d" %(a_file, b_file, diff_i)
+        return True
+      if a_file == b_file and a_line < b_line:
+        if DEBUG_SORTING:
+          print "line %d < %d at diff %d" %(a_line, b_line, diff_i)
+        return True
+      return False
+
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     #first_common_diff_i = min(common_diffs)
     last_common_diff_i = max(common_diffs)
     # Order by filename at latest diff and then by
     # line at earliest common diff
-    a_file = a._nodehistory[last_common_diff_i]._filename
-    b_file = b._nodehistory[last_common_diff_i]._filename
-    a_line = a._nodehistory[last_common_diff_i]._line
-    b_line = b._nodehistory[last_common_diff_i]._line
+    if DEBUG_SORTING:
+      print "<<<<< Comparing at last_common=%d %s and %s" %(last_common_diff_i, a,b)
 
-    if a._kind == FragmentBoundNode.END:
-      a_line += 1
-    if b._kind == FragmentBoundNode.END:
-      b_line += 1
-    print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
-    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
-    return a_file < b_file or (a_file == b_file and a_line < b_line)
+
+    if lt_at_diff(a, b, last_common_diff_i):
+      if DEBUG_SORTING:
+        print "Lines are <"
+      return True
+    else:
+      if DEBUG_SORTING:
+        print "Lines are !<"
+      return False
+
 
   def __eq__(a, b):
     def eq_at_diff(a, b, diff_i):
@@ -271,15 +295,18 @@ class FragmentBoundLine():
       if b._kind == FragmentBoundNode.END:
         b_line += 1
       if a_file != b_file:
-        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
+        if DEBUG_GROUPING:
+          print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
         return False
       if a_line != b_line:
-        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
+        if DEBUG_GROUPING:
+          print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
         return False
       #return a_file == b_file and a_line == b_line
       return True
 
-    print "===== Comparing %s and %s" %(a,b)
+    if DEBUG_GROUPING:
+      print "===== Comparing %s and %s" %(a,b)
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
@@ -291,15 +318,18 @@ class FragmentBoundLine():
     # group them even though their kinds differ because it will still be
     # possible to distinguish the bounds.
     if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
-      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
+      if DEBUG_GROUPING:
+        print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
     if eq_at_diff(a, b, first_common_diff_i) \
         and eq_at_diff(a, b, prev_diff_i) \
         and (a._kind == b._kind or
              a._startdiff_i != b._startdiff_i):
-      print "Lines are =="
+      if DEBUG_GROUPING:
+        print "Lines are =="
       return True
     else:
-      print "Lines are !="
+      if DEBUG_GROUPING:
+        print "Lines are !="
       return False
 
 
@@ -363,6 +393,8 @@ def group_fragment_bound_lines(node_lines):
   grouped by position (file, line) at first common diff.
   """
   node_lines = sorted(node_lines)
+  if DEBUG_SORTING:
+    print "Sorted lines:", node_lines
   groups = []
   for node_line in node_lines:
     added = False
@@ -390,7 +422,8 @@ def group_fragment_bound_lines(node_lines):
 def generate_matrix(ast):
   print "AST:", ast
   node_lines = update_all_positions_to_latest(ast._patches)
-  print_node_line_relation_table(node_lines)
+  if DEBUG_GROUPING:
+    print_node_line_relation_table(node_lines)
   print "Node lines:", node_lines
 
   grouped_node_lines = group_fragment_bound_lines(node_lines)
