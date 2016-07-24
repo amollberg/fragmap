@@ -8,7 +8,7 @@ def print_hunkogram(diff_list):
   matrix = generate_matrix(diff_list)
   matrix_width = len(matrix[0])
   hash_width = 8
-  padded_matrix_width = max(CONSOLE_WIDTH/2, matrix_width)
+  padded_matrix_width = min(CONSOLE_WIDTH/2, matrix_width)
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
   for r in range(len(matrix)):
     cur_patch = diff_list._patches[r]._header
