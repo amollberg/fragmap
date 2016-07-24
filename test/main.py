@@ -99,7 +99,7 @@ class Test(unittest.TestCase):
   def test_011_012_groups(self):
     self.check_node_group_kinds(['011-add-x-to-A-and-N.diff',
                                  '012-add-x-to-A-C.diff'],
-                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
+                                [[START, START],[END],[END],[START],[END]]) # ((a)bc)..(n)
 
 
   def test_020(self):
@@ -137,6 +137,11 @@ class Test(unittest.TestCase):
                      ['##..',
                       '..#.',
                       '.##.'])
+  def test_030_032_groups(self):
+    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
+                                 '031-addmod-add-c.diff',
+                                 '032-addmod-change-bc-to-xy.diff'],
+                                [[START],[START],[END,START],[END,END]]) # (a((xy)))
 
 
   def test_030_033(self):
@@ -148,6 +153,15 @@ class Test(unittest.TestCase):
                       '..#..',
                       '###..',
                       '####.'])
+
+
+  def test_030_033_groups(self):
+    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
+                                 '031-addmod-add-c.diff',
+                                 '032-addmod-change-bc-to-xy.diff',
+                                 '033-addmod-add-z-between-xy.diff'],
+                                # (a((x(z)y)))
+                                [[START],[START,START],[START],[END],[END,END,END]])
 
 
   def test_041_042_043(self):
