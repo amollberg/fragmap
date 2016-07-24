@@ -278,16 +278,31 @@ class AST():
   @staticmethod
   def parse(lines):
     patches = []
+    unheadered_filepatches = []
     while len(lines) > 0:
+      # Try parsing a Patch
       patch, lines = Patch.parse(lines)
       if DEBUG_PARSER:
         print "Patch: ", patch
       if patch is not None:
         patches += [patch]
       else:
-        # Remove a line and retry parsing
-        lines = lines[1:]
+        # Try parsing a FilePatch
+        filepatch, lines = FilePatch.parse(lines)
+        if DEBUG_PARSER:
+          print "Filepatch without patch header:", filepatch
+        if filepatch is not None:
+          unheadered_filepatches += [filepatch]
+        else:
+          # Remove a line and retry parsing
+          lines = lines[1:]
         continue
+    if len(unheadered_filepatches) > 0:
+      dummy_patch = Patch(unheadered_filepatches,
+                          PatchHeader('0000000000000000000000000000000000000000',
+                                      [' (uncommitted changes)']))
+      print "Created dummy Patch:", dummy_patch
+      patches += [dummy_patch]
     return AST(patches), lines
 
 class PatchParser():
