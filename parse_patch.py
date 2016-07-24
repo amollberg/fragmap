@@ -190,12 +190,14 @@ class FilePatch():
 
 class PatchHeader():
   _hash = None
+  _message = None
 
-  def __init__(self, hash):
+  def __init__(self, hash, message):
     self._hash = hash
+    self._message = message
 
   def __repr__(self):
-    return "<PatchHeader: %s>" %(self._hash,)
+    return "<PatchHeader: %s\n%s>" %(self._hash, self._message)
 
   @staticmethod
   def parse(lines):
@@ -217,11 +219,15 @@ class PatchHeader():
       print "##2"
       return None, lines
     lines = lines[3:]
+    message = []
     while lines[0] == '' or lines[0][0] == ' ':
       if DEBUG_PARSER:
         print "in PatchHeader:", lines[0]
+      if lines[0] != '':
+        # Add line to message list
+        message += [lines[0].strip()]
       lines = lines[1:]
-    return PatchHeader(hash), lines
+    return PatchHeader(hash, message), lines
 
 class Patch():
   _header = None

@@ -11,8 +11,9 @@ def print_hunkogram(diff_list):
   padded_matrix_width = max(CONSOLE_WIDTH/2, matrix_width)
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
   for r in range(len(matrix)):
-    commit_msg = "Test"
-    hash = diff_list._patches[r]._header._hash
+    cur_patch = diff_list._patches[r]._header
+    commit_msg = cur_patch._message[0] # First row of message
+    hash = cur_patch._hash
     # Pad short commit messages
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages
