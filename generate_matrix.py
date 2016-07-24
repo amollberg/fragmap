@@ -158,6 +158,8 @@ def update_positions(node_lines, patch, diff_i):
       print "last:", nl.last()._filename
       if nl.last()._filename == oldfile:
         file_node_lines += [nl]
+      else:
+        nl.update_unchanged(diff_i)
     print "Updating file:", oldfile
     print "Node lines:", file_node_lines
     update_file_positions(file_node_lines, file_patch, diff_i)
@@ -356,17 +358,27 @@ class FragmentBoundLine():
   def last(self):
     return self._nodehistory[max(self._nodehistory.viewkeys())]
 
-  def update(self, diff_i, filename, line):
+  def update_unchanged(self, diff_i):
+    """
+    Update the node line with no changes. Simply clones
+    the latest node, adds it to the history and returns it.
+    """
     # Shallow copy previous
     if diff_i < 0:
       diff_i = 0
-    print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
     updated_node = copy.copy(self._nodehistory[diff_i-1])
+    self._nodehistory[diff_i] = updated_node
+    return updated_node
 
+  def update(self, diff_i, filename, line):
+    # Copy previous node without changing anything
+    updated_node = self.update_unchanged(diff_i)
+    print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
+    # Apply changes to new node
     updated_node._diff_i = diff_i
     updated_node._file = filename
     updated_node._line = line
-    self._nodehistory[diff_i] = updated_node
+
 
 
 def earliest_diff(node_lines):

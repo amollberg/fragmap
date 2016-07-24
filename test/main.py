@@ -178,11 +178,11 @@ class Test(unittest.TestCase):
                       '052-twofiles-add-y-to-b.diff',
                       '053-twofiles-add-z-to-b.diff',
                       '054-twofiles-add-w-to-b.diff'],
-                     ['#....',
-                      '.#...',
-                      '..#..',
-                      '...#.',
-                      '....#'])
+                     ['#......',
+                      '..#....',
+                      '...#...',
+                      '....#..',
+                      '.....#.'])
 
 
   def get_node_lines(self, diff_filenames):
