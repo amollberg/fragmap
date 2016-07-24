@@ -227,11 +227,12 @@ class Patch():
   _header = None
   _filepatches = None
 
-  def __init__(self, filepatches):
+  def __init__(self, filepatches, header):
     self._filepatches = filepatches
+    self._header = header
 
   def __repr__(self):
-    return "\n <Patch: %s>" % (self._filepatches,)
+    return "\n <Patch: %s %s>" % (self._header, self._filepatches)
 
   def find_patch_by_old_file(self, old_file_name):
     for file_patch in self._filepatches:
@@ -258,7 +259,7 @@ class Patch():
       else:
         # No more parsable filepatches; return
         break
-    return Patch(filepatches), lines
+    return Patch(filepatches, header), lines
 
 class AST():
   _patches = None
