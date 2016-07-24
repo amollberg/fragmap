@@ -1,0 +1,4244 @@
+1b2aff54bb0a41af9fc9e321bdd75f1acd8a21d5
+commit 1b2aff54bb0a41af9fc9e321bdd75f1acd8a21d5
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 3 23:16:50 2016 +0200
+
+    First edition of list-hunks using git show and rev-list
+
+diff --git a/list-hunks.sh b/list-hunks.sh
+new file mode 100644
+index 0000000..14ab82b
+--- /dev/null
++++ b/list-hunks.sh
+@@ -0,0 +1,7 @@
++#!/bin/env bash
++
++while read -r rev; do
++	echo $rev 
++    #git diff "$rev~1" "$rev"  --
++	git show "$rev"  -- | grep "^@"
++done < <(git rev-list "$1")
+\ No newline at end of file
+908f564e4635dc650ce5ed9d6b6d8b9ec5e54633
+commit 908f564e4635dc650ce5ed9d6b6d8b9ec5e54633
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 4 22:12:29 2016 +0200
+
+    improved git show arguments, added generate-matrix.py
+
+diff --git a/generate-matrix.py b/generate-matrix.py
+new file mode 100644
+index 0000000..e2ea5ca
+--- /dev/null
++++ b/generate-matrix.py
+@@ -0,0 +1,2 @@
++#!/usr/bin/env python
++
+diff --git a/list-hunks.sh b/list-hunks.sh
+index 14ab82b..1d945d6 100644
+--- a/list-hunks.sh
++++ b/list-hunks.sh
+@@ -4 +4 @@ while read -r rev; do
+-	echo $rev 
++    echo $rev
+@@ -6,2 +6,7 @@ while read -r rev; do
+-	git show "$rev"  -- | grep "^@"
+-done < <(git rev-list "$1")
+\ No newline at end of file
++    git show -U0 --no-color "$rev"  -- # | grep "^[@+-]"
++done < <(git rev-list "$1")
++
++# TODO: Integrate with interactive rebase, edit buffer or something
++#git rebase -i "$1"
++#cat .git/rebase-merge/git-rebase-todo
++
+695138f714af348cb5bf71e859cdbcfad6a459bb
+commit 695138f714af348cb5bf71e859cdbcfad6a459bb
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 6 23:17:36 2016 +0200
+
+    WIP: Added parse-patch.py
+
+diff --git a/parse-patch.py b/parse-patch.py
+new file mode 100644
+index 0000000..b41e6bc
+--- /dev/null
++++ b/parse-patch.py
+@@ -0,0 +1,187 @@
++#!/usr/bin/env python
++
++# Read patch from stdin, write list of files and hunks to stdout
++
++# AST -> Patch
++
++import sys
++import re
++
++class Range():
++  _start = 0
++  _length = 0
++
++  def __init__(self, start, length):
++    self._start = start
++    self._length = length
++
++  def __repr__(self):
++    return "[Range: %d, %d]" % (self._start, self._length,)
++
++class FragmentHeader():
++  _oldrange = None
++  _newrange = None
++  def __init__(self, oldrange, newrange):
++    self._oldrange = oldrange
++    self._newrange = newrange
++
++  def __repr__(self):
++    return "[FragmentHeader: %s, %s]" % (self._oldrange, self._newrange,)
++
++  @staticmethod
++  def parse(lines):
++    print "FragmentHeader? ", lines[0]
++    if lines[0][0:4] == '@@ -':
++      match = re.match('^@@ -(\d+)(?:,(\d+)) \+(\d+)(?:,(\d+)) @@', lines[0])
++      if match is not None:
++        oldlength = 1
++        if match.group(2):
++          oldlength = int(match.group(2))
++        newlength = 1
++        if match.group(4):
++          newlength = int(match.group(4))
++        return FragmentHeader(Range(int(match.group(1)), oldlength),
++                              Range(int(match.group(3)), newlength)), 1
++    print "Not fragment header"
++    return None, 0
++    
++    
++class Fragment():
++  _header = None
++  def __init__(self, header):
++    self._header = header
++
++  def __repr__(self):
++    return "[Fragment: %s]" % (self._header,)
++
++  @staticmethod
++  def parse(lines):
++    print "Fragment? ", lines[0]
++    header, i = FragmentHeader.parse(lines)
++    # Consume lines according to FragmentHeader
++    #print "Header:", header
++    lines = lines[i:]
++    #print i
++    if header is not None:
++      for line in lines:
++        #print "line: '%s', length: %d" % (line, len(line))
++        if len(line) == 0 or line[0] in {' ', '+', '-', '\\'}:
++          #print "in fragment '%s'" % line, i
++          i += 1
++        else:
++          #print "not in fragment: '%s'" % line, i
++          break
++      return Fragment(header), i
++    print "Not fragment"
++    return None, 0
++
++class FilePatchHeader():
++  _oldfile = None
++  _newfile = None
++  def __init__(self, oldfile, newfile):
++    self._oldfile = oldfile
++    self._newfile = newfile
++
++  def __repr__(self):
++    return "[FilePatchHeader: %s -> %s]" % (self._oldfile, self._newfile,)
++
++  @staticmethod
++  def parse(lines):
++    print "FilePatchHeader? ", lines[0]
++    if lines[0][0:4] == '--- ':
++      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
++      if match is not None:
++        oldfile = match.group(1)
++        match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
++        if match is not None:
++          newfile = match.group(1)
++          return FilePatchHeader(oldfile, newfile), 2
++    return None, 0
++
++  
++class FilePatch():
++  _fragments = None
++  _header = None
++  
++  def __init__(self, header, fragments):
++    self._header = header
++    self._fragments = fragments
++
++  def __repr__(self):
++    return "[FilePatch: %s]" % (self._fragments,)
++
++  @staticmethod
++  def parse(lines):
++    print "FilePatch? ", lines[0]
++    i = 0
++    header, j = FilePatchHeader.parse(lines)
++    # Consume lines
++    lines = lines[j:]
++    i += j
++    if header is not None:
++      fragments = []
++      while len(lines) > 0:
++        #print i,j, lines
++        fragment, j = Fragment.parse(lines)
++        print "Fragment: ", fragment, j
++        # Consume lines
++        #print len(lines)
++        lines = lines[j:]
++        #print "After:",len(lines)
++        i += j
++        if fragment is None:
++          # No more fragments; return
++          return FilePatch(header, fragments), i
++        fragments += [fragment]
++    return None, 0
++
++  
++class AST():
++  _filePatches = None
++  def __init__(self, filePatches):
++    self._filePatches = filePatches
++
++  def __repr__(self):
++    return "[AST: %s]" % (self._filePatches,)
++
++  @staticmethod
++  def parse(lines):
++    i = 0
++    filePatches = []
++    while len(lines) > 0:
++      filePatch, lines_consumed = FilePatch.parse(lines)
++      print "Filepatch: ", filePatch
++      if lines_consumed > 0:
++        # Consume lines
++        lines = lines[lines_consumed:]
++        i += lines_consumed
++        if filePatch is None:
++          # No more file patches; return
++          return AST(filePatches), i
++        filePatches += [filePatch]
++      else:
++        # Remove a line and retry parsing
++        lines = lines[1:]
++        i += 1
++        continue
++    return None, 0
++  
++class PatchParser():
++  _ast = None
++
++  @staticmethod
++  def parse(lines):
++    ast, lines_consumed = AST.parse(lines)
++    if lines_consumed == 0:
++      print "No lines consumed!"
++    if lines_consumed < len(lines):
++      print "Unparsable content left at end of file."
++    return ast
++
++def main():
++  pp = PatchParser()
++  lines = [line.rstrip() for line in sys.stdin]
++  print  pp.parse(lines)
++
++if __name__ == '__main__':
++  main()
+97616ce049e71d2d68b561d2a78d71b3745c12b6
+commit 97616ce049e71d2d68b561d2a78d71b3745c12b6
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 10 20:11:36 2016 +0200
+
+    Changed second return value to list, fixed bug in FilePatch
+
+diff --git a/parse-patch.py b/parse-patch.py
+index b41e6bc..f8efce2 100644
+--- a/parse-patch.py
++++ b/parse-patch.py
+@@ -44 +44 @@ class FragmentHeader():
+-                              Range(int(match.group(3)), newlength)), 1
++                              Range(int(match.group(3)), newlength)), lines[1:]
+@@ -46 +46 @@ class FragmentHeader():
+-    return None, 0
++    return None, lines
+@@ -60,4 +60 @@ class Fragment():
+-    header, i = FragmentHeader.parse(lines)
+-    # Consume lines according to FragmentHeader
+-    #print "Header:", header
+-    lines = lines[i:]
++    header, lines = FragmentHeader.parse(lines)
+@@ -64,0 +62 @@ class Fragment():
++    i = 0
+@@ -74 +72 @@ class Fragment():
+-      return Fragment(header), i
++      return Fragment(header), lines[i:]
+@@ -76 +74 @@ class Fragment():
+-    return None, 0
++    return None, lines
+@@ -98,2 +96,2 @@ class FilePatchHeader():
+-          return FilePatchHeader(oldfile, newfile), 2
+-    return None, 0
++        return FilePatchHeader(oldfile, newfile), lines[2:]
++    return None, lines
+@@ -116,5 +114 @@ class FilePatch():
+-    i = 0
+-    header, j = FilePatchHeader.parse(lines)
+-    # Consume lines
+-    lines = lines[j:]
+-    i += j
++    header, lines = FilePatchHeader.parse(lines)
+@@ -125,2 +119,2 @@ class FilePatch():
+-        fragment, j = Fragment.parse(lines)
+-        print "Fragment: ", fragment, j
++        fragment, lines = Fragment.parse(lines)
++        #print "Fragment: ", fragment
+@@ -129 +122,0 @@ class FilePatch():
+-        lines = lines[j:]
+@@ -131 +123,0 @@ class FilePatch():
+-        i += j
+@@ -133,2 +125,2 @@ class FilePatch():
+-          # No more fragments; return
+-          return FilePatch(header, fragments), i
++          # No more fragments; stop
++          break
+@@ -136 +128,6 @@ class FilePatch():
+-    return None, 0
++        #print "Fragments:", fragments
++      p = FilePatch(header, fragments), lines
++      #print "Returned patch:", p
++      return p
++    else:
++      return None, lines
+@@ -149 +145,0 @@ class AST():
+-    i = 0
+@@ -152 +148 @@ class AST():
+-      filePatch, lines_consumed = FilePatch.parse(lines)
++      filePatch, lines = FilePatch.parse(lines)
+@@ -154,7 +150 @@ class AST():
+-      if lines_consumed > 0:
+-        # Consume lines
+-        lines = lines[lines_consumed:]
+-        i += lines_consumed
+-        if filePatch is None:
+-          # No more file patches; return
+-          return AST(filePatches), i
++      if filePatch is not None:
+@@ -165 +154,0 @@ class AST():
+-        i += 1
+@@ -167 +156 @@ class AST():
+-    return None, 0
++    return AST(filePatches), lines
+@@ -174,4 +163,4 @@ class PatchParser():
+-    ast, lines_consumed = AST.parse(lines)
+-    if lines_consumed == 0:
+-      print "No lines consumed!"
+-    if lines_consumed < len(lines):
++    ast, lines_after = AST.parse(lines)
++    if len(lines_after) == len(lines):
++      print "No lines parsed!"
++    if len(lines_after) > 0:
+9eb1f5a528b06167c725e4901ee891f3004432b1
+commit 9eb1f5a528b06167c725e4901ee891f3004432b1
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 10 20:12:40 2016 +0200
+
+    CRLF -> LF
+
+diff --git a/generate-matrix.py b/generate-matrix.py
+index e2ea5ca..cf529d7 100644
+--- a/generate-matrix.py
++++ b/generate-matrix.py
+@@ -1,2 +1,2 @@
+-#!/usr/bin/env python
+-
++#!/usr/bin/env python
++
+diff --git a/list-hunks.sh b/list-hunks.sh
+index 1d945d6..c3aa01e 100644
+--- a/list-hunks.sh
++++ b/list-hunks.sh
+@@ -1,12 +1,12 @@
+-#!/bin/env bash
+-
+-while read -r rev; do
+-    echo $rev
+-    #git diff "$rev~1" "$rev"  --
+-    git show -U0 --no-color "$rev"  -- # | grep "^[@+-]"
+-done < <(git rev-list "$1")
+-
+-# TODO: Integrate with interactive rebase, edit buffer or something
+-#git rebase -i "$1"
+-#cat .git/rebase-merge/git-rebase-todo
+-
++#!/bin/env bash
++
++while read -r rev; do
++    echo $rev
++    #git diff "$rev~1" "$rev"  --
++    git show -U0 --no-color "$rev"  -- # | grep "^[@+-]"
++done < <(git rev-list "$1")
++
++# TODO: Integrate with interactive rebase, edit buffer or something
++#git rebase -i "$1"
++#cat .git/rebase-merge/git-rebase-todo
++
+diff --git a/parse-patch.py b/parse-patch.py
+index f8efce2..7aedd35 100644
+--- a/parse-patch.py
++++ b/parse-patch.py
+@@ -1,176 +1,176 @@
+-#!/usr/bin/env python
+-
+-# Read patch from stdin, write list of files and hunks to stdout
+-
+-# AST -> Patch
+-
+-import sys
+-import re
+-
+-class Range():
+-  _start = 0
+-  _length = 0
+-
+-  def __init__(self, start, length):
+-    self._start = start
+-    self._length = length
+-
+-  def __repr__(self):
+-    return "[Range: %d, %d]" % (self._start, self._length,)
+-
+-class FragmentHeader():
+-  _oldrange = None
+-  _newrange = None
+-  def __init__(self, oldrange, newrange):
+-    self._oldrange = oldrange
+-    self._newrange = newrange
+-
+-  def __repr__(self):
+-    return "[FragmentHeader: %s, %s]" % (self._oldrange, self._newrange,)
+-
+-  @staticmethod
+-  def parse(lines):
+-    print "FragmentHeader? ", lines[0]
+-    if lines[0][0:4] == '@@ -':
+-      match = re.match('^@@ -(\d+)(?:,(\d+)) \+(\d+)(?:,(\d+)) @@', lines[0])
+-      if match is not None:
+-        oldlength = 1
+-        if match.group(2):
+-          oldlength = int(match.group(2))
+-        newlength = 1
+-        if match.group(4):
+-          newlength = int(match.group(4))
+-        return FragmentHeader(Range(int(match.group(1)), oldlength),
+-                              Range(int(match.group(3)), newlength)), lines[1:]
+-    print "Not fragment header"
+-    return None, lines
+-    
+-    
+-class Fragment():
+-  _header = None
+-  def __init__(self, header):
+-    self._header = header
+-
+-  def __repr__(self):
+-    return "[Fragment: %s]" % (self._header,)
+-
+-  @staticmethod
+-  def parse(lines):
+-    print "Fragment? ", lines[0]
+-    header, lines = FragmentHeader.parse(lines)
+-    #print i
+-    i = 0
+-    if header is not None:
+-      for line in lines:
+-        #print "line: '%s', length: %d" % (line, len(line))
+-        if len(line) == 0 or line[0] in {' ', '+', '-', '\\'}:
+-          #print "in fragment '%s'" % line, i
+-          i += 1
+-        else:
+-          #print "not in fragment: '%s'" % line, i
+-          break
+-      return Fragment(header), lines[i:]
+-    print "Not fragment"
+-    return None, lines
+-
+-class FilePatchHeader():
+-  _oldfile = None
+-  _newfile = None
+-  def __init__(self, oldfile, newfile):
+-    self._oldfile = oldfile
+-    self._newfile = newfile
+-
+-  def __repr__(self):
+-    return "[FilePatchHeader: %s -> %s]" % (self._oldfile, self._newfile,)
+-
+-  @staticmethod
+-  def parse(lines):
+-    print "FilePatchHeader? ", lines[0]
+-    if lines[0][0:4] == '--- ':
+-      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
+-      if match is not None:
+-        oldfile = match.group(1)
+-        match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
+-        if match is not None:
+-          newfile = match.group(1)
+-        return FilePatchHeader(oldfile, newfile), lines[2:]
+-    return None, lines
+-
+-  
+-class FilePatch():
+-  _fragments = None
+-  _header = None
+-  
+-  def __init__(self, header, fragments):
+-    self._header = header
+-    self._fragments = fragments
+-
+-  def __repr__(self):
+-    return "[FilePatch: %s]" % (self._fragments,)
+-
+-  @staticmethod
+-  def parse(lines):
+-    print "FilePatch? ", lines[0]
+-    header, lines = FilePatchHeader.parse(lines)
+-    if header is not None:
+-      fragments = []
+-      while len(lines) > 0:
+-        #print i,j, lines
+-        fragment, lines = Fragment.parse(lines)
+-        #print "Fragment: ", fragment
+-        # Consume lines
+-        #print len(lines)
+-        #print "After:",len(lines)
+-        if fragment is None:
+-          # No more fragments; stop
+-          break
+-        fragments += [fragment]
+-        #print "Fragments:", fragments
+-      p = FilePatch(header, fragments), lines
+-      #print "Returned patch:", p
+-      return p
+-    else:
+-      return None, lines
+-
+-  
+-class AST():
+-  _filePatches = None
+-  def __init__(self, filePatches):
+-    self._filePatches = filePatches
+-
+-  def __repr__(self):
+-    return "[AST: %s]" % (self._filePatches,)
+-
+-  @staticmethod
+-  def parse(lines):
+-    filePatches = []
+-    while len(lines) > 0:
+-      filePatch, lines = FilePatch.parse(lines)
+-      print "Filepatch: ", filePatch
+-      if filePatch is not None:
+-        filePatches += [filePatch]
+-      else:
+-        # Remove a line and retry parsing
+-        lines = lines[1:]
+-        continue
+-    return AST(filePatches), lines
+-  
+-class PatchParser():
+-  _ast = None
+-
+-  @staticmethod
+-  def parse(lines):
+-    ast, lines_after = AST.parse(lines)
+-    if len(lines_after) == len(lines):
+-      print "No lines parsed!"
+-    if len(lines_after) > 0:
+-      print "Unparsable content left at end of file."
+-    return ast
+-
+-def main():
+-  pp = PatchParser()
+-  lines = [line.rstrip() for line in sys.stdin]
+-  print  pp.parse(lines)
+-
+-if __name__ == '__main__':
+-  main()
++#!/usr/bin/env python
++
++# Read patch from stdin, write list of files and hunks to stdout
++
++# AST -> Patch
++
++import sys
++import re
++
++class Range():
++  _start = 0
++  _length = 0
++
++  def __init__(self, start, length):
++    self._start = start
++    self._length = length
++
++  def __repr__(self):
++    return "[Range: %d, %d]" % (self._start, self._length,)
++
++class FragmentHeader():
++  _oldrange = None
++  _newrange = None
++  def __init__(self, oldrange, newrange):
++    self._oldrange = oldrange
++    self._newrange = newrange
++
++  def __repr__(self):
++    return "[FragmentHeader: %s, %s]" % (self._oldrange, self._newrange,)
++
++  @staticmethod
++  def parse(lines):
++    print "FragmentHeader? ", lines[0]
++    if lines[0][0:4] == '@@ -':
++      match = re.match('^@@ -(\d+)(?:,(\d+)) \+(\d+)(?:,(\d+)) @@', lines[0])
++      if match is not None:
++        oldlength = 1
++        if match.group(2):
++          oldlength = int(match.group(2))
++        newlength = 1
++        if match.group(4):
++          newlength = int(match.group(4))
++        return FragmentHeader(Range(int(match.group(1)), oldlength),
++                              Range(int(match.group(3)), newlength)), lines[1:]
++    print "Not fragment header"
++    return None, lines
++    
++    
++class Fragment():
++  _header = None
++  def __init__(self, header):
++    self._header = header
++
++  def __repr__(self):
++    return "[Fragment: %s]" % (self._header,)
++
++  @staticmethod
++  def parse(lines):
++    print "Fragment? ", lines[0]
++    header, lines = FragmentHeader.parse(lines)
++    #print i
++    i = 0
++    if header is not None:
++      for line in lines:
++        #print "line: '%s', length: %d" % (line, len(line))
++        if len(line) == 0 or line[0] in {' ', '+', '-', '\\'}:
++          #print "in fragment '%s'" % line, i
++          i += 1
++        else:
++          #print "not in fragment: '%s'" % line, i
++          break
++      return Fragment(header), lines[i:]
++    print "Not fragment"
++    return None, lines
++
++class FilePatchHeader():
++  _oldfile = None
++  _newfile = None
++  def __init__(self, oldfile, newfile):
++    self._oldfile = oldfile
++    self._newfile = newfile
++
++  def __repr__(self):
++    return "[FilePatchHeader: %s -> %s]" % (self._oldfile, self._newfile,)
++
++  @staticmethod
++  def parse(lines):
++    print "FilePatchHeader? ", lines[0]
++    if lines[0][0:4] == '--- ':
++      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
++      if match is not None:
++        oldfile = match.group(1)
++        match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
++        if match is not None:
++          newfile = match.group(1)
++        return FilePatchHeader(oldfile, newfile), lines[2:]
++    return None, lines
++
++  
++class FilePatch():
++  _fragments = None
++  _header = None
++  
++  def __init__(self, header, fragments):
++    self._header = header
++    self._fragments = fragments
++
++  def __repr__(self):
++    return "[FilePatch: %s]" % (self._fragments,)
++
++  @staticmethod
++  def parse(lines):
++    print "FilePatch? ", lines[0]
++    header, lines = FilePatchHeader.parse(lines)
++    if header is not None:
++      fragments = []
++      while len(lines) > 0:
++        #print i,j, lines
++        fragment, lines = Fragment.parse(lines)
++        #print "Fragment: ", fragment
++        # Consume lines
++        #print len(lines)
++        #print "After:",len(lines)
++        if fragment is None:
++          # No more fragments; stop
++          break
++        fragments += [fragment]
++        #print "Fragments:", fragments
++      p = FilePatch(header, fragments), lines
++      #print "Returned patch:", p
++      return p
++    else:
++      return None, lines
++
++  
++class AST():
++  _filePatches = None
++  def __init__(self, filePatches):
++    self._filePatches = filePatches
++
++  def __repr__(self):
++    return "[AST: %s]" % (self._filePatches,)
++
++  @staticmethod
++  def parse(lines):
++    filePatches = []
++    while len(lines) > 0:
++      filePatch, lines = FilePatch.parse(lines)
++      print "Filepatch: ", filePatch
++      if filePatch is not None:
++        filePatches += [filePatch]
++      else:
++        # Remove a line and retry parsing
++        lines = lines[1:]
++        continue
++    return AST(filePatches), lines
++  
++class PatchParser():
++  _ast = None
++
++  @staticmethod
++  def parse(lines):
++    ast, lines_after = AST.parse(lines)
++    if len(lines_after) == len(lines):
++      print "No lines parsed!"
++    if len(lines_after) > 0:
++      print "Unparsable content left at end of file."
++    return ast
++
++def main():
++  pp = PatchParser()
++  lines = [line.rstrip() for line in sys.stdin]
++  print  pp.parse(lines)
++
++if __name__ == '__main__':
++  main()
+5af667b66f4eb15fe14033a4060f100ab63d2440
+commit 5af667b66f4eb15fe14033a4060f100ab63d2440
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 11 21:37:56 2016 +0200
+
+    Initial generate_matrix, added update_positions etc
+
+diff --git a/generate-matrix.py b/generate-matrix.py
+index cf529d7..fa6dc11 100644
+--- a/generate-matrix.py
++++ b/generate-matrix.py
+@@ -2,0 +3,140 @@
++from parse_patch import *
++
++def update_positions(old_ast, patch):
++  ast = copy(old_ast)
++  def update_file_positions(file_ast, file_patch):
++    """
++    Update the AST to how it should look after the patch has been applied.
++    """
++    # TODO: Remove this return
++    # Naive version - no update
++    return
++    
++    # TODO: Verify that filenames are the same
++    # patch fragment +a,b -c,d means the map [a,a+b] -> [c,c+d]
++    # previous lines are unaffected, mapping e -> e
++    # subsequent lines map as e -> e-(a+b)+c+d
++    # TODO Ensure sorted fragments
++    #for patch_fragment in file_patch._fragments:
++    #  for ast_fragment in file_ast:
++    #    updated_header = ast_fragment._header
++    #    if ast_fragment._header._oldrange._start >= patch_fragment._header._oldrange._start:
++    #      if ast_fragment._header._oldrange._start <= patch_fragment._header._oldrange._end:
++    #        # Old start is inside patch fragment; absorb to the patch start
++    #        updated_header._oldrange._start = patch_fragment._header._newrange._start
++    #        # New start has to absorb to patch start as well
++    #        updated_header._newrange._start = patch_fragment._header._newrange._start
++    #      else:
++    #        # Old start is after the patch fragment; shift the starts
++  # TODO
++  pass
++          
++
++def update_positions_to_latest(old_ast, patch_list):
++  """
++  Update the positions of the AST old_ast through every patch
++  in patch_list that is more recent than it.
++  """
++  # TODO
++  pass
++  
++# For each commit: project fragment positions iteratively up past the latest commit
++#  => a list of nodes, each pointing to commit and kind (start or end of fragment)
++
++def update_all_positions_to_latest(ast_list):
++  """
++  Update all ASTs to the latest patch, letting
++  newer ASTs act as patches for older ASTs.
++  Assumes ast_list is sorted in ascending time.
++  """
++  # For all ASTs except the last which is already up to date.
++  for i in range(len(ast_list) - 1):
++    update_positions_to_latest(ast_list[i], ast_list[i+1:])
++  return ast_list
++
++class FragmentBoundNode():
++  # References back into the ASTs
++  _AST_i = None
++  _file_i = None
++  _fragment_i = None
++  
++  # Info to sort on
++  _filename = None
++  _line = None
++  
++  # Other attributes
++  _kind = None
++  # Two kinds of fragment bounds:
++  START = 1
++  END = 2
++
++  # Sort by filename then by line
++  def __lt__(a, b):
++    return a._filename < b._filename or a._line < b._line
++
++
++  def __init__(self, AST_list, AST_i, file_i, fragment_i, kind):
++    self._AST_i = AST_i
++    self._file_i = file_i
++    self._fragment_i = fragment_i
++    self._filename = AST_list[AST_i]._filePatches[file_i]._header._oldfile
++    fragment_range = AST_list[AST_i]._filePatches[file_i]._fragments[fragment_i]._header._oldrange
++    if kind == FragmentBoundNode.START:
++      self._line = fragment_range._start
++    elif kind == FragmentBoundNode.END:
++      self._line = fragment_range._end
++    self._kind = kind
++
++  def __repr__(self):
++    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._AST_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
++    
++
++def extract_fragments(ast_list):
++  fragment_list = []
++  for ast_i in range(len(ast_list)):
++    for file_i in range(len(ast_list[ast_i]._filePatches)):
++      for fragment_i in range(len(ast_list[ast_i]._filePatches[file_i]._fragments)):
++        fragment_list += [
++          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.START),
++          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.END)
++        ]
++  return fragment_list
++
++def generate_fragment_bound_list(ast_list):
++  """
++  Takes an up-to date list of ASTs.
++  Returns a list with ordered fragment bounds.
++  """
++  return sorted(extract_fragments(ast_list))
++
++      
++# Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
++
++def generate_matrix(ast_list):
++  bound_list = generate_fragment_bound_list(ast_list)
++  print "bound list:", bound_list
++  n_rows = len(ast_list)
++  n_cols = len(bound_list)
++  print "Matrix size: rows, cols: ", n_rows, n_cols
++  matrix = [['.'] * n_cols] * n_rows
++  for r in range(n_rows):
++    inside_fragment = False
++    item_i = 0
++    for c in range(n_cols):
++      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._AST_i == r)
++      if inside_fragment:
++        matrix[r][c] = '#'
++  return matrix
++ 
++def main():
++  pp = PatchParser()
++  lines = [line.rstrip() for line in sys.stdin]
++  ast_list =  pp.parse(lines)
++  print ast_list
++  matrix = generate_matrix(ast_list)
++  for row in matrix:
++    print ''.join(row)
++  
++
++if __name__ == '__main__':
++  main()
+diff --git a/parse-patch.py b/parse-patch.py
+index 7aedd35..cf16990 100644
+--- a/parse-patch.py
++++ b/parse-patch.py
+@@ -12 +12 @@ class Range():
+-  _length = 0
++  _end = 0
+@@ -16 +16 @@ class Range():
+-    self._length = length
++    self._end = start + length
+@@ -19 +19,6 @@ class Range():
+-    return "[Range: %d, %d]" % (self._start, self._length,)
++    return "[Range: %d to %d]" % (self._start, self._end,)
++
++  def update_positions(self, start_delta, end_delta):
++    self._start += start_delta
++    self._end += end_delta
++
+@@ -56,0 +62,4 @@ class Fragment():
++  def update_positions(self, start_delta, length_delta):
++    self._header._newrange.update_positions(start_delta, length_delta)
++    self._header._oldrange.update_positions(start_delta, length_delta)
++
+@@ -109 +118 @@ class FilePatch():
+-    return "[FilePatch: %s]" % (self._fragments,)
++    return "[FilePatch: %s, %s]" % (self._header, self._fragments,)
+@@ -143,0 +153,6 @@ class AST():
++  def find_patch_by_old_file(self, old_file_name):
++    for file_patch in self._filePatches:
++      if file_patch._header._oldfile == old_file_name:
++        return file_patch
++    return None
++
+@@ -168 +183 @@ class PatchParser():
+-    return ast
++    return [ast]
+63a9782d8d733122fe4c9e98d22884e1e96115ae
+commit 63a9782d8d733122fe4c9e98d22884e1e96115ae
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 11 21:38:51 2016 +0200
+
+    Renamed scripts, replaced - with _
+
+diff --git a/generate-matrix.py b/generate_matrix.py
+similarity index 100%
+rename from generate-matrix.py
+rename to generate_matrix.py
+diff --git a/parse-patch.py b/parse_patch.py
+similarity index 100%
+rename from parse-patch.py
+rename to parse_patch.py
+e49319557d8afae4bf227e64827f5b31ad5419f1
+commit e49319557d8afae4bf227e64827f5b31ad5419f1
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 11 22:26:24 2016 +0200
+
+    WIP: Added Patch above FilePatch and below AST
+
+diff --git a/parse_patch.py b/parse_patch.py
+index cf16990..21d9c62 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -98,9 +98,18 @@ class FilePatchHeader():
+-    if lines[0][0:4] == '--- ':
+-      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
+-      if match is not None:
+-        oldfile = match.group(1)
+-        match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
+-        if match is not None:
+-          newfile = match.group(1)
+-        return FilePatchHeader(oldfile, newfile), lines[2:]
+-    return None, lines
++    if lines[0][0:11] != 'diff --git ':
++      return None, lines
++    lines = lines[1:]
++    while lines[0] != '' and lines[0][0:4] != '--- ':
++      lines = lines[1:]
++      
++    if lines[0][0:4] != '--- ':
++      return None, lines
++    
++    match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
++    if match is None:
++      return None, lines
++    oldfile = match.group(1)
++    
++    match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
++    if match is not None:
++      newfile = match.group(1)
++    return FilePatchHeader(oldfile, newfile), lines[2:]
+@@ -144,5 +153,5 @@ class FilePatch():
+-  
+-class AST():
+-  _filePatches = None
+-  def __init__(self, filePatches):
+-    self._filePatches = filePatches
++class PatchHeader():
++  _hash = None
++
++  def __init__(self, hash):
++    self._hash = hash
+@@ -151 +160,35 @@ class AST():
+-    return "[AST: %s]" % (self._filePatches,)
++    return "[PatchHeader: %s]" %(self._hash,)
++
++  @staticmethod
++  def parse(lines):
++    print "PatchHeader?", lines[0]
++    match = re.match("^([0-9a-f]{40})", lines[0][0:40])
++    if match is not None:
++      lines = lines[1:]
++
++    match = re.match("^commit ([0-9a-f]{40})", lines[0])
++    if match is None:
++      return None, lines
++    hash = match.group(1)
++
++    if lines[1][0:8] != 'Author: ':
++      print "'%s'!='Author: '" %(lines[1][0:8],)
++      return None, lines
++    if lines[2][0:6] != 'Date: ':
++      print "##2"
++      return None, lines
++    lines = lines[3:]
++    while lines[0] == '' or lines[0][0] == ' ':
++      print "in PatchHeader:", lines[0]
++      lines = lines[1:]
++    return PatchHeader(hash), lines
++        
++class Patch():
++  _header = None
++  _filepatches = None
++
++  def __init__(self, filepatches):
++    self._filepatches = filepatches
++
++  def __repr__(self):
++    return "[Patch: %s]" % (self._filepatches,)
+@@ -154 +197 @@ class AST():
+-    for file_patch in self._filePatches:
++    for file_patch in self._filepatches:
+@@ -161 +204,26 @@ class AST():
+-    filePatches = []
++    print "Patch?", lines[0]
++    header, lines = PatchHeader.parse(lines)
++    print "PatchHeader: ", header
++    if header is None:
++      return None, lines
++    filepatches = []
++    while True:
++      filepatch, lines = FilePatch.parse(lines)
++      print "FilePatch:", filepatch
++      if filepatch is not None:
++        filepatches += [filepatch]
++      else:
++        # No more parsable filepatches; return
++        return Patch(filepatches), lines
++  
++class AST():
++  _patches = None
++  def __init__(self, patches):
++    self._patches = patches
++
++  def __repr__(self):
++    return "[AST: %s]" % (self._patches,)
++
++  @staticmethod
++  def parse(lines):
++    patches = []
+@@ -163,4 +231,4 @@ class AST():
+-      filePatch, lines = FilePatch.parse(lines)
+-      print "Filepatch: ", filePatch
+-      if filePatch is not None:
+-        filePatches += [filePatch]
++      patch, lines = Patch.parse(lines)
++      print "Patch: ", patch
++      if patch is not None:
++        patches += [patch]
+@@ -171 +239 @@ class AST():
+-    return AST(filePatches), lines
++    return AST(patches), lines
+@@ -183 +251 @@ class PatchParser():
+-    return [ast]
++    return ast
+653bcb893d109fca1bc4a1af3a8c3b5e387f84f0
+commit 653bcb893d109fca1bc4a1af3a8c3b5e387f84f0
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 15:23:57 2016 +0200
+
+    Rename AST -> diff, fixes
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index fa6dc11..2a21439 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -35 +35 @@ def update_positions(old_ast, patch):
+-def update_positions_to_latest(old_ast, patch_list):
++def update_positions_to_latest(old_diff, patch_list):
+@@ -48,3 +48,3 @@ def update_all_positions_to_latest(ast_list):
+-  Update all ASTs to the latest patch, letting
+-  newer ASTs act as patches for older ASTs.
+-  Assumes ast_list is sorted in ascending time.
++  Update all diffs to the latest patch, letting
++  newer diffs act as patches for older diffs.
++  Assumes diff_list is sorted in ascending time.
+@@ -52,4 +52,4 @@ def update_all_positions_to_latest(ast_list):
+-  # For all ASTs except the last which is already up to date.
+-  for i in range(len(ast_list) - 1):
+-    update_positions_to_latest(ast_list[i], ast_list[i+1:])
+-  return ast_list
++  # For all diffs except the last which is already up to date.
++  for i in range(len(diff_list) - 1):
++    update_positions_to_latest(diff_list[i], diff_list[i+1:])
++  return diff_list
+@@ -58,2 +58,2 @@ class FragmentBoundNode():
+-  # References back into the ASTs
+-  _AST_i = None
++  # References back into the diffs
++  _diff_i = None
+@@ -78,2 +78,2 @@ class FragmentBoundNode():
+-  def __init__(self, AST_list, AST_i, file_i, fragment_i, kind):
+-    self._AST_i = AST_i
++  def __init__(self, diff_list, diff_i, file_i, fragment_i, kind):
++    self._diff_i = diff_i
+@@ -82,2 +82,2 @@ class FragmentBoundNode():
+-    self._filename = AST_list[AST_i]._filePatches[file_i]._header._oldfile
+-    fragment_range = AST_list[AST_i]._filePatches[file_i]._fragments[fragment_i]._header._oldrange
++    self._filename = diff_list[diff_i]._filepatches[file_i]._header._oldfile
++    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._oldrange
+@@ -91 +91 @@ class FragmentBoundNode():
+-    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._AST_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
++    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
+@@ -94 +94 @@ class FragmentBoundNode():
+-def extract_fragments(ast_list):
++def extract_fragments(ast):
+@@ -96,3 +96,4 @@ def extract_fragments(ast_list):
+-  for ast_i in range(len(ast_list)):
+-    for file_i in range(len(ast_list[ast_i]._filePatches)):
+-      for fragment_i in range(len(ast_list[ast_i]._filePatches[file_i]._fragments)):
++  diff_list = ast._patches
++  for diff_i in range(len(diff_list)):
++    for file_i in range(len(diff_list[diff_i]._filepatches)):
++      for fragment_i in range(len(diff_list[diff_i]._filepatches[file_i]._fragments)):
+@@ -100,2 +101,2 @@ def extract_fragments(ast_list):
+-          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.START),
+-          FragmentBoundNode(ast_list, ast_i, file_i, fragment_i, FragmentBoundNode.END)
++          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.START),
++          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.END)
+@@ -105 +106 @@ def extract_fragments(ast_list):
+-def generate_fragment_bound_list(ast_list):
++def generate_fragment_bound_list(ast):
+@@ -107 +108 @@ def generate_fragment_bound_list(ast_list):
+-  Takes an up-to date list of ASTs.
++  Takes an up-to date list of diffs.
+@@ -110 +111 @@ def generate_fragment_bound_list(ast_list):
+-  return sorted(extract_fragments(ast_list))
++  return sorted(extract_fragments(ast))
+@@ -115,2 +116,2 @@ def generate_fragment_bound_list(ast_list):
+-def generate_matrix(ast_list):
+-  bound_list = generate_fragment_bound_list(ast_list)
++def generate_matrix(ast):
++  bound_list = generate_fragment_bound_list(ast)
+@@ -118 +119 @@ def generate_matrix(ast_list):
+-  n_rows = len(ast_list)
++  n_rows = len(ast._patches)
+@@ -126 +127 @@ def generate_matrix(ast_list):
+-      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._AST_i == r)
++      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._diff_i == r)
+@@ -134,3 +135,3 @@ def main():
+-  ast_list =  pp.parse(lines)
+-  print ast_list
+-  matrix = generate_matrix(ast_list)
++  diff_list =  pp.parse(lines)
++  print diff_list
++  matrix = generate_matrix(diff_list)
+diff --git a/parse_patch.py b/parse_patch.py
+index 21d9c62..d8e7224 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -210 +210 @@ class Patch():
+-    while True:
++    while len(lines) > 0:
+@@ -217 +217,2 @@ class Patch():
+-        return Patch(filepatches), lines
++        break
++    return Patch(filepatches), lines
+25764ade7bfdd615940ad004c04f88beb0ac1993
+commit 25764ade7bfdd615940ad004c04f88beb0ac1993
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 15:49:41 2016 +0200
+
+    Added first 5 test diffs
+
+diff --git a/parse_patch.py b/parse_patch.py
+index d8e7224..0cda481 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -40 +40 @@ class FragmentHeader():
+-      match = re.match('^@@ -(\d+)(?:,(\d+)) \+(\d+)(?:,(\d+)) @@', lines[0])
++      match = re.match('^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', lines[0])
+diff --git a/test/diffs/000-add-empty-file.diff b/test/diffs/000-add-empty-file.diff
+new file mode 100644
+index 0000000..7024793
+--- /dev/null
++++ b/test/diffs/000-add-empty-file.diff
+@@ -0,0 +1,9 @@
++commit 3bb4ab032ea1d00947ed0896857b113ad8199cf6
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 15:37:41 2016 +0200
++
++    Added empty.txt
++
++diff --git a/empty.txt b/empty.txt
++new file mode 100644
++index 0000000..e69de29
+diff --git a/test/diffs/001-remove-empty-file.diff b/test/diffs/001-remove-empty-file.diff
+new file mode 100644
+index 0000000..287f229
+--- /dev/null
++++ b/test/diffs/001-remove-empty-file.diff
+@@ -0,0 +1,9 @@
++commit b69d42dd9fc5f628add915bdf16b2b1462fc1e94
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 15:38:53 2016 +0200
++
++    Removed empty.txt
++
++diff --git a/empty.txt b/empty.txt
++deleted file mode 100644
++index e69de29..0000000
+diff --git a/test/diffs/002-rename-empty-file.diff b/test/diffs/002-rename-empty-file.diff
+new file mode 100644
+index 0000000..7d13b2d
+--- /dev/null
++++ b/test/diffs/002-rename-empty-file.diff
+@@ -0,0 +1,10 @@
++commit 1639e6c774eaa60771e6e36da9090eb269a63170
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 15:43:23 2016 +0200
++
++    Renamed empty.txt other.txt
++
++diff --git a/empty.txt b/other.txt
++similarity index 100%
++rename from empty.txt
++rename to other.txt
+diff --git a/test/diffs/003-add-one-line-to-empty-file.diff b/test/diffs/003-add-one-line-to-empty-file.diff
+new file mode 100644
+index 0000000..5903c18
+--- /dev/null
++++ b/test/diffs/003-add-one-line-to-empty-file.diff
+@@ -0,0 +1,13 @@
++commit 62904f443d9640b734b19c5cb541a6046c2cf621
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 15:45:08 2016 +0200
++
++    Added one line to empty file
++
++diff --git a/other.txt b/other.txt
++index e69de29..6769dd6 100644
++--- a/other.txt
+++++ b/other.txt
++@@ -0,0 +1 @@
+++Hello world!
++\ No newline at end of file
+diff --git a/test/diffs/004-removed-one-line-empty-file.diff b/test/diffs/004-removed-one-line-empty-file.diff
+new file mode 100644
+index 0000000..18cff1e
+--- /dev/null
++++ b/test/diffs/004-removed-one-line-empty-file.diff
+@@ -0,0 +1,13 @@
++commit 9f9b3ee7176d0e655f36df83758ab948d3f1e2b7
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 15:46:57 2016 +0200
++
++    Removed one line, empty file
++
++diff --git a/other.txt b/other.txt
++index 6769dd6..e69de29 100644
++--- a/other.txt
+++++ b/other.txt
++@@ -1 +0,0 @@
++-Hello world!
++\ No newline at end of file
+8307731114fff9d2bc705d30651a571030b5c06a
+commit 8307731114fff9d2bc705d30651a571030b5c06a
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:18:27 2016 +0200
+
+    Added test diffs 5-13
+
+diff --git a/test/diffs/005-added-twenty-lines-file.diff b/test/diffs/005-added-twenty-lines-file.diff
+new file mode 100644
+index 0000000..bc73c69
+--- /dev/null
++++ b/test/diffs/005-added-twenty-lines-file.diff
+@@ -0,0 +1,32 @@
++commit 984d48ee988f269a14299b1a1c05660e669536bc
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 22:02:39 2016 +0200
++
++    Added twenty-lines.txt
++
++diff --git a/twenty-lines.txt b/twenty-lines.txt
++new file mode 100644
++index 0000000..3edbf23
++--- /dev/null
+++++ b/twenty-lines.txt
++@@ -0,0 +1,20 @@
+++one
+++two
+++three
+++four
+++five
+++six
+++seven
+++eight
+++nine
+++ten
+++eleven
+++twelve
+++thirteen
+++fourteen
+++fifteen
+++sixteen
+++seventeen
+++eighteen
+++nineteen
+++twenty
+diff --git a/test/diffs/006-twentyfile-removed-15-17.diff b/test/diffs/006-twentyfile-removed-15-17.diff
+new file mode 100644
+index 0000000..7343269
+--- /dev/null
++++ b/test/diffs/006-twentyfile-removed-15-17.diff
+@@ -0,0 +1,20 @@
++commit bd8e7c98d0b56a94060d2d2b27a905db9a5afe08
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 22:07:33 2016 +0200
++
++    Twenty file: removed lines 15-17
++
++diff --git a/twenty-lines.txt b/twenty-lines.txt
++index 3edbf23..7e83b27 100644
++--- a/twenty-lines.txt
+++++ b/twenty-lines.txt
++@@ -12,9 +12,6 @@ eleven
++ twelve
++ thirteen
++ fourteen
++-fifteen
++-sixteen
++-seventeen
++ eighteen
++ nineteen
++ twenty
+diff --git a/test/diffs/007-twentyfile-removed-2-5.diff b/test/diffs/007-twentyfile-removed-2-5.diff
+new file mode 100644
+index 0000000..5f85951
+--- /dev/null
++++ b/test/diffs/007-twentyfile-removed-2-5.diff
+@@ -0,0 +1,19 @@
++commit 9191f64073e118c30ea31d87249ffd2542cfab7c
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 22:09:47 2016 +0200
++
++    Twenty file: removed lines 2-5
++
++diff --git a/twenty-lines.txt b/twenty-lines.txt
++index 3edbf23..e88f868 100644
++--- a/twenty-lines.txt
+++++ b/twenty-lines.txt
++@@ -1,8 +1,4 @@
++ one
++-two
++-three
++-four
++-five
++ six
++ seven
++ eight
+diff --git a/test/diffs/008-changefile-add-x-to-C-F.diff b/test/diffs/008-changefile-add-x-to-C-F.diff
+new file mode 100644
+index 0000000..6cccf90
+--- /dev/null
++++ b/test/diffs/008-changefile-add-x-to-C-F.diff
+@@ -0,0 +1,24 @@
++commit 6e300f965e2f01dab3c6ea63e602e555d0f0797b
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:01:53 2016 +0200
++
++    Added x to C-F
++
++diff --git a/change-lines.txt b/change-lines.txt
++index 09b9fad..f6b976b 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -1,9 +1,9 @@
++ a
++ b
++-c
++-d
++-e
++-f
+++cx
+++dx
+++ex
+++fx
++ g
++ h
++ i
+diff --git a/test/diffs/009-changefile-add-y-to-E-I.diff b/test/diffs/009-changefile-add-y-to-E-I.diff
+new file mode 100644
+index 0000000..a0a16fd
+--- /dev/null
++++ b/test/diffs/009-changefile-add-y-to-E-I.diff
+@@ -0,0 +1,27 @@
++commit 75f66732e0e95dfd6f2d2535bc06098997e98711
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:04:25 2016 +0200
++
++    Added y to E-I
++
++diff --git a/change-lines.txt b/change-lines.txt
++index f6b976b..aef8357 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -2,11 +2,11 @@ a
++ b
++ cx
++ dx
++-ex
++-fx
++-g
++-h
++-i
+++exy
+++fxy
+++gy
+++hy
+++iy
++ j
++ k
++ l
+diff --git a/test/diffs/010-add-x-to-J-K.diff b/test/diffs/010-add-x-to-J-K.diff
+new file mode 100644
+index 0000000..0024d12
+--- /dev/null
++++ b/test/diffs/010-add-x-to-J-K.diff
+@@ -0,0 +1,21 @@
++commit 1f5a1c5b6d0404525cbde219de1a839f4b08b376
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:06:00 2016 +0200
++
++    Added x to J-K
++
++diff --git a/change-lines.txt b/change-lines.txt
++index aef8357..b5b5133 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -7,8 +7,8 @@ fxy
++ gy
++ hy
++ iy
++-j
++-k
+++jx
+++kx
++ l
++ m
++ n
+diff --git a/test/diffs/011-add-x-to-A-and-N.diff b/test/diffs/011-add-x-to-A-and-N.diff
+new file mode 100644
+index 0000000..b446463
+--- /dev/null
++++ b/test/diffs/011-add-x-to-A-and-N.diff
+@@ -0,0 +1,23 @@
++commit 85219d00d3ee71cbd9b7dfbe6ea0673b40c99569
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:08:04 2016 +0200
++
++    Added x to A and N
++
++diff --git a/change-lines.txt b/change-lines.txt
++index b5b5133..58c71d0 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -1,4 +1,4 @@
++-a
+++ax
++ b
++ cx
++ dx
++@@ -11,5 +11,5 @@ jx
++ kx
++ l
++ m
++-n
+++nx
++ o
+diff --git a/test/diffs/012-add-x-to-A-C.diff b/test/diffs/012-add-x-to-A-C.diff
+new file mode 100644
+index 0000000..92a16bd
+--- /dev/null
++++ b/test/diffs/012-add-x-to-A-C.diff
+@@ -0,0 +1,20 @@
++commit 2d0af034406aee9868421462c711ee7b610812f6
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:10:59 2016 +0200
++
++    Added y to A-C
++
++diff --git a/change-lines.txt b/change-lines.txt
++index 58c71d0..6d8e0aa 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -1,6 +1,6 @@
++-ax
++-b
++-cx
+++axy
+++by
+++cxy
++ dx
++ exy
++ fxy
+diff --git a/test/diffs/013-add-y-to-M-O.diff b/test/diffs/013-add-y-to-M-O.diff
+new file mode 100644
+index 0000000..ad703e4
+--- /dev/null
++++ b/test/diffs/013-add-y-to-M-O.diff
+@@ -0,0 +1,20 @@
++commit 0233de91c52f17c88df60b0001b81164443272ba
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Sun Jul 17 23:14:08 2016 +0200
++
++    Added y to M-O
++
++diff --git a/change-lines.txt b/change-lines.txt
++index 6d8e0aa..b2689b1 100644
++--- a/change-lines.txt
+++++ b/change-lines.txt
++@@ -10,6 +10,6 @@ iy
++ jx
++ kx
++ l
++-m
++-nx
++-o
+++my
+++nxy
+++oy
+54e97e861221289c76658f9278d8939cb5d0fd3f
+commit 54e97e861221289c76658f9278d8939cb5d0fd3f
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 17 23:56:32 2016 +0200
+
+    Fixed: Matrix generation, inside_fragment start
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 2a21439..7f6bb7a 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -122 +122 @@ def generate_matrix(ast):
+-  matrix = [['.'] * n_cols] * n_rows
++  matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
+@@ -127 +127 @@ def generate_matrix(ast):
+-      inside_fragment = (bound_list[r]._kind == FragmentBoundNode.START and bound_list[r]._diff_i == r)
++      inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START and bound_list[c]._diff_i == r)
+08303548d502b7bfb7dcd2d8bccdc572baf5e2f6
+commit 08303548d502b7bfb7dcd2d8bccdc572baf5e2f6
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 10:51:50 2016 +0200
+
+    Fixed: Correct updating of inside_fragment
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 7f6bb7a..a913dbb 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -127 +127,3 @@ def generate_matrix(ast):
+-      inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START and bound_list[c]._diff_i == r)
++      # If node belongs in on this row
++      if bound_list[c]._diff_i == r:
++        inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START)
+3a81bc5923c2bb722c0c3ce332f75559d6e71125
+commit 3a81bc5923c2bb722c0c3ce332f75559d6e71125
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 11:58:49 2016 +0200
+
+    Fixed node sorting
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a913dbb..4a79298 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -75 +75,2 @@ class FragmentBoundNode():
+-    return a._filename < b._filename or a._line < b._line
++    return a._filename < b._filename or (
++           a._filename == b._filename and a._line < b._line)
+bb19cf0f645af92af2dc15b48536e6993c28420c
+commit bb19cf0f645af92af2dc15b48536e6993c28420c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 11:59:51 2016 +0200
+
+    Made object __repr__ more distinguishable
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 4a79298..399aa47 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -92 +92 @@ class FragmentBoundNode():
+-    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
++    return "\n<Node: %d, %d, %d, (%s, %d), %d>" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
+diff --git a/parse_patch.py b/parse_patch.py
+index 0cda481..7979d19 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -19 +19 @@ class Range():
+-    return "[Range: %d to %d]" % (self._start, self._end,)
++    return "<Range: %d to %d>" % (self._start, self._end,)
+@@ -34 +34 @@ class FragmentHeader():
+-    return "[FragmentHeader: %s, %s]" % (self._oldrange, self._newrange,)
++    return "<FragmentHeader: %s, %s>" % (self._oldrange, self._newrange,)
+@@ -60 +60 @@ class Fragment():
+-    return "[Fragment: %s]" % (self._header,)
++    return "\n   <Fragment: %s>" % (self._header,)
+@@ -93 +93 @@ class FilePatchHeader():
+-    return "[FilePatchHeader: %s -> %s]" % (self._oldfile, self._newfile,)
++    return "<FilePatchHeader: %s -> %s>" % (self._oldfile, self._newfile,)
+@@ -127 +127 @@ class FilePatch():
+-    return "[FilePatch: %s, %s]" % (self._header, self._fragments,)
++    return "\n  <FilePatch: %s, %s>" % (self._header, self._fragments,)
+@@ -160 +160 @@ class PatchHeader():
+-    return "[PatchHeader: %s]" %(self._hash,)
++    return "<PatchHeader: %s>" %(self._hash,)
+@@ -194 +194 @@ class Patch():
+-    return "[Patch: %s]" % (self._filepatches,)
++    return "\n <Patch: %s>" % (self._filepatches,)
+@@ -226 +226 @@ class AST():
+-    return "[AST: %s]" % (self._patches,)
++    return "<AST: %s>" % (self._patches,)
+a4c5ca72561ceb8c5fb362e65f9cc4ad3df2d55b
+commit a4c5ca72561ceb8c5fb362e65f9cc4ad3df2d55b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 12:01:00 2016 +0200
+
+    Fixed: Made end bound one-past
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 399aa47..7477c52 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -88 +88,6 @@ class FragmentBoundNode():
+-      self._line = fragment_range._end
++      # +1 because the bounds indicated are inclusive and
++      # we want bounds that are zero-impulse, i.e. we don't have to look at
++      # bounds that mention the previous line to decide what happens on this one
++      # which means that the inclusive end markers have to be "one-past" the end,
++      # i.e. [start, end[ .
++      self._line = fragment_range._end + 1
+75ee0ee0cbbe4f52cdabf73ec9f05a7e80c35da0
+commit 75ee0ee0cbbe4f52cdabf73ec9f05a7e80c35da0
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 12:02:07 2016 +0200
+
+    Group nodes by keys for compactness
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 7477c52..5bc97c7 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -115 +115,2 @@ def generate_fragment_bound_list(ast):
+-  Returns a list with ordered fragment bounds.
++  Returns a list with ordered fragment bounds
++  grouped by position (file, line).
+@@ -117 +118,16 @@ def generate_fragment_bound_list(ast):
+-  return sorted(extract_fragments(ast))
++  node_list = sorted(extract_fragments(ast))
++  grouped_list = [[]]
++  last_key = None
++  last_i = 0
++  for node in node_list:
++    key = (node._filename, node._line)
++    if last_key is None:
++      last_key = key
++    if key != last_key:
++      last_i += 1
++      # Append new sublist
++      grouped_list += [[]]
++    # Append to sublist at index last_i
++    grouped_list[last_i] += [node]
++    last_key = key
++  return grouped_list
+@@ -133,3 +149,4 @@ def generate_matrix(ast):
+-      # If node belongs in on this row
+-      if bound_list[c]._diff_i == r:
+-        inside_fragment = (bound_list[c]._kind == FragmentBoundNode.START)
++      for node in bound_list[c]:
++        # If node belongs in on this row
++        if node._diff_i == r:
++          inside_fragment = (node._kind == FragmentBoundNode.START)
+710ca08bc9958b1003aeb14c8d220c1cb0a17643
+commit 710ca08bc9958b1003aeb14c8d220c1cb0a17643
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 17:55:12 2016 +0200
+
+    Removed unchanged lines from test diffs
+
+diff --git a/test/diffs/006-twentyfile-removed-15-17.diff b/test/diffs/006-twentyfile-removed-15-17.diff
+index 7343269..51b6f15 100644
+--- a/test/diffs/006-twentyfile-removed-15-17.diff
++++ b/test/diffs/006-twentyfile-removed-15-17.diff
+@@ -11,4 +11 @@ index 3edbf23..7e83b27 100644
+-@@ -12,9 +12,6 @@ eleven
+- twelve
+- thirteen
+- fourteen
++@@ -15,3 +15,0 @@
+@@ -18,3 +15 @@ index 3edbf23..7e83b27 100644
+- eighteen
+- nineteen
+- twenty
++
+diff --git a/test/diffs/007-twentyfile-removed-2-5.diff b/test/diffs/007-twentyfile-removed-2-5.diff
+index 5f85951..78dd229 100644
+--- a/test/diffs/007-twentyfile-removed-2-5.diff
++++ b/test/diffs/007-twentyfile-removed-2-5.diff
+@@ -11,2 +11 @@ index 3edbf23..e88f868 100644
+-@@ -1,8 +1,4 @@
+- one
++@@ -2,4 +2,0 @@
+@@ -17,3 +16 @@ index 3edbf23..e88f868 100644
+- six
+- seven
+- eight
++
+diff --git a/test/diffs/008-changefile-add-x-to-C-F.diff b/test/diffs/008-changefile-add-x-to-C-F.diff
+index 6cccf90..4ad17d2 100644
+--- a/test/diffs/008-changefile-add-x-to-C-F.diff
++++ b/test/diffs/008-changefile-add-x-to-C-F.diff
+@@ -11,3 +11 @@ index 09b9fad..f6b976b 100644
+-@@ -1,9 +1,9 @@
+- a
+- b
++@@ -3,4 +3,4 @@
+@@ -22,3 +20 @@ index 09b9fad..f6b976b 100644
+- g
+- h
+- i
++
+diff --git a/test/diffs/009-changefile-add-y-to-E-I.diff b/test/diffs/009-changefile-add-y-to-E-I.diff
+index a0a16fd..1dd18a7 100644
+--- a/test/diffs/009-changefile-add-y-to-E-I.diff
++++ b/test/diffs/009-changefile-add-y-to-E-I.diff
+@@ -11,4 +11 @@ index f6b976b..aef8357 100644
+-@@ -2,11 +2,11 @@ a
+- b
+- cx
+- dx
++@@ -5,5 +5,5 @@
+@@ -25,3 +21,0 @@ index f6b976b..aef8357 100644
+- j
+- k
+- l
+diff --git a/test/diffs/010-add-x-to-J-K.diff b/test/diffs/010-add-x-to-J-K.diff
+index 0024d12..8a56ebb 100644
+--- a/test/diffs/010-add-x-to-J-K.diff
++++ b/test/diffs/010-add-x-to-J-K.diff
+@@ -11,4 +11 @@ index aef8357..b5b5133 100644
+-@@ -7,8 +7,8 @@ fxy
+- gy
+- hy
+- iy
++@@ -10,2 +10,2 @@
+@@ -19,3 +16 @@ index aef8357..b5b5133 100644
+- l
+- m
+- n
++
+diff --git a/test/diffs/011-add-x-to-A-and-N.diff b/test/diffs/011-add-x-to-A-and-N.diff
+index b446463..439836a 100644
+--- a/test/diffs/011-add-x-to-A-and-N.diff
++++ b/test/diffs/011-add-x-to-A-and-N.diff
+@@ -11 +11 @@ index b5b5133..58c71d0 100644
+-@@ -1,4 +1,4 @@
++@@ -1,1 +1,1 @@
+@@ -14,7 +14 @@ index b5b5133..58c71d0 100644
+- b
+- cx
+- dx
+-@@ -11,5 +11,5 @@ jx
+- kx
+- l
+- m
++@@ -14,1 +14,1 @@
+@@ -23 +17 @@ index b5b5133..58c71d0 100644
+- o
++
+diff --git a/test/diffs/012-add-x-to-A-C.diff b/test/diffs/012-add-x-to-A-C.diff
+index 92a16bd..a83ffd6 100644
+--- a/test/diffs/012-add-x-to-A-C.diff
++++ b/test/diffs/012-add-x-to-A-C.diff
+@@ -11 +11 @@ index 58c71d0..6d8e0aa 100644
+-@@ -1,6 +1,6 @@
++@@ -1,3 +1,3 @@
+@@ -18,3 +17,0 @@ index 58c71d0..6d8e0aa 100644
+- dx
+- exy
+- fxy
+diff --git a/test/diffs/013-add-y-to-M-O.diff b/test/diffs/013-add-y-to-M-O.diff
+index ad703e4..9dfa12d 100644
+--- a/test/diffs/013-add-y-to-M-O.diff
++++ b/test/diffs/013-add-y-to-M-O.diff
+@@ -11,4 +11 @@ index 6d8e0aa..b2689b1 100644
+-@@ -10,6 +10,6 @@ iy
+- jx
+- kx
+- l
++@@ -13,3 +13,3 @@
+745f25cd33a1902690d4aba858f823372a6bf5d7
+commit 745f25cd33a1902690d4aba858f823372a6bf5d7
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 18:35:03 2016 +0200
+
+    Added test/main.py with 3 cases
+
+diff --git a/test/main.py b/test/main.py
+new file mode 100644
+index 0000000..a352b48
+--- /dev/null
++++ b/test/main.py
+@@ -0,0 +1,54 @@
++#!/usr/bin/env python
++
++
++import unittest
++import os
++import sys
++TEST_DIR = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(TEST_DIR, '..'))
++from parse_patch import *
++from generate_matrix import *
++
++def read_diff(filename):
++  filepath = os.path.join(TEST_DIR, 'diffs', filename)
++  with open(filepath) as f:
++    lines = [line.rstrip() for line in f]
++    return lines
++
++
++class Test(unittest.TestCase):
++
++  def test_012(self):
++    self.check_diff('012-add-x-to-A-C.diff', ['#.'])
++
++  def test_011(self):
++    self.check_diff('011-add-x-to-A-and-N.diff', ['#.#.'])
++
++  def test_011_012(self):
++    self.check_diffs(['011-add-x-to-A-and-N.diff', 
++                      '012-add-x-to-A-C.diff'],
++                     ['#..#.', 
++                      '##...'])
++    
++  def check_diff(self, diff_filename, matrix):
++    diff = read_diff(diff_filename)
++    pp = PatchParser()
++    actual_matrix = generate_matrix(pp.parse(diff))
++    self.check_matrix(actual_matrix, matrix)
++
++  def check_diffs(self, diff_filenames, matrix):
++    diff = []
++    for fn in diff_filenames:
++      diff += read_diff(fn)
++    pp = PatchParser()
++    actual_matrix = generate_matrix(pp.parse(diff))
++    self.check_matrix(actual_matrix, matrix)
++
++    
++  def check_matrix(self, matrix, reference):
++    joined_matrix = [''.join(row) for row in matrix]
++    self.assertEqual(joined_matrix, reference)
++
++            
++if __name__ == '__main__':
++  unittest.main()
+5470e93b63843c573a06c4ceea12c342ec07843c
+commit 5470e93b63843c573a06c4ceea12c342ec07843c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 18:38:14 2016 +0200
+
+    Added .gitignore
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..1a507cf
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,3 @@
++*~
++*#
++*.pyc
+\ No newline at end of file
+ee764262bfc793f8432eaae305f14cfc0dbb7952
+commit ee764262bfc793f8432eaae305f14cfc0dbb7952
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 18:52:56 2016 +0200
+
+    Added add,remove lines tests. Failing. Renamed test 004
+
+diff --git a/test/diffs/004-removed-one-line-empty-file.diff b/test/diffs/004-remove-one-line-empty-file.diff
+similarity index 100%
+rename from test/diffs/004-removed-one-line-empty-file.diff
+rename to test/diffs/004-remove-one-line-empty-file.diff
+diff --git a/test/main.py b/test/main.py
+index a352b48..00dd72b 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -21,2 +21,11 @@ class Test(unittest.TestCase):
+-  def test_012(self):
+-    self.check_diff('012-add-x-to-A-C.diff', ['#.'])
++  def test_003(self):
++    self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
++
++  def test_004(self):
++    self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
++
++  def test_003_004(self):
++    self.check_diffs(['003-add-one-line-to-empty-file.diff',
++                      '004-remove-one-line-empty-file.diff'], 
++                     ['#.',
++                      '#.'])
+@@ -26,0 +36,3 @@ class Test(unittest.TestCase):
++  def test_012(self):
++    self.check_diff('012-add-x-to-A-C.diff', ['#.'])
++
+@@ -32,0 +45 @@ class Test(unittest.TestCase):
++
+ed867f0143077aa3c9bc678ea9ee15c26c73b6b3
+commit ed867f0143077aa3c9bc678ea9ee15c26c73b6b3
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 20:35:02 2016 +0200
+
+    Removed +1 from end bound. Failing tests commented out
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 5bc97c7..77ec36f 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -88,6 +88 @@ class FragmentBoundNode():
+-      # +1 because the bounds indicated are inclusive and
+-      # we want bounds that are zero-impulse, i.e. we don't have to look at
+-      # bounds that mention the previous line to decide what happens on this one
+-      # which means that the inclusive end markers have to be "one-past" the end,
+-      # i.e. [start, end[ .
+-      self._line = fragment_range._end + 1
++      self._line = fragment_range._end
+@@ -138,0 +134 @@ def generate_matrix(ast):
++  print "AST:", ast
+diff --git a/test/main.py b/test/main.py
+index 00dd72b..74ef6f3 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -21,11 +21,11 @@ class Test(unittest.TestCase):
+-  def test_003(self):
+-    self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
+-
+-  def test_004(self):
+-    self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
+-
+-  def test_003_004(self):
+-    self.check_diffs(['003-add-one-line-to-empty-file.diff',
+-                      '004-remove-one-line-empty-file.diff'], 
+-                     ['#.',
+-                      '#.'])
++  #def test_003(self):
++  #  self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
++  #
++  #def test_004(self):
++  #  self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
++  #
++  #def test_003_004(self):
++  #  self.check_diffs(['003-add-one-line-to-empty-file.diff',
++  #                    '004-remove-one-line-empty-file.diff'], 
++  #                   ['#.',
++  #                    '#.'])
+a6b586858676323fc9625191cb2bb06bf624c97a
+commit a6b586858676323fc9625191cb2bb06bf624c97a
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 21:22:12 2016 +0200
+
+    Added node exception for row 0
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 77ec36f..dea6f3e 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -83,2 +83,2 @@ class FragmentBoundNode():
+-    self._filename = diff_list[diff_i]._filepatches[file_i]._header._oldfile
+-    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._oldrange
++    self._filename = diff_list[diff_i]._filepatches[file_i]._header._newfile
++    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._newrange
+@@ -117,0 +118,2 @@ def generate_fragment_bound_list(ast):
++    if node._line == 0:
++      continue
+diff --git a/test/main.py b/test/main.py
+index 74ef6f3..4a96eb3 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -21,11 +21,11 @@ class Test(unittest.TestCase):
+-  #def test_003(self):
+-  #  self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
+-  #
+-  #def test_004(self):
+-  #  self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
+-  #
+-  #def test_003_004(self):
+-  #  self.check_diffs(['003-add-one-line-to-empty-file.diff',
+-  #                    '004-remove-one-line-empty-file.diff'], 
+-  #                   ['#.',
+-  #                    '#.'])
++  def test_003(self):
++    self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
++
++  def test_004(self):
++    self.check_diff('004-remove-one-line-empty-file.diff', ['.'])
++
++  def test_003_004(self):
++    self.check_diffs(['003-add-one-line-to-empty-file.diff',
++                      '004-remove-one-line-empty-file.diff'], 
++                     ['#.',
++                      '..'])
+12a121877586a87bafcc1890c10fd4c741946c0b
+commit 12a121877586a87bafcc1890c10fd4c741946c0b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 21:26:18 2016 +0200
+
+    Added parser debug flag
+
+diff --git a/parse_patch.py b/parse_patch.py
+index 7979d19..fa33194 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -9,0 +10,2 @@ import re
++DEBUG_PARSER=False
++
+@@ -38 +40,2 @@ class FragmentHeader():
+-    print "FragmentHeader? ", lines[0]
++    if DEBUG_PARSER:
++      print "FragmentHeader? ", lines[0]
+@@ -50 +53,2 @@ class FragmentHeader():
+-    print "Not fragment header"
++    if DEBUG_PARSER:
++      print "Not fragment header"
+@@ -68 +72,2 @@ class Fragment():
+-    print "Fragment? ", lines[0]
++    if DEBUG_PARSER:
++      print "Fragment? ", lines[0]
+@@ -82 +87,2 @@ class Fragment():
+-    print "Not fragment"
++    if DEBUG_PARSER:
++      print "Not fragment"
+@@ -97 +103,2 @@ class FilePatchHeader():
+-    print "FilePatchHeader? ", lines[0]
++    if DEBUG_PARSER:
++      print "FilePatchHeader? ", lines[0]
+@@ -131 +138,2 @@ class FilePatch():
+-    print "FilePatch? ", lines[0]
++    if DEBUG_PARSER:
++      print "FilePatch? ", lines[0]
+@@ -136 +143,0 @@ class FilePatch():
+-        #print i,j, lines
+@@ -138,4 +144,0 @@ class FilePatch():
+-        #print "Fragment: ", fragment
+-        # Consume lines
+-        #print len(lines)
+-        #print "After:",len(lines)
+@@ -146 +148,0 @@ class FilePatch():
+-        #print "Fragments:", fragments
+@@ -148 +149,0 @@ class FilePatch():
+-      #print "Returned patch:", p
+@@ -164 +165,2 @@ class PatchHeader():
+-    print "PatchHeader?", lines[0]
++    if DEBUG_PARSER:
++      print "PatchHeader?", lines[0]
+@@ -182 +184,2 @@ class PatchHeader():
+-      print "in PatchHeader:", lines[0]
++      if DEBUG_PARSER:
++        print "in PatchHeader:", lines[0]
+@@ -204 +207,2 @@ class Patch():
+-    print "Patch?", lines[0]
++    if DEBUG_PARSER:
++      print "Patch?", lines[0]
+@@ -206 +210,2 @@ class Patch():
+-    print "PatchHeader: ", header
++    if DEBUG_PARSER:
++      print "PatchHeader: ", header
+@@ -212 +217,2 @@ class Patch():
+-      print "FilePatch:", filepatch
++      if DEBUG_PARSER:
++        print "FilePatch:", filepatch
+@@ -233 +239,2 @@ class AST():
+-      print "Patch: ", patch
++      if DEBUG_PARSER:
++        print "Patch: ", patch
+@@ -248 +255 @@ class PatchParser():
+-    if len(lines_after) == len(lines):
++    if DEBUG_PARSER and len(lines_after) == len(lines):
+@@ -250 +257 @@ class PatchParser():
+-    if len(lines_after) > 0:
++    if DEBUG_PARSER and len(lines_after) > 0:
+diff --git a/test/main.py b/test/main.py
+index 4a96eb3..30752b4 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -62,0 +63,2 @@ class Test(unittest.TestCase):
++    for row in joined_matrix:
++      print row
+378bd1e3339fa90b487b8e6bbfd0cebc5e9a509c
+commit 378bd1e3339fa90b487b8e6bbfd0cebc5e9a509c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 22:25:46 2016 +0200
+
+    Added modfile tests 020-023
+
+diff --git a/test/diffs/020-modfile-create.diff b/test/diffs/020-modfile-create.diff
+new file mode 100644
+index 0000000..dab37e4
+--- /dev/null
++++ b/test/diffs/020-modfile-create.diff
+@@ -0,0 +1,14 @@
++commit 61e57104dd521ae7f644bf22b4604e5fadcf4f5d
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Mon Jul 18 21:31:00 2016 +0200
++
++    Added new file c.txt with 2 lines
++
++diff --git a/c.txt b/c.txt
++new file mode 100644
++index 0000000..c30dea8
++--- /dev/null
+++++ b/c.txt
++@@ -0,0 +1,2 @@
+++a
+++b
+diff --git a/test/diffs/021-modfile-remove-first-line.diff b/test/diffs/021-modfile-remove-first-line.diff
+new file mode 100644
+index 0000000..3988b7a
+--- /dev/null
++++ b/test/diffs/021-modfile-remove-first-line.diff
+@@ -0,0 +1,12 @@
++commit 6c58a455f48b531fb95f6724da791fc447555383
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Mon Jul 18 21:37:24 2016 +0200
++
++    Modfile: delete first line
++
++diff --git a/c.txt b/c.txt
++index c30dea8..485540d 100644
++--- a/c.txt
+++++ b/c.txt
++@@ -1 +0,0 @@
++-a
+diff --git a/test/diffs/022-modfile-mod-second-line.diff b/test/diffs/022-modfile-mod-second-line.diff
+new file mode 100644
+index 0000000..37ab442
+--- /dev/null
++++ b/test/diffs/022-modfile-mod-second-line.diff
+@@ -0,0 +1,13 @@
++commit 377a8000088d2263d9935cf05125f0b8eaf20d11
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Mon Jul 18 21:39:55 2016 +0200
++
++    Modfile: Modify second line
++
++diff --git a/c.txt b/c.txt
++index 485540d..6bb86a7 100644
++--- a/c.txt
+++++ b/c.txt
++@@ -1 +1 @@
++-b
+++bx
+diff --git a/test/diffs/023-modfile-readd-first-line.diff b/test/diffs/023-modfile-readd-first-line.diff
+new file mode 100644
+index 0000000..2124afe
+--- /dev/null
++++ b/test/diffs/023-modfile-readd-first-line.diff
+@@ -0,0 +1,13 @@
++commit 14e73ef5f144f7acd6b05a235c66517d59782320
++Author: amollberg <amollberg@users.noreply.github.com>
++Date:   Mon Jul 18 21:41:58 2016 +0200
++
++    Modfile: Re-added first line
++
++diff --git a/c.txt b/c.txt
++index 6bb86a7..c8524bc 100644
++--- a/c.txt
+++++ b/c.txt
++@@ -1 +1,2 @@
+++a
++ bx
+diff --git a/test/main.py b/test/main.py
+index 30752b4..ab7d1af 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -44 +44,19 @@ class Test(unittest.TestCase):
+-    
++
++  def test_020(self):
++    self.check_diff('020-modfile-create.diff', ['#.'])
++
++  def test_021(self):
++    self.check_diff('021-modfile-remove-first-line.diff', ['#.'])
++
++  def test_020_021(self):
++    self.check_diffs(['020-modfile-create.diff',
++                      '021-modfile-remove-first-line.diff'],
++                     ['##.',
++                      '#..'])
++
++  def test_022_023(self):
++    self.check_diffs(['022-modfile-mod-second-line.diff',
++                      '023-modfile-readd-first-line.diff'],
++                     ['.#.',
++                      '#..'])
++
+2a9d1de6f2bbf8d0a16a01530a36b9a3d563152b
+commit 2a9d1de6f2bbf8d0a16a01530a36b9a3d563152b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Jul 18 23:19:50 2016 +0200
+
+    Make nodes from both oldfile and newfile
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index dea6f3e..9305a63 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -58,0 +59 @@ class FragmentBoundNode():
++  _diff = None
+@@ -60,2 +61,2 @@ class FragmentBoundNode():
+-  _file_i = None
+-  _fragment_i = None
++  _file = None
++  _fragment = None
+@@ -79 +80,2 @@ class FragmentBoundNode():
+-  def __init__(self, diff_list, diff_i, file_i, fragment_i, kind):
++  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, filename, kind):
++    self._diff = diff
+@@ -81,4 +83,3 @@ class FragmentBoundNode():
+-    self._file_i = file_i
+-    self._fragment_i = fragment_i
+-    self._filename = diff_list[diff_i]._filepatches[file_i]._header._newfile
+-    fragment_range = diff_list[diff_i]._filepatches[file_i]._fragments[fragment_i]._header._newrange
++    self._file = file_patch
++    self._fragment = fragment
++    self._filename = filename
+@@ -92 +93 @@ class FragmentBoundNode():
+-    return "\n<Node: %d, %d, %d, (%s, %d), %d>" %(self._diff_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
++    return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
+@@ -98,3 +99,4 @@ def extract_fragments(ast):
+-  for diff_i in range(len(diff_list)):
+-    for file_i in range(len(diff_list[diff_i]._filepatches)):
+-      for fragment_i in range(len(diff_list[diff_i]._filepatches[file_i]._fragments)):
++  diff_i = 0
++  for diff in diff_list:
++    for file_patch in diff._filepatches:
++      for fragment in file_patch._fragments:
+@@ -102,2 +104,8 @@ def extract_fragments(ast):
+-          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.START),
+-          FragmentBoundNode(diff_list, diff_i, file_i, fragment_i, FragmentBoundNode.END)
++          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++                            file_patch._header._oldfile, FragmentBoundNode.START),
++          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++                            file_patch._header._oldfile, FragmentBoundNode.END),
++          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
++                            file_patch._header._newfile, FragmentBoundNode.START),
++          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
++                            file_patch._header._newfile, FragmentBoundNode.END)
+@@ -104,0 +113 @@ def extract_fragments(ast):
++    diff_i += 1
+diff --git a/test/diffs/023-modfile-readd-first-line.diff b/test/diffs/023-modfile-readd-first-line.diff
+index 2124afe..0299403 100644
+--- a/test/diffs/023-modfile-readd-first-line.diff
++++ b/test/diffs/023-modfile-readd-first-line.diff
+@@ -11 +11 @@ index 6bb86a7..c8524bc 100644
+-@@ -1 +1,2 @@
++@@ -0,0 +1 @@
+@@ -13 +12,0 @@ index 6bb86a7..c8524bc 100644
+- bx
+diff --git a/test/main.py b/test/main.py
+index ab7d1af..cd9530a 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -25 +25 @@ class Test(unittest.TestCase):
+-    self.check_diff('004-remove-one-line-empty-file.diff', ['.'])
++    self.check_diff('004-remove-one-line-empty-file.diff', ['#.'])
+@@ -31 +31 @@ class Test(unittest.TestCase):
+-                      '..'])
++                      '#.'])
+286bbdd0eb5a9b230c59c6fac21f051a8069a42d
+commit 286bbdd0eb5a9b230c59c6fac21f051a8069a42d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 11:05:16 2016 +0200
+
+    Fleshed out update functions
+    Fleshed out update functions. Tests failing
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 9305a63..139c505 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -2,0 +3 @@
++import copy
+@@ -3,0 +5,17 @@ from parse_patch import *
++# Hierarchy:
++# AST
++#  Patch
++#   PatchHeader
++#    _hash
++#   FilePatch
++#     FilePatchHeader
++#      _oldfile
++#      _newfile
++#     Fragment
++#      FragmentHeader
++#       Range _oldrange
++#        _start
++#        _end
++#       Range _newrange
++#        _start
++#        _end
+@@ -5,2 +23,11 @@ from parse_patch import *
+-def update_positions(old_ast, patch):
+-  ast = copy(old_ast)
++def nonnull_file(file_patch_header):
++  def is_null(fn):
++    return fn == '/dev/null'
++  if not is_null(file_patch_header._newfile):
++    return file_patch_header._newfile
++  if not is_null(file_patch_header._oldfile):
++    return file_patch_header._oldfile
++  # Both files are null files
++  return None
++
++def update_positions(old_diff, patch):
+@@ -11,4 +38,24 @@ def update_positions(old_ast, patch):
+-    # TODO: Remove this return
+-    # Naive version - no update
+-    return
+-    
++    def update_range(fragment_range, file_patch):
++      # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
++      # previous lines are unaffected, mapping e -> e
++      # start lines inside fragment map e -> c
++      # end lines inside fragment map e -> d
++      # subsequent lines map as e -> e-b+d
++      marker = None
++      for patch_fragment in file_patch._fragments:
++        if patch_fragment._header._oldrange._start <= fragment_range._start:
++          marker = patch_fragment._header
++        else:
++          break
++      if marker is None:
++        # No fragments before the given range
++        return
++      if fragment_range._start < marker._oldrange._end:
++        fragment_range._start = marker._newrange._start
++      else:
++        fragment_range._start += marker._newrange._end - marker._oldrange._end
++      if fragment_range._end < marker._oldrange._end:
++        fragment_range._end = marker._newrange._end
++      else:
++        fragment_range._end += marker._newrange._end - marker._oldrange._end
++      
+@@ -16,3 +62,0 @@ def update_positions(old_ast, patch):
+-    # patch fragment +a,b -c,d means the map [a,a+b] -> [c,c+d]
+-    # previous lines are unaffected, mapping e -> e
+-    # subsequent lines map as e -> e-(a+b)+c+d
+@@ -20,13 +64,13 @@ def update_positions(old_ast, patch):
+-    #for patch_fragment in file_patch._fragments:
+-    #  for ast_fragment in file_ast:
+-    #    updated_header = ast_fragment._header
+-    #    if ast_fragment._header._oldrange._start >= patch_fragment._header._oldrange._start:
+-    #      if ast_fragment._header._oldrange._start <= patch_fragment._header._oldrange._end:
+-    #        # Old start is inside patch fragment; absorb to the patch start
+-    #        updated_header._oldrange._start = patch_fragment._header._newrange._start
+-    #        # New start has to absorb to patch start as well
+-    #        updated_header._newrange._start = patch_fragment._header._newrange._start
+-    #      else:
+-    #        # Old start is after the patch fragment; shift the starts
+-  # TODO
+-  pass
++    for ast_fragment in file_ast._fragments:
++      print "Header before:", ast_fragment._header
++      update_range(ast_fragment._header._oldrange, file_patch)
++      update_range(ast_fragment._header._newrange, file_patch)
++      print "Patch:", file_patch
++      print "Header after:", ast_fragment._header
++
++  for file_patch in patch._filepatches:
++    for file_ast in old_diff._filepatches:
++      if nonnull_file(file_ast._header) == file_patch._header._oldfile:
++        update_file_positions(file_ast, file_patch)
++        file_ast._header._oldfile = file_patch._header._newfile
++        file_ast._header._newfile = file_patch._header._newfile
+@@ -40,2 +84,3 @@ def update_positions_to_latest(old_diff, patch_list):
+-  # TODO
+-  pass
++  for patch in patch_list:
++    # TODO: Sort and filter by timestamp
++    update_positions(old_diff, patch)
+@@ -46 +91 @@ def update_positions_to_latest(old_diff, patch_list):
+-def update_all_positions_to_latest(ast_list):
++def update_all_positions_to_latest(diff_list):
+@@ -145,0 +191,2 @@ def generate_matrix(ast):
++  ast._patches = update_all_positions_to_latest(ast._patches)
++  print "AST after update:", ast
+diff --git a/parse_patch.py b/parse_patch.py
+index fa33194..304b6bf 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -6,0 +7,18 @@
++# Hierarchy:
++# AST
++#  Patch
++#   PatchHeader
++#    _hash
++#   FilePatch
++#     FilePatchHeader
++#      _oldfile
++#      _newfile
++#     Fragment
++#      FragmentHeader
++#       Range _oldrange
++#        _start
++#        _end
++#       Range _newrange
++#        _start
++#        _end
++
+bd0422d4588682a05d9d0688a018aeb2a633a78e
+commit bd0422d4588682a05d9d0688a018aeb2a633a78e
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 15:49:02 2016 +0200
+
+    Added addmod test 030-033 for overlapping fragment additions
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 139c505..539dbd0 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -22,0 +23,8 @@ from parse_patch import *
++# TODO:
++# Generate nodes as we update the diff list, not just after every one 
++# Each update has to also update each node and sort new nodes into the
++# list of existing. We may be able to work recursively, patching older 
++# diffs and adding new nodes. We probably will never remove nodes as to
++# signal that fragments have been joined together. They still need to
++# be represented at the last level as separate (?).
++
+diff --git a/test/main.py b/test/main.py
+index cd9530a..35b4013 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -63,0 +64,30 @@ class Test(unittest.TestCase):
++  def test_030(self):
++    self.check_diff('030-addmod-create-with-ab.diff', ['#.'])
++
++  def test_030_031(self):
++    self.check_diffs(['030-addmod-create-with-ab.diff',
++                      '031-addmod-add-c.diff'], 
++                     [['#..'],
++                      ['.#.']])
++
++  def test_030_032(self):
++    self.check_diffs(['030-addmod-create-with-ab.diff',
++                      '031-addmod-add-c.diff',
++                      '032-addmod-change-bc-to-xy.diff'], 
++                     [['#...'],
++                      ['..#.'],
++                      ['###.']])
++
++
++  def test_030_033(self):
++    self.check_diffs(['030-addmod-create-with-ab.diff',
++                      '031-addmod-add-c.diff',
++                      '032-addmod-change-bc-to-xy.diff',
++                      '033-addmod-add-z-between-xy.diff'], 
++                     [['#....'],
++                      ['..#..'],
++                      ['###..'],
++                      ['####.']])
++
++
++
+9def84b5ceff2be019b7507e276d54c7e084b57c
+commit 9def84b5ceff2be019b7507e276d54c7e084b57c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 15:49:36 2016 +0200
+
+    Created class FragmentBoundLine to track bounds over changeset
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 539dbd0..41bc0e3 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -147 +147,28 @@ class FragmentBoundNode():
+-    
++
++def FragmentBoundLine():
++  _nodehistory = None
++  _startdiff_i = None
++
++  def __lt__(a, b):
++    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
++    first_common_diff_i = min(common_diffs)
++    last_common_diff_i = max(common_diffs)
++    # Order by filename at latest diff and then by
++    # line at earliest common diff
++    a_file = a._nodehistory[last_common_diff_i]._filename
++    b_file = b._nodehistory[last_common_diff_i]._filename
++    a_line = a._nodehistory[first_common_diff_i]._line
++    b_line = b._nodehistory[first_common_diff_i]._line
++    return a_file < b_file or (a_file == b_file and a_line < b_line)
++
++  def __init__(self, node):
++    self._startdiff_i
++    self._nodehistory = {self._startdiff_i : node}
++
++  def update(self, diff_i, filename, line):
++    # Shallow copy previous
++    updated_node = copy.copy(self._nodehstory[diff_i-1])
++
++    updated_node._file = filename
++    updated_node._line = line
++    self._nodehistory[diff_i] = updated_node
+4508b2d70d26e16f2056c7bc0466633325366c08
+commit 4508b2d70d26e16f2056c7bc0466633325366c08
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 19:29:09 2016 +0200
+
+    Modified updating for node lines
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 41bc0e3..759b2d5 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -21,0 +22,3 @@ from parse_patch import *
++# FragmentNodeLine
++#  FragmentNode
++#  _startdiff_i
+@@ -41,37 +44,26 @@ def nonnull_file(file_patch_header):
+-def update_positions(old_diff, patch):
+-  def update_file_positions(file_ast, file_patch):
+-    """
+-    Update the AST to how it should look after the patch has been applied.
+-    """
+-    def update_range(fragment_range, file_patch):
+-      # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
+-      # previous lines are unaffected, mapping e -> e
+-      # start lines inside fragment map e -> c
+-      # end lines inside fragment map e -> d
+-      # subsequent lines map as e -> e-b+d
+-      marker = None
+-      for patch_fragment in file_patch._fragments:
+-        if patch_fragment._header._oldrange._start <= fragment_range._start:
+-          marker = patch_fragment._header
+-        else:
+-          break
+-      if marker is None:
+-        # No fragments before the given range
+-        return
+-      if fragment_range._start < marker._oldrange._end:
+-        fragment_range._start = marker._newrange._start
+-      else:
+-        fragment_range._start += marker._newrange._end - marker._oldrange._end
+-      if fragment_range._end < marker._oldrange._end:
+-        fragment_range._end = marker._newrange._end
+-      else:
+-        fragment_range._end += marker._newrange._end - marker._oldrange._end
+-      
+-    # TODO: Verify that filenames are the same
+-    # TODO Ensure sorted fragments
+-    for ast_fragment in file_ast._fragments:
+-      print "Header before:", ast_fragment._header
+-      update_range(ast_fragment._header._oldrange, file_patch)
+-      update_range(ast_fragment._header._newrange, file_patch)
+-      print "Patch:", file_patch
+-      print "Header after:", ast_fragment._header
++def update_line(line, bound_kind, file_patch):
++  """
++  Update one line in a file with a file patch.
++  """
++  # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
++  # previous lines are unaffected, mapping e -> e
++  # start lines inside fragment map e -> c
++  # end lines inside fragment map e -> d
++  # subsequent lines map as e -> e-b+d
++  marker = None
++  for patch_fragment in file_patch._fragments:
++    if patch_fragment._header._oldrange._start <= line:
++      marker = patch_fragment._header
++    else:
++      break
++  if marker is not None:
++    if line < marker._oldrange._end:
++      # line is inside the range
++      if bound_kind == FragmentBoundNode.START:
++        line = marker._newrange._start
++      elif bound_kind == FragmentBoundNode.END:
++        line = marker._newrange._end
++    else:
++      # line is after the range
++      line += marker._newrange._end - marker._oldrange._en
++  return line
+@@ -79,9 +71,32 @@ def update_positions(old_diff, patch):
+-  for file_patch in patch._filepatches:
+-    for file_ast in old_diff._filepatches:
+-      if nonnull_file(file_ast._header) == file_patch._header._oldfile:
+-        update_file_positions(file_ast, file_patch)
+-        file_ast._header._oldfile = file_patch._header._newfile
+-        file_ast._header._newfile = file_patch._header._newfile
+-          
+-
+-def update_positions_to_latest(old_diff, patch_list):
++
++def update_file_positions(file_node_lines, file_patch):
++  """
++  Update all the nodes belonging in a file with a file patch.
++  """
++  # TODO: Verify that filenames are the same
++  # TODO Ensure sorted fragments
++  for node_line in file_node_lines:
++    print "Node before:", node_line.last()
++    node_line.update(diff_i, file_patch._header._newfile,
++                     update_line(node_line.last(), file_patch))
++    print "Node after:", node_line.last()
++
++
++def extract_nodes(diff, diff_i):
++  node_list = []
++  for file_patch in diff._filepatches:
++    for fragment in file_patch._fragments:
++      node_list += [
++        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++                          file_patch._header._oldfile, FragmentBoundNode.START),
++        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++                          file_patch._header._oldfile, FragmentBoundNode.END),
++        ]
++  return node_list
++
++
++def extract_node_lines(diff, diff_i):
++  return map(FragmentBoundLine, extract_nodes(diff, diff_i))
++
++
++def update_positions(node_lines, patch):
+@@ -89,2 +104 @@ def update_positions_to_latest(old_diff, patch_list):
+-  Update the positions of the AST old_ast through every patch
+-  in patch_list that is more recent than it.
++  Update all node lines with a multi-file patch.
+@@ -92,3 +106,16 @@ def update_positions_to_latest(old_diff, patch_list):
+-  for patch in patch_list:
+-    # TODO: Sort and filter by timestamp
+-    update_positions(old_diff, patch)
++  for file_patch in patch._filepatches:
++    oldfile = file_patch._header._oldfile
++    file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
++    update_file_positions(file_node_lines, file_patch)
++
++
++#def update_positions_to_latest(node_lines, patch_list):
++#  """
++#  Update the positions of the AST old_ast through every patch
++#  in patch_list that is more recent than it.
++#  """
++#  for patch in patch_list:
++#    # TODO: Sort and filter by timestamp
++#    update_positions(node_lines, patch)
++
++
+@@ -97,0 +125,4 @@ def update_positions_to_latest(old_diff, patch_list):
++# Need to generate the nodes as we iterate through. What order?
++# * Starting diff : new to old, propagation: old to new
++# * Starting diff : old to new, propagation: old to new
++#   + Can get all nodes from a patch in one go
+@@ -105,4 +136,6 @@ def update_all_positions_to_latest(diff_list):
+-  # For all diffs except the last which is already up to date.
+-  for i in range(len(diff_list) - 1):
+-    update_positions_to_latest(diff_list[i], diff_list[i+1:])
+-  return diff_list
++  node_line_list = []
++  for i in range(len(diff_list)):
++    #update_positions_to_latest(diff_list[i], diff_list[i+1:])
++    node_line_list += extract_node_lines(diff_list[i], i)
++    update_positions(node_line_list, diff_list[i])
++  return node_line_list
+@@ -148 +181 @@ class FragmentBoundNode():
+-def FragmentBoundLine():
++class FragmentBoundLine():
+@@ -150,0 +184 @@ def FragmentBoundLine():
++  _kind = None
+@@ -165 +199 @@ def FragmentBoundLine():
+-    self._startdiff_i
++    self._startdiff_i = node._diff_i
+@@ -166,0 +201,7 @@ def FragmentBoundLine():
++    self._kind = node._kind
++
++  def __repr__(self):
++    return " \n<FragmentBoundLine: %d, %s>" % (self._startdiff_i, self._nodehistory)
++
++  def last(self):
++    return self._nodehistory[max(self._nodehistory.viewkeys())]
+@@ -176,19 +216,0 @@ def FragmentBoundLine():
+-def extract_fragments(ast):
+-  fragment_list = []
+-  diff_list = ast._patches
+-  diff_i = 0
+-  for diff in diff_list:
+-    for file_patch in diff._filepatches:
+-      for fragment in file_patch._fragments:
+-        fragment_list += [
+-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+-                            file_patch._header._oldfile, FragmentBoundNode.START),
+-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
+-                            file_patch._header._oldfile, FragmentBoundNode.END),
+-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
+-                            file_patch._header._newfile, FragmentBoundNode.START),
+-          FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._newrange,
+-                            file_patch._header._newfile, FragmentBoundNode.END)
+-        ]
+-    diff_i += 1
+-  return fragment_list
+@@ -195,0 +218 @@ def extract_fragments(ast):
++# TODO: Convert to just grouping. Howto group nodes in node lines?
+@@ -198 +221 @@ def generate_fragment_bound_list(ast):
+-  Takes an up-to date list of diffs.
++  Takes a list of  up-to date list of diffs.
+@@ -226,4 +249,3 @@ def generate_matrix(ast):
+-  ast._patches = update_all_positions_to_latest(ast._patches)
+-  print "AST after update:", ast
+-  bound_list = generate_fragment_bound_list(ast)
+-  print "bound list:", bound_list
++  node_lines = update_all_positions_to_latest(ast._patches)
++  print "Node lines:", node_lines
++  #bound_list = generate_fragment_bound_list(ast)
+@@ -231 +253 @@ def generate_matrix(ast):
+-  n_cols = len(bound_list)
++  n_cols = len(node_lines) # TODO: Reduce this after they have been grouped
+@@ -238 +260 @@ def generate_matrix(ast):
+-      for node in bound_list[c]:
++      for node_line in node_lines:
+@@ -240,2 +262,2 @@ def generate_matrix(ast):
+-        if node._diff_i == r:
+-          inside_fragment = (node._kind == FragmentBoundNode.START)
++        if node_line._startdiff_i == r:
++          inside_fragment = (node_line._kind == FragmentBoundNode.START)
+da56003d36d5ff9257ee2c256324b12833ea8cac
+commit da56003d36d5ff9257ee2c256324b12833ea8cac
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 23:43:41 2016 +0200
+
+    Test for special case for empty oldranges, propagate diff_i
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 759b2d5..a43fbc8 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -58,0 +59,3 @@ def update_line(line, bound_kind, file_patch):
++  is_creation = (marker._oldrange._start == marker._oldrange._end)
++  print "Update_line:", line, bound_kind, file_patch
++  print "Marker:", marker
+@@ -60 +63,3 @@ def update_line(line, bound_kind, file_patch):
+-    if line < marker._oldrange._end:
++    if line < marker._oldrange._end or (
++      is_creation and line == marker._oldrange._end):
++
+@@ -61,0 +67 @@ def update_line(line, bound_kind, file_patch):
++      print "Line %d is inside range %s" %(line, marker._oldrange)
+@@ -63,0 +70 @@ def update_line(line, bound_kind, file_patch):
++        print "Setting start line to", line
+@@ -65,0 +73 @@ def update_line(line, bound_kind, file_patch):
++        print "Setting end line to", line
+@@ -68 +76,3 @@ def update_line(line, bound_kind, file_patch):
+-      line += marker._newrange._end - marker._oldrange._en
++      print "Line %d is after range %s; shifting %d" % (
++        line, marker._oldrange, marker._newrange._end - marker._oldrange._end)
++      line += marker._newrange._end - marker._oldrange._end
+@@ -72 +82 @@ def update_line(line, bound_kind, file_patch):
+-def update_file_positions(file_node_lines, file_patch):
++def update_file_positions(file_node_lines, file_patch, diff_i):
+@@ -81 +91,3 @@ def update_file_positions(file_node_lines, file_patch):
+-                     update_line(node_line.last(), file_patch))
++                     update_line(node_line.last()._line,
++                                 node_line.last()._kind,
++                                 file_patch))
+@@ -102 +114 @@ def extract_node_lines(diff, diff_i):
+-def update_positions(node_lines, patch):
++def update_positions(node_lines, patch, diff_i):
+@@ -108,2 +120,10 @@ def update_positions(node_lines, patch):
+-    file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
+-    update_file_positions(file_node_lines, file_patch)
++    #file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
++    file_node_lines = []
++    for nl in node_lines:
++      print "last:", nl.last()._filename
++      if nl.last()._filename == oldfile:
++        file_node_lines += [nl]
++    print "Updating file:", oldfile
++    print "Node lines:", file_node_lines
++    update_file_positions(file_node_lines, file_patch, diff_i)
++    print "Updated node lines:", file_node_lines
+@@ -140 +160,3 @@ def update_all_positions_to_latest(diff_list):
+-    update_positions(node_line_list, diff_list[i])
++    print "All extracted:", i, node_line_list
++    update_positions(node_line_list, diff_list[i], i)
++    #print "All updated:", node_line_list
+@@ -179 +201,4 @@ class FragmentBoundNode():
+-    return "\n<Node: %s, (%s, %d), %d>" %(self._diff_i, self._filename, self._line, self._kind)
++    kind_str = "START"
++    if self._kind == FragmentBoundNode.END:
++      kind_str = "END"
++    return "\n <Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
+@@ -211 +236,3 @@ class FragmentBoundLine():
+-    updated_node = copy.copy(self._nodehstory[diff_i-1])
++    if diff_i <= 0:
++      diff_i = 1
++    updated_node = copy.copy(self._nodehistory[diff_i-1])
+diff --git a/test/main.py b/test/main.py
+index 35b4013..bd660a9 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -20,0 +21,16 @@ class Test(unittest.TestCase):
++  def test_update_line_1(self):
++    oldrange = Range(0,0)
++    newrange = Range(1,1)
++    frag1header = FragmentHeader(oldrange, newrange)
++    frag1 = Fragment(frag1header)
++    oldfile = "dummy"
++    newfile = "dummy"
++    fileheader = FilePatchHeader(oldfile, newfile)
++    filepatch = FilePatch(fileheader, [frag1])
++
++    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch),
++                     1)
++    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch),
++                     2)
++
++
+115b7f9f0066294f51e270c567b9d30e8401017d
+commit 115b7f9f0066294f51e270c567b9d30e8401017d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Tue Jul 19 23:48:41 2016 +0200
+
+    Compacter test, added case for creation at middle
+
+diff --git a/test/main.py b/test/main.py
+index bd660a9..a00c76f 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -21,14 +21,14 @@ class Test(unittest.TestCase):
+-  def test_update_line_1(self):
+-    oldrange = Range(0,0)
+-    newrange = Range(1,1)
+-    frag1header = FragmentHeader(oldrange, newrange)
+-    frag1 = Fragment(frag1header)
+-    oldfile = "dummy"
+-    newfile = "dummy"
+-    fileheader = FilePatchHeader(oldfile, newfile)
+-    filepatch = FilePatch(fileheader, [frag1])
+-
+-    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch),
+-                     1)
+-    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch),
+-                     2)
++  def test_update_line_create_at_beginning(self):
++    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
++        Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
++
++    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch), 1)
++    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch), 2)
++
++
++  def test_update_line_create_at_middle(self):
++    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
++        Fragment(FragmentHeader(Range(3,3), Range(4,1)))])
++
++    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 4)
++    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 5)
+0bd9e9af5299fb65daad4bfb096cf3356d6a4888
+commit 0bd9e9af5299fb65daad4bfb096cf3356d6a4888
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 10:07:20 2016 +0200
+
+    +1 to creation lines. Update_line tests pass
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a43fbc8..a2aa51f 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -59 +58,0 @@ def update_line(line, bound_kind, file_patch):
+-  is_creation = (marker._oldrange._start == marker._oldrange._end)
+@@ -62,0 +62 @@ def update_line(line, bound_kind, file_patch):
++    is_creation = (marker._oldrange._start == marker._oldrange._end)
+diff --git a/parse_patch.py b/parse_patch.py
+index 304b6bf..2674d85 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -34,0 +35,6 @@ class Range():
++    # Fix for inconvenient notation of empty lines
++    # This eliminates the need for special cases in
++    # some calculations.
++    if length == 0:
++      start += 1
++
+diff --git a/test/main.py b/test/main.py
+index a00c76f..4af008b 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -25,2 +25,2 @@ class Test(unittest.TestCase):
+-    self.assertEqual(update_line(0, FragmentBoundNode.START, filepatch), 1)
+-    self.assertEqual(update_line(0, FragmentBoundNode.END, filepatch), 2)
++    self.assertEqual(update_line(1, FragmentBoundNode.START, filepatch), 1)
++    self.assertEqual(update_line(1, FragmentBoundNode.END, filepatch), 2)
+@@ -31,4 +31,12 @@ class Test(unittest.TestCase):
+-        Fragment(FragmentHeader(Range(3,3), Range(4,1)))])
+-
+-    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 4)
+-    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 5)
++        Fragment(FragmentHeader(Range(3,0), Range(4,1)))])
++
++    # Previous lines unaffected
++    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 3)
++    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 3)
++    # Creation bounds moved
++    self.assertEqual(update_line(4, FragmentBoundNode.START, filepatch), 4)
++    self.assertEqual(update_line(4, FragmentBoundNode.END, filepatch), 5)
++    # Subsequent lines shifted
++    self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
++    self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
++    
+a6d48e7424f7bb51245648a83208bff6db045e37
+commit a6d48e7424f7bb51245648a83208bff6db045e37
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 10:08:48 2016 +0200
+
+    More prints
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a2aa51f..08c6f23 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -155,0 +156 @@ def update_all_positions_to_latest(diff_list):
++  print "update_all_positions:", diff_list
+e57f7739ffcceba058e2e6a8db4ffa5880b33d46
+commit e57f7739ffcceba058e2e6a8db4ffa5880b33d46
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 11:15:34 2016 +0200
+
+    Improved node printouts
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 08c6f23..019fe16 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -205 +205 @@ class FragmentBoundNode():
+-    return "\n <Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
++    return "<Node: %s, (%s, %d), %s>" %(self._diff_i, self._filename, self._line, kind_str)
+@@ -230 +230,4 @@ class FragmentBoundLine():
+-    return " \n<FragmentBoundLine: %d, %s>" % (self._startdiff_i, self._nodehistory)
++    return " \n<FragmentBoundLine: %d, %s>" % (
++      self._startdiff_i,
++      ''.join(["\n %d: %s" %(key, val)
++              for key,val in self._nodehistory.iteritems()]))
+5e2c834a418f4d79331b203112ed76ee3609d079
+commit 5e2c834a418f4d79331b203112ed76ee3609d079
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 11:20:18 2016 +0200
+
+    Fixed confused diff indices
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 019fe16..5467137 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -226 +226,4 @@ class FragmentBoundLine():
+-    self._nodehistory = {self._startdiff_i : node}
++    # Initialize history with a base node that was created
++    # by some previous diff (startdiff - 1) so that
++    # when this node gets updated with startdiff it will be in sync.
++    self._nodehistory = {self._startdiff_i-1 : node}
+@@ -240,2 +243,2 @@ class FragmentBoundLine():
+-    if diff_i <= 0:
+-      diff_i = 1
++    if diff_i < 0:
++      diff_i = 0
+@@ -243,0 +247 @@ class FragmentBoundLine():
++    updated_node._diff_i = diff_i
+@@ -287,0 +292 @@ def generate_matrix(ast):
++    diff_i = r
+@@ -291,4 +296,5 @@ def generate_matrix(ast):
+-      for node_line in node_lines:
+-        # If node belongs in on this row
+-        if node_line._startdiff_i == r:
+-          inside_fragment = (node_line._kind == FragmentBoundNode.START)
++      node_line = node_lines[c]
++      print "%d,%d: %s" %(r,c, node_line)
++      # If node belongs in on this row
++      if node_line._startdiff_i == diff_i:
++        inside_fragment = (node_line._kind == FragmentBoundNode.START)
+64d311391c40b306a9a843422781c9867087485e
+commit 64d311391c40b306a9a843422781c9867087485e
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 11:21:11 2016 +0200
+
+    Cleaned whitespace
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 5467137..b00df54 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -27 +27 @@ from parse_patch import *
+-# Generate nodes as we update the diff list, not just after every one 
++# Generate nodes as we update the diff list, not just after every one
+@@ -29 +29 @@ from parse_patch import *
+-# list of existing. We may be able to work recursively, patching older 
++# list of existing. We may be able to work recursively, patching older
+@@ -142 +142 @@ def update_positions(node_lines, patch, diff_i):
+-  
++
+@@ -172 +172 @@ class FragmentBoundNode():
+-  
++
+@@ -176 +176 @@ class FragmentBoundNode():
+-  
++
+@@ -279 +279 @@ def generate_fragment_bound_list(ast):
+-      
++
+@@ -304 +304 @@ def generate_matrix(ast):
+- 
++
+@@ -313 +313 @@ def main():
+-  
++
+diff --git a/parse_patch.py b/parse_patch.py
+index 2674d85..fe5fc0b 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -80,2 +80,2 @@ class FragmentHeader():
+-    
+-    
++
++
+@@ -134 +134 @@ class FilePatchHeader():
+-      
++
+@@ -137 +137 @@ class FilePatchHeader():
+-    
++
+@@ -142 +142 @@ class FilePatchHeader():
+-    
++
+@@ -148 +148 @@ class FilePatchHeader():
+-  
++
+@@ -152 +152 @@ class FilePatch():
+-  
++
+@@ -212 +212 @@ class PatchHeader():
+-        
++
+@@ -249 +249 @@ class Patch():
+-  
++
+@@ -272 +272 @@ class AST():
+-  
++
+6362117fbc40e3ddf8eab7c668e221b93d49d462
+commit 6362117fbc40e3ddf8eab7c668e221b93d49d462
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Jul 20 12:15:07 2016 +0200
+
+    Added node line __eq__ and grouping. More tests succeed
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index b00df54..786d870 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -211,0 +212 @@ class FragmentBoundLine():
++  # Note: This ordering is not transitive so bound lines cannot be sorted!
+@@ -221,0 +223,2 @@ class FragmentBoundLine():
++    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+@@ -223,0 +227,14 @@ class FragmentBoundLine():
++  def __eq__(a, b):
++    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
++    first_common_diff_i = min(common_diffs)
++    # Order by filename at latest diff and then by
++    # line at earliest common diff
++    a_file = a._nodehistory[first_common_diff_i]._filename
++    b_file = b._nodehistory[first_common_diff_i]._filename
++    a_line = a._nodehistory[first_common_diff_i]._line
++    b_line = b._nodehistory[first_common_diff_i]._line
++    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
++    return a_file == b_file and a_line == b_line and a._kind == b._kind
++
++
+@@ -254 +271,4 @@ class FragmentBoundLine():
+-def generate_fragment_bound_list(ast):
++# Group node lines that are equal, i.e. that at the first
++# common diff are at the same position and of the same kind.
++# As a note, at any subsequent diffs they will consequently be the same too.
++def group_fragment_bound_lines(node_lines):
+@@ -256,3 +276,3 @@ def generate_fragment_bound_list(ast):
+-  Takes a list of  up-to date list of diffs.
+-  Returns a list with ordered fragment bounds
+-  grouped by position (file, line).
++  Takes a list of up-to date list of bound node lines.
++  Returns a list with ordered bound node lines
++  grouped by position (file, line) at first common diff.
+@@ -260,18 +280,14 @@ def generate_fragment_bound_list(ast):
+-  node_list = sorted(extract_fragments(ast))
+-  grouped_list = [[]]
+-  last_key = None
+-  last_i = 0
+-  for node in node_list:
+-    if node._line == 0:
+-      continue
+-    key = (node._filename, node._line)
+-    if last_key is None:
+-      last_key = key
+-    if key != last_key:
+-      last_i += 1
+-      # Append new sublist
+-      grouped_list += [[]]
+-    # Append to sublist at index last_i
+-    grouped_list[last_i] += [node]
+-    last_key = key
+-  return grouped_list
++  groups = []
++  for node_line in node_lines:
++    added = False
++    for group in groups:
++      if node_line == group[0]:
++        # Append to group
++        group += [node_line]
++        added = True
++        break
++    if not added:
++      # Create new group
++      print "New group for", node_line
++      groups += [[node_line]]
++  return groups
+@@ -285,0 +302,2 @@ def generate_matrix(ast):
++  grouped_node_lines = group_fragment_bound_lines(node_lines)
++  print "Grouped lines:", grouped_node_lines
+@@ -288 +306 @@ def generate_matrix(ast):
+-  n_cols = len(node_lines) # TODO: Reduce this after they have been grouped
++  n_cols = len(grouped_node_lines)
+@@ -296,5 +314,7 @@ def generate_matrix(ast):
+-      node_line = node_lines[c]
+-      print "%d,%d: %s" %(r,c, node_line)
+-      # If node belongs in on this row
+-      if node_line._startdiff_i == diff_i:
+-        inside_fragment = (node_line._kind == FragmentBoundNode.START)
++      node_line_group = grouped_node_lines[c]
++      print "%d,%d: %s" %(r,c, node_line_group)
++      for node_line in node_line_group:
++        # If node belongs in on this row
++        if node_line._startdiff_i == diff_i:
++          inside_fragment = (node_line._kind == FragmentBoundNode.START)
++          break
+5595136f56900cbcba5a07d89e32ec058d4932ec
+commit 5595136f56900cbcba5a07d89e32ec058d4932ec
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 11:43:18 2016 +0200
+
+    Mod FilePatchHeader to avoid nullfiles
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 786d870..fa4492c 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -35,5 +35 @@ def nonnull_file(file_patch_header):
+-  def is_null(fn):
+-    return fn == '/dev/null'
+-  if not is_null(file_patch_header._newfile):
+-    return file_patch_header._newfile
+-  if not is_null(file_patch_header._oldfile):
++  if not is_nullfile(file_patch_header._oldfile):
+@@ -40,0 +37,2 @@ def nonnull_file(file_patch_header):
++  if not is_nullfile(file_patch_header._newfile):
++    return file_patch_header._newfile
+@@ -103 +101 @@ def extract_nodes(diff, diff_i):
+-                          file_patch._header._oldfile, FragmentBoundNode.START),
++                          FragmentBoundNode.START),
+@@ -105 +103 @@ def extract_nodes(diff, diff_i):
+-                          file_patch._header._oldfile, FragmentBoundNode.END),
++                          FragmentBoundNode.END),
+@@ -189 +187 @@ class FragmentBoundNode():
+-  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, filename, kind):
++  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, kind):
+@@ -194 +192 @@ class FragmentBoundNode():
+-    self._filename = filename
++    self._filename = nonnull_file(file_patch._header)
+diff --git a/parse_patch.py b/parse_patch.py
+index fe5fc0b..644b38a 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -29,0 +30,5 @@ DEBUG_PARSER=False
++
++def is_nullfile(fn):
++  return fn == '/dev/null'
++
++
+@@ -118,0 +124,8 @@ class FilePatchHeader():
++    # A fix to avoid special cases for null files
++    # TODO: If file creation is important, this needs
++    # to be signaled in another way, like _iscreation.
++    if is_nullfile(oldfile):
++      oldfile = newfile
++    elif is_nullfile(newfile):
++      newfile = oldfile
++
+cc67672929e0406d9ffb14c7a2ac6f1d2453bf38
+commit cc67672929e0406d9ffb14c7a2ac6f1d2453bf38
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 11:46:42 2016 +0200
+
+    Experiments with sorting node lines, ignoring later etc.
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index fa4492c..c228099 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -213 +213 @@ class FragmentBoundLine():
+-    first_common_diff_i = min(common_diffs)
++    #first_common_diff_i = min(common_diffs)
+@@ -219,4 +219,4 @@ class FragmentBoundLine():
+-    a_line = a._nodehistory[first_common_diff_i]._line
+-    b_line = b._nodehistory[first_common_diff_i]._line
+-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+-    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
++    a_line = a._nodehistory[last_common_diff_i]._line
++    b_line = b._nodehistory[last_common_diff_i]._line
++    #print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
++    #print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+@@ -234,2 +234,2 @@ class FragmentBoundLine():
+-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+-    print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
++    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    #print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
+@@ -251 +251 @@ class FragmentBoundLine():
+-              for key,val in self._nodehistory.iteritems()]))
++              for key,val in sorted(self._nodehistory.iteritems())]))
+@@ -266,0 +267,2 @@ class FragmentBoundLine():
++def earliest_diff(node_lines):
++  return min([nl._startdiff_i for nl in node_lines])
+@@ -277,0 +280 @@ def group_fragment_bound_lines(node_lines):
++  node_lines = sorted(node_lines)
+@@ -310 +312,0 @@ def generate_matrix(ast):
+-    item_i = 0
+@@ -313,8 +315,10 @@ def generate_matrix(ast):
+-      print "%d,%d: %s" %(r,c, node_line_group)
+-      for node_line in node_line_group:
+-        # If node belongs in on this row
+-        if node_line._startdiff_i == diff_i:
+-          inside_fragment = (node_line._kind == FragmentBoundNode.START)
+-          break
+-      if inside_fragment:
+-        matrix[r][c] = '#'
++      print "%d,%d: %s" %(r, c, node_line_group)
++      if True: #earliest_diff(node_line_group) <= diff_i:
++        for node_line in node_line_group:
++          # If node belongs in on this row
++          if node_line._startdiff_i == diff_i:
++            inside_fragment = (node_line._kind == FragmentBoundNode.START)
++            break
++        print "%d,%d: %d" %(r, c, inside_fragment)
++        if inside_fragment:
++          matrix[r][c] = '#'
+diff --git a/test/main.py b/test/main.py
+index 4af008b..c2d5554 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -84 +84 @@ class Test(unittest.TestCase):
+-                     ['.#.',
++                     ['##.',
+595634fda399b6173e3739cfd4d8a9f4189b7446
+commit 595634fda399b6173e3739cfd4d8a9f4189b7446
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 11:47:48 2016 +0200
+
+    Added note of updating non-creation end nodes
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index c228099..3024c39 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -58,0 +59 @@ def update_line(line, bound_kind, file_patch):
++  # TODO: Dont move end markers from non-creation lines when updating with start of other
+56c2a838bf246fc7bd30024de8c38b7b643cca86
+commit 56c2a838bf246fc7bd30024de8c38b7b643cca86
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 11:48:24 2016 +0200
+
+    Debug prints
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 3024c39..06f07f0 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -260,0 +261 @@ class FragmentBoundLine():
++    print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
+@@ -293 +294 @@ def group_fragment_bound_lines(node_lines):
+-      print "New group for", node_line
++      #print "New group for", node_line
+3d32fe02559404351ac7ea057acb0e27a18dac94
+commit 3d32fe02559404351ac7ea057acb0e27a18dac94
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 11:48:44 2016 +0200
+
+    Fixed whitespace
+
+diff --git a/test/main.py b/test/main.py
+index c2d5554..23986aa 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -42 +42 @@ class Test(unittest.TestCase):
+-    
++
+@@ -53 +53 @@ class Test(unittest.TestCase):
+-                      '004-remove-one-line-empty-file.diff'], 
++                      '004-remove-one-line-empty-file.diff'],
+@@ -64 +64 @@ class Test(unittest.TestCase):
+-    self.check_diffs(['011-add-x-to-A-and-N.diff', 
++    self.check_diffs(['011-add-x-to-A-and-N.diff',
+@@ -66 +66 @@ class Test(unittest.TestCase):
+-                     ['#..#.', 
++                     ['#..#.',
+@@ -93,3 +93,3 @@ class Test(unittest.TestCase):
+-                      '031-addmod-add-c.diff'], 
+-                     [['#..'],
+-                      ['.#.']])
++                      '031-addmod-add-c.diff'],
++                     ['#..',
++                      '.#.'])
+@@ -100,4 +100,4 @@ class Test(unittest.TestCase):
+-                      '032-addmod-change-bc-to-xy.diff'], 
+-                     [['#...'],
+-                      ['..#.'],
+-                      ['###.']])
++                      '032-addmod-change-bc-to-xy.diff'],
++                     ['#...',
++                      '..#.',
++                      '###.'])
+@@ -110,5 +110,5 @@ class Test(unittest.TestCase):
+-                      '033-addmod-add-z-between-xy.diff'], 
+-                     [['#....'],
+-                      ['..#..'],
+-                      ['###..'],
+-                      ['####.']])
++                      '033-addmod-add-z-between-xy.diff'],
++                     ['#....',
++                      '..#..',
++                      '###..',
++                      '####.'])
+@@ -132 +132 @@ class Test(unittest.TestCase):
+-    
++
+@@ -139 +139 @@ class Test(unittest.TestCase):
+-            
++
+774c186d8a8e66bd9fe33509b0302e121ee3caf1
+commit 774c186d8a8e66bd9fe33509b0302e121ee3caf1
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 14:48:33 2016 +0200
+
+    Changed from one-past to inclusive end. Successivemod fails on format
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 06f07f0..dd90138 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -59 +59 @@ def update_line(line, bound_kind, file_patch):
+-  # TODO: Dont move end markers from non-creation lines when updating with start of other
++  # TODO: Fix sorting of node line groups after this.
+@@ -61 +61 @@ def update_line(line, bound_kind, file_patch):
+-    is_creation = (marker._oldrange._start == marker._oldrange._end)
++    is_creation = (marker._oldrange._start == marker._oldrange._end + 1)
+@@ -63 +63 @@ def update_line(line, bound_kind, file_patch):
+-      is_creation and line == marker._oldrange._end):
++      is_creation and line == marker._oldrange._start):
+@@ -77,0 +78,3 @@ def update_line(line, bound_kind, file_patch):
++  else:
++    # line is before any fragment; no update required
++    pass
+diff --git a/parse_patch.py b/parse_patch.py
+index 644b38a..5bd6d12 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -47 +47 @@ class Range():
+-    self._end = start + length
++    self._end = start + length - 1
+diff --git a/test/main.py b/test/main.py
+index 23986aa..11d092f 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -116,0 +117,7 @@ class Test(unittest.TestCase):
++  def test_041_042_043(self):
++    self.check_diffs(['041-successivemod-mod-ab.diff',
++                      '042-successivemod-mod-cd.diff',
++                      '043-successivemod-mod-ef.diff'],
++                     ['#..',
++                      '.#.',
++                      '..#'])
+44c6e1409ff9701696639d6317a154ae8a967329
+commit 44c6e1409ff9701696639d6317a154ae8a967329
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Thu Jul 21 16:32:35 2016 +0200
+
+    Split update_line into new and inherited
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index dd90138..e5505d6 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -42 +42,18 @@ def nonnull_file(file_patch_header):
+-def update_line(line, bound_kind, file_patch):
++
++def update_new_bound(fragment_i, bound_kind, file_patch):
++  """
++  Update a bound that belongs to the current diff. Simply apply whatever
++  fragment it belongs to.
++  """
++  line = 0
++  marker = file_patch._fragments[fragment_i]._header
++  if bound_kind == FragmentBoundNode.START:
++    line = marker._newrange._start
++    print "Setting new start line to", line
++  elif bound_kind == FragmentBoundNode.END:
++    line = marker._newrange._end
++    print "Setting new end line to", line
++  return line
++
++
++def update_inherited_bound(line, bound_kind, file_patch):
+@@ -44 +61,3 @@ def update_line(line, bound_kind, file_patch):
+-  Update one line in a file with a file patch.
++  Update a bound inherited from an older patch. Must never be
++  called for bounds belonging to the newest patch. Use
++  update_new_bound for them.
+@@ -61,4 +80 @@ def update_line(line, bound_kind, file_patch):
+-    is_creation = (marker._oldrange._start == marker._oldrange._end + 1)
+-    if line < marker._oldrange._end or (
+-      is_creation and line == marker._oldrange._start):
+-
++    if line <= marker._oldrange._end:
+@@ -82,0 +99,9 @@ def update_line(line, bound_kind, file_patch):
++def update_line(line, bound_kind, fragment_i, startdiff_i, diff_i, file_patch):
++  # If the current diff is the start diff of the
++  # affected node line:
++  if diff_i == startdiff_i:
++    # The bound is new
++    return update_new_bound(fragment_i, bound_kind, file_patch)
++  else:
++    # The bound is inherited
++    return update_inherited_bound(line, bound_kind, file_patch)
+@@ -94,0 +120,3 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
++                                 node_line.last()._fragment_i,
++                                 node_line._startdiff_i,
++                                 diff_i,
+@@ -102 +130,2 @@ def extract_nodes(diff, diff_i):
+-    for fragment in file_patch._fragments:
++    for fragment_i in range(len(file_patch._fragments)):
++      fragment = file_patch._fragments[fragment_i]
+@@ -104 +133 @@ def extract_nodes(diff, diff_i):
+-        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
+@@ -106 +135 @@ def extract_nodes(diff, diff_i):
+-        FragmentBoundNode(diff, diff_i, file_patch, fragment, fragment._header._oldrange,
++        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
+@@ -190,2 +219 @@ class FragmentBoundNode():
+-
+-  def __init__(self, diff, diff_i, file_patch, fragment, fragment_range, kind):
++  def __init__(self, diff, diff_i, file_patch, fragment_i, fragment_range, kind):
+@@ -195 +223,2 @@ class FragmentBoundNode():
+-    self._fragment = fragment
++    self._fragment = file_patch._fragments[fragment_i]
++    self._fragment_i = fragment_i
+@@ -271,0 +301 @@ class FragmentBoundLine():
++
+diff --git a/test/main.py b/test/main.py
+index 11d092f..6a2bbe4 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -21 +21 @@ class Test(unittest.TestCase):
+-  def test_update_line_create_at_beginning(self):
++  def test_update_inherited_bound_create_at_beginning(self):
+@@ -25,2 +25,3 @@ class Test(unittest.TestCase):
+-    self.assertEqual(update_line(1, FragmentBoundNode.START, filepatch), 1)
+-    self.assertEqual(update_line(1, FragmentBoundNode.END, filepatch), 2)
++    # Subsequent lines shifted
++    self.assertEqual(update_inherited_bound(1, FragmentBoundNode.START, filepatch), 2)
++    self.assertEqual(update_inherited_bound(1, FragmentBoundNode.END, filepatch), 2)
+@@ -29 +30 @@ class Test(unittest.TestCase):
+-  def test_update_line_create_at_middle(self):
++  def test_update_inherited_bound_create_at_middle(self):
+@@ -34,5 +35,16 @@ class Test(unittest.TestCase):
+-    self.assertEqual(update_line(3, FragmentBoundNode.START, filepatch), 3)
+-    self.assertEqual(update_line(3, FragmentBoundNode.END, filepatch), 3)
+-    # Creation bounds moved
+-    self.assertEqual(update_line(4, FragmentBoundNode.START, filepatch), 4)
+-    self.assertEqual(update_line(4, FragmentBoundNode.END, filepatch), 5)
++    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
++    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.END, filepatch), 3)
++    # Subsequent lines shifted
++    self.assertEqual(update_inherited_bound(10, FragmentBoundNode.START, filepatch), 11)
++    self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 14)
++
++  def test_update_inherited_bound_expand_at_middle(self):
++    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
++        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
++
++    # Previous lines unaffected
++    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
++    self.assertEqual(update_inherited_bound(3, FragmentBoundNode.END, filepatch), 3)
++    # Contained fragments expanded
++    self.assertEqual(update_inherited_bound(5, FragmentBoundNode.START, filepatch), 4)
++    self.assertEqual(update_inherited_bound(5, FragmentBoundNode.END, filepatch), 7)
+@@ -40,2 +52,6 @@ class Test(unittest.TestCase):
+-    self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
+-    self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
++    self.assertEqual(update_inherited_bound(10, FragmentBoundNode.START, filepatch), 12)
++    self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 15)
++
++  def test_update_new_bound(self):
++    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
++        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+@@ -42,0 +59,3 @@ class Test(unittest.TestCase):
++    # Related bounds updated
++    self.assertEqual(update_new_bound(0, FragmentBoundNode.START, filepatch), 4)
++    self.assertEqual(update_new_bound(0, FragmentBoundNode.END, filepatch), 7)
+57de9ffaa539c8f7e1ab8a27f0f27a06def2d75e
+commit 57de9ffaa539c8f7e1ab8a27f0f27a06def2d75e
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 10:26:08 2016 +0200
+
+    Fix: correct end line in __lt__
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index e5505d6..a81da9b 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -253,0 +254,5 @@ class FragmentBoundLine():
++
++    if a._kind == FragmentBoundNode.END:
++      a_line += 1
++    if b._kind == FragmentBoundNode.END:
++      b_line += 1
+@@ -259,0 +265,3 @@ class FragmentBoundLine():
++    # Remove base diffs
++    #common_diffs -= {a._startdiff_i -1,
++    #                 b._startdiff_i -1}
+@@ -267,2 +275,2 @@ class FragmentBoundLine():
+-    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+-    #print "Keys: (%s, %d) == (%s, %d)" %(a_file, a_line, b_file, b_line)
++    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    print "Keys:", (a_file, a_line, a._kind), "==", (b_file, b_line, b._kind)
+993810d6e98d7782416e1c95bd2533b753a0d01d
+commit 993810d6e98d7782416e1c95bd2533b753a0d01d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 10:43:44 2016 +0200
+
+    Group neighboring starts and ends. 2/19 tests fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a81da9b..05992c4 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -265,3 +264,0 @@ class FragmentBoundLine():
+-    # Remove base diffs
+-    #common_diffs -= {a._startdiff_i -1,
+-    #                 b._startdiff_i -1}
+@@ -274,0 +272,5 @@ class FragmentBoundLine():
++    if a._kind == FragmentBoundNode.END:
++      a_line += 1
++    if b._kind == FragmentBoundNode.END:
++      b_line += 1
++
+@@ -277 +279,5 @@ class FragmentBoundLine():
+-    return a_file == b_file and a_line == b_line and a._kind == b._kind
++    # If a start and an end does not share a startdiff then it is safe to
++    # group them even though their kinds differ because it will still be
++    # possible to distinguish the bounds.
++    return a_file == b_file and a_line == b_line and (a._kind == b._kind or
++                                                      a._startdiff_i != b._startdiff_i)
+diff --git a/test/main.py b/test/main.py
+index 6a2bbe4..a22963f 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -113,2 +113,2 @@ class Test(unittest.TestCase):
+-                     ['#..',
+-                      '.#.'])
++                     ['#.',
++                      '.#'])
+@@ -140,3 +140,3 @@ class Test(unittest.TestCase):
+-                     ['#..',
+-                      '.#.',
+-                      '..#'])
++                     ['#...',
++                      '.#..',
++                      '..#.'])
+82bb15f66c74aac4ca8137bddee7721df9263c57
+commit 82bb15f66c74aac4ca8137bddee7721df9263c57
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 15:45:18 2016 +0200
+
+    Updated test_030_032 to more sensible reference. 2/19 fail
+
+diff --git a/test/main.py b/test/main.py
+index a22963f..e64164f 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -120 +120 @@ class Test(unittest.TestCase):
+-                     ['#...',
++                     ['##..',
+@@ -122 +122 @@ class Test(unittest.TestCase):
+-                      '###.'])
++                      '.##.'])
+501e09280578906c1bd2862e515ab7ff064467b1
+commit 501e09280578906c1bd2862e515ab7ff064467b1
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 16:22:26 2016 +0200
+
+    Ignore startdiff-1 when grouping. 022_023 succeeds but 6/19 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 05992c4..01cc732 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -264,0 +265 @@ class FragmentBoundLine():
++    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
+diff --git a/test/main.py b/test/main.py
+index e64164f..27d924d 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -103 +103 @@ class Test(unittest.TestCase):
+-                     ['##.',
++                     ['.#.',
+798369d511dac998c736f21764d03f4cf46ef00c
+commit 798369d511dac998c736f21764d03f4cf46ef00c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 22:42:26 2016 +0200
+
+    inside_fragment=False overrides True on inter-group conflict
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 01cc732..51f966c 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -279 +279 @@ class FragmentBoundLine():
+-    print "Keys:", (a_file, a_line, a._kind), "==", (b_file, b_line, b._kind)
++    print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
+@@ -371 +371,6 @@ def generate_matrix(ast):
+-            break
++            print "Setting inside_fragment =", inside_fragment
++            # If it was updated to False:
++            if not inside_fragment:
++              # False overrides True so that if start and end from same diff
++              # appear in same group we don't get stuck at True
++              break
+7e677414c2148e1dd86256f49edd9498ac3dc020
+commit 7e677414c2148e1dd86256f49edd9498ac3dc020
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 22:43:39 2016 +0200
+
+    Added helpers for counting starts/ends in groups. 7/20 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 51f966c..bae7631 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -259,2 +259,2 @@ class FragmentBoundLine():
+-    #print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
+-    #print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
++    print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
++    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+diff --git a/test/main.py b/test/main.py
+index 27d924d..297aff3 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -20,0 +21,3 @@ class Test(unittest.TestCase):
++  # Append instead of replace default assertion failure message
++  longMessage = True
++
+@@ -71,2 +74,3 @@ class Test(unittest.TestCase):
+-    self.check_diffs(['003-add-one-line-to-empty-file.diff',
+-                      '004-remove-one-line-empty-file.diff'],
++    files = ['003-add-one-line-to-empty-file.diff',
++             '004-remove-one-line-empty-file.diff']
++    self.check_diffs(files,
+@@ -75,0 +80,6 @@ class Test(unittest.TestCase):
++  def test_003_004_groups(self):
++    files = ['003-add-one-line-to-empty-file.diff',
++             '004-remove-one-line-empty-file.diff']
++    self.check_node_group_kinds(files, [(2,0), (0,2)])
++
++
+@@ -143,0 +154,32 @@ class Test(unittest.TestCase):
++  def get_node_lines(self, diff_filenames):
++    diff = []
++    for fn in diff_filenames:
++      diff += read_diff(fn)
++    print diff
++    pp = PatchParser()
++    return update_all_positions_to_latest(pp.parse(diff)._patches)
++
++  def check_node_group_kinds(self, diff_filenames, kinds):
++    START = 0
++    END = 1
++    node_lines = self.get_node_lines(diff_filenames)
++    grouped_node_lines = group_fragment_bound_lines(node_lines)
++    self.assertEqual(len(grouped_node_lines), len(kinds))
++    i = 0
++    actual_kinds = [None]*len(grouped_node_lines)
++    for group in grouped_node_lines:
++      n_start = 0
++      n_end = 0
++      for node_line in group:
++        if node_line._kind == FragmentBoundNode.START:
++          n_start += 1
++        elif node_line._kind == FragmentBoundNode.END:
++          n_end += 1
++
++      actual_kinds[i] = (n_start, n_end)
++      #self.assertEqual(n_start, kinds[i][START], "Wrong number of starts in group %d: %s" % (i, grouped_node_lines))
++      #self.assertEqual(n_end, kinds[i][END], "Wrong number of ends in group %d: %s" % (i, grouped_node_lines))
++      i += 1
++    self.assertListEqual(actual_kinds, kinds, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
++
++
+ed5eaf20f54fe604eaae43f8a96c99b130fb14ab
+commit ed5eaf20f54fe604eaae43f8a96c99b130fb14ab
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 23:02:21 2016 +0200
+
+    Fix: Prevent nodes from same diff from being grouped. 3/20 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index bae7631..6fd69ba 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -335 +335,7 @@ def group_fragment_bound_lines(node_lines):
+-      if node_line == group[0]:
++      inter_diff_collision = False
++      for member in group:
++        if member._startdiff_i == node_line._startdiff_i \
++        and member._kind != node_line._kind:
++          inter_diff_collision = True
++          break
++      if node_line == group[0] and not inter_diff_collision:
+diff --git a/test/main.py b/test/main.py
+index 297aff3..ccc721e 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -123,2 +123,2 @@ class Test(unittest.TestCase):
+-                     ['#.',
+-                      '.#'])
++                     ['#..',
++                      '.#.'])
+92db6205fe907808e442f9e86d228e7d227fee6b
+commit 92db6205fe907808e442f9e86d228e7d227fee6b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 23:15:42 2016 +0200
+
+    Added test_011_012_groups which fails. 4/21 fail
+
+diff --git a/test/main.py b/test/main.py
+index ccc721e..0709fd6 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -96,0 +97,5 @@ class Test(unittest.TestCase):
++  def test_011_012_groups(self):
++    self.check_node_group_kinds(['011-add-x-to-A-and-N.diff',
++                                 '012-add-x-to-A-C.diff'],
++                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
++
+dd67bd067276dd4fa7c697d3976566fa6e2feb87
+commit dd67bd067276dd4fa7c697d3976566fa6e2feb87
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 23:50:28 2016 +0200
+
+    Improved test case readability: Automatic kind histograms
+
+diff --git a/test/main.py b/test/main.py
+index 0709fd6..2e526fd 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -17,0 +18,2 @@ def read_diff(filename):
++START = 0
++END = 1
+@@ -83 +85 @@ class Test(unittest.TestCase):
+-    self.check_node_group_kinds(files, [(2,0), (0,2)])
++    self.check_node_group_kinds(files, [[START,START], [END,END]]) # ((h))
+@@ -100 +102 @@ class Test(unittest.TestCase):
+-                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
++                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
+@@ -168,2 +170,10 @@ class Test(unittest.TestCase):
+-    START = 0
+-    END = 1
++    def histogram_kinds(kinds):
++      hist = []
++      for group in kinds:
++        group_hist = {START : 0, END : 0}
++        print group_hist
++        for node_line_kind in group:
++          group_hist[node_line_kind] += 1
++        hist += [(group_hist[START], group_hist[END])]
++      return hist
++    kinds_hist = histogram_kinds(kinds)
+@@ -172 +182 @@ class Test(unittest.TestCase):
+-    self.assertEqual(len(grouped_node_lines), len(kinds))
++    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
+@@ -174 +184 @@ class Test(unittest.TestCase):
+-    actual_kinds = [None]*len(grouped_node_lines)
++    actual_kinds_hist = [None]*len(grouped_node_lines)
+@@ -184 +194 @@ class Test(unittest.TestCase):
+-      actual_kinds[i] = (n_start, n_end)
++      actual_kinds_hist[i] = (n_start, n_end)
+@@ -188 +198 @@ class Test(unittest.TestCase):
+-    self.assertListEqual(actual_kinds, kinds, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
++    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
+510b9206aa3b6265bbb4e0a0bcedd68989a1d5ed
+commit 510b9206aa3b6265bbb4e0a0bcedd68989a1d5ed
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sat Jul 23 15:52:43 2016 +0200
+
+    Added fn to print node line equality relation
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 6fd69ba..b9e96c4 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -319,0 +320,16 @@ def earliest_diff(node_lines):
++def print_node_line_relation_table(node_lines):
++  """
++  Print a grid of '=' indicating which node_line
++  is equal to which.
++  """
++  N = len(node_lines)
++  grid = [['.' for i in xrange(N)] for j in xrange(N)]
++  for r in range(N):
++    for c in range(N):
++      if node_lines[r] == node_lines[c]:
++        grid[r][c] = '='
++  for row in grid:
++    print ''.join(row)
++
++
++
+@@ -357,0 +374 @@ def generate_matrix(ast):
++  print_node_line_relation_table(node_lines)
+@@ -358,0 +376 @@ def generate_matrix(ast):
++
+@@ -361,0 +380 @@ def generate_matrix(ast):
++
+3ffa603d9561f5cc7dc14ccc23b071420008654d
+commit 3ffa603d9561f5cc7dc14ccc23b071420008654d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 09:57:58 2016 +0200
+
+    Factorized out eq_at_diff, added debugging prints
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index b9e96c4..a6323e7 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -263,0 +264,19 @@ class FragmentBoundLine():
++    def eq_at_diff(a, b, diff_i):
++      a_file = a._nodehistory[diff_i]._filename
++      b_file = b._nodehistory[diff_i]._filename
++      a_line = a._nodehistory[diff_i]._line
++      b_line = b._nodehistory[diff_i]._line
++      if a._kind == FragmentBoundNode.END:
++        a_line += 1
++      if b._kind == FragmentBoundNode.END:
++        b_line += 1
++      if a_file != b_file:
++        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
++        return False
++      if a_line != b_line:
++        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
++        return False
++      #return a_file == b_file and a_line == b_line
++      return True
++
++    print "===== Comparing %s and %s" %(a,b)
+@@ -267,10 +286 @@ class FragmentBoundLine():
+-    # Order by filename at latest diff and then by
+-    # line at earliest common diff
+-    a_file = a._nodehistory[first_common_diff_i]._filename
+-    b_file = b._nodehistory[first_common_diff_i]._filename
+-    a_line = a._nodehistory[first_common_diff_i]._line
+-    b_line = b._nodehistory[first_common_diff_i]._line
+-    if a._kind == FragmentBoundNode.END:
+-      a_line += 1
+-    if b._kind == FragmentBoundNode.END:
+-      b_line += 1
++    prev_diff_i = first_common_diff_i - 1
+@@ -278,2 +288,2 @@ class FragmentBoundLine():
+-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+-    print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
++    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    #print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
+@@ -283,2 +293,11 @@ class FragmentBoundLine():
+-    return a_file == b_file and a_line == b_line and (a._kind == b._kind or
+-                                                      a._startdiff_i != b._startdiff_i)
++    if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
++      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
++    if eq_at_diff(a, b, first_common_diff_i) \
++        and eq_at_diff(a, b, prev_diff_i) \
++        and (a._kind == b._kind or
++             a._startdiff_i != b._startdiff_i):
++      print "Lines are =="
++      return True
++    else:
++      print "Lines are !="
++      return False
+diff --git a/test/main.py b/test/main.py
+index 2e526fd..a96a954 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -178,0 +179,2 @@ class Test(unittest.TestCase):
++    def stringify_kinds_list(l):
++      return map(lambda e: {START:'start', END:'end'}[e], l)
+@@ -179,0 +182 @@ class Test(unittest.TestCase):
++    kinds = map(stringify_kinds_list, kinds)
+@@ -180,0 +184 @@ class Test(unittest.TestCase):
++    print_node_line_relation_table(node_lines)
+@@ -182 +186,3 @@ class Test(unittest.TestCase):
+-    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
++    error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
++      kinds, grouped_node_lines)
++    self.assertEqual(len(grouped_node_lines), len(kinds_hist), "Wrong length; " + error_string)
+@@ -198 +204 @@ class Test(unittest.TestCase):
+-    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
++    self.assertListEqual(actual_kinds_hist, kinds_hist, error_string)
+01e24deb8f1cfe9eed5f38d84b913c4501a5ed29
+commit 01e24deb8f1cfe9eed5f38d84b913c4501a5ed29
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 10:01:44 2016 +0200
+
+    Added group tests 030_032 and 030_033
+
+diff --git a/test/main.py b/test/main.py
+index a96a954..2f8f339 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -102 +102 @@ class Test(unittest.TestCase):
+-                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
++                                [[START, START],[END],[END],[START],[END]]) # ((a)bc)..(n)
+@@ -139,0 +140,5 @@ class Test(unittest.TestCase):
++  def test_030_032_groups(self):
++    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
++                                 '031-addmod-add-c.diff',
++                                 '032-addmod-change-bc-to-xy.diff'],
++                                [[START],[START],[END,START],[END,END]]) # (a((xy)))
+@@ -152,0 +158,9 @@ class Test(unittest.TestCase):
++  def test_030_033_groups(self):
++    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
++                                 '031-addmod-add-c.diff',
++                                 '032-addmod-change-bc-to-xy.diff',
++                                 '033-addmod-add-z-between-xy.diff'],
++                                # (a((x(z)y)))
++                                [[START],[START,START],[START],[END],[END,END,END]])
++
++
+5aa021f2eac4111b53929bd5705ae7ecd9fc6cd7
+commit 5aa021f2eac4111b53929bd5705ae7ecd9fc6cd7
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:00:09 2016 +0200
+
+    Added console_ui with mockup
+
+diff --git a/console_ui.py b/console_ui.py
+new file mode 100644
+index 0000000..0d159ab
+--- /dev/null
++++ b/console_ui.py
+@@ -0,0 +1,34 @@
++from parse_patch import *
++from generate_matrix import *
++
++CONSOLE_WIDTH = 80
++
++# TODO: Change name?
++def print_hunkogram(diff_list):
++  matrix = generate_matrix(diff_list)
++  matrix_width = len(matrix[0])
++  hash_width = 8
++  padded_matrix_width = max(CONSOLE_WIDTH/2, matrix_width)
++  max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
++  for row in matrix:
++    commit_msg = "Test"
++    hash = "abcd0123"
++    # Pad short commit messages
++    commit_msg = commit_msg.ljust(max_commit_width, ' ')
++    # Truncate long commit messages
++    commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
++    # Print hash, commit, matrix row
++    hash = hash[0:hash_width]
++    print hash, commit_msg, ''.join(row)
++
++def main():
++  pp = PatchParser()
++  lines = [line.rstrip() for line in sys.stdin]
++  print lines
++  diff_list = pp.parse(lines)
++  print_hunkogram(diff_list)
++
++
++
++if __name__ == '__main__':
++  main()
+bd48487445b6ef3f24dac66ce00926b23d2fe24c
+commit bd48487445b6ef3f24dac66ce00926b23d2fe24c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:07:12 2016 +0200
+
+    Fixed uninited patch _header, added actual hash to console_ui
+
+diff --git a/console_ui.py b/console_ui.py
+index 0d159ab..e0e2137 100644
+--- a/console_ui.py
++++ b/console_ui.py
+@@ -13 +13 @@ def print_hunkogram(diff_list):
+-  for row in matrix:
++  for r in range(len(matrix)):
+@@ -15 +15 @@ def print_hunkogram(diff_list):
+-    hash = "abcd0123"
++    hash = diff_list._patches[r]._header._hash
+@@ -22 +22 @@ def print_hunkogram(diff_list):
+-    print hash, commit_msg, ''.join(row)
++    print hash, commit_msg, ''.join(matrix[r])
+diff --git a/parse_patch.py b/parse_patch.py
+index 5bd6d12..aaa5496 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -230 +230 @@ class Patch():
+-  def __init__(self, filepatches):
++  def __init__(self, filepatches, header):
+@@ -231,0 +232 @@ class Patch():
++    self._header = header
+@@ -234 +235 @@ class Patch():
+-    return "\n <Patch: %s>" % (self._filepatches,)
++    return "\n <Patch: %s %s>" % (self._header, self._filepatches)
+@@ -261 +262 @@ class Patch():
+-    return Patch(filepatches), lines
++    return Patch(filepatches, header), lines
+58a8c50cd6abc0b2ac50f71f459ddf6582d36368
+commit 58a8c50cd6abc0b2ac50f71f459ddf6582d36368
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:26:21 2016 +0200
+
+    Added commit message parsing, added actual message to console_ui
+
+diff --git a/console_ui.py b/console_ui.py
+index e0e2137..43a675a 100644
+--- a/console_ui.py
++++ b/console_ui.py
+@@ -14,2 +14,3 @@ def print_hunkogram(diff_list):
+-    commit_msg = "Test"
+-    hash = diff_list._patches[r]._header._hash
++    cur_patch = diff_list._patches[r]._header
++    commit_msg = cur_patch._message[0] # First row of message
++    hash = cur_patch._hash
+diff --git a/parse_patch.py b/parse_patch.py
+index aaa5496..1c9ad7c 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -192,0 +193 @@ class PatchHeader():
++  _message = None
+@@ -194 +195 @@ class PatchHeader():
+-  def __init__(self, hash):
++  def __init__(self, hash, message):
+@@ -195,0 +197 @@ class PatchHeader():
++    self._message = message
+@@ -198 +200 @@ class PatchHeader():
+-    return "<PatchHeader: %s>" %(self._hash,)
++    return "<PatchHeader: %s\n%s>" %(self._hash, self._message)
+@@ -219,0 +222 @@ class PatchHeader():
++    message = []
+@@ -222,0 +226,3 @@ class PatchHeader():
++      if lines[0] != '':
++        # Add line to message list
++        message += [lines[0].strip()]
+@@ -224 +230 @@ class PatchHeader():
+-    return PatchHeader(hash), lines
++    return PatchHeader(hash, message), lines
+68f1ef779d8c11e97f7c29cba92c839ca6f53244
+commit 68f1ef779d8c11e97f7c29cba92c839ca6f53244
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 15:16:39 2016 +0200
+
+    Added debugging to node line __lt__. 4/23 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a6323e7..299e251 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -25,0 +26,4 @@ from parse_patch import *
++DEBUG_SORTING = True
++DEBUG_GROUPING = False
++
++
+@@ -244,0 +249,19 @@ class FragmentBoundLine():
++    def lt_at_diff(a, b, diff_i):
++      a_file = a._nodehistory[diff_i]._filename
++      b_file = b._nodehistory[diff_i]._filename
++      a_line = a._nodehistory[diff_i]._line
++      b_line = b._nodehistory[diff_i]._line
++      if a._kind == FragmentBoundNode.END:
++        a_line += 1
++      if b._kind == FragmentBoundNode.END:
++        b_line += 1
++      if a_file < b_file:
++        if DEBUG_SORTING:
++          print "file %s < %s at diff %d" %(a_file, b_file, diff_i)
++        return True
++      if a_file == b_file and a_line < b_line:
++        if DEBUG_SORTING:
++          print "line %d < %d at diff %d" %(a_line, b_line, diff_i)
++        return True
++      return False
++
+@@ -250,12 +273,13 @@ class FragmentBoundLine():
+-    a_file = a._nodehistory[last_common_diff_i]._filename
+-    b_file = b._nodehistory[last_common_diff_i]._filename
+-    a_line = a._nodehistory[last_common_diff_i]._line
+-    b_line = b._nodehistory[last_common_diff_i]._line
+-
+-    if a._kind == FragmentBoundNode.END:
+-      a_line += 1
+-    if b._kind == FragmentBoundNode.END:
+-      b_line += 1
+-    print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
+-    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+-    return a_file < b_file or (a_file == b_file and a_line < b_line)
++    if DEBUG_SORTING:
++      print "<<<<< Comparing at last_common=%d %s and %s" %(last_common_diff_i, a,b)
++
++
++    if lt_at_diff(a, b, last_common_diff_i):
++      if DEBUG_SORTING:
++        print "Lines are <"
++      return True
++    else:
++      if DEBUG_SORTING:
++        print "Lines are !<"
++      return False
++
+@@ -274 +298,2 @@ class FragmentBoundLine():
+-        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
++        if DEBUG_GROUPING:
++          print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
+@@ -277 +302,2 @@ class FragmentBoundLine():
+-        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
++        if DEBUG_GROUPING:
++          print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
+@@ -282 +308,2 @@ class FragmentBoundLine():
+-    print "===== Comparing %s and %s" %(a,b)
++    if DEBUG_GROUPING:
++      print "===== Comparing %s and %s" %(a,b)
+@@ -294 +321,2 @@ class FragmentBoundLine():
+-      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
++      if DEBUG_GROUPING:
++        print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
+@@ -299 +327,2 @@ class FragmentBoundLine():
+-      print "Lines are =="
++      if DEBUG_GROUPING:
++        print "Lines are =="
+@@ -302 +331,2 @@ class FragmentBoundLine():
+-      print "Lines are !="
++      if DEBUG_GROUPING:
++        print "Lines are !="
+@@ -365,0 +396,2 @@ def group_fragment_bound_lines(node_lines):
++  if DEBUG_SORTING:
++    print "Sorted lines:", node_lines
+@@ -393 +425,2 @@ def generate_matrix(ast):
+-  print_node_line_relation_table(node_lines)
++  if DEBUG_GROUPING:
++    print_node_line_relation_table(node_lines)
+95c76393de855d383bdba1ac924dac7fd043909a
+commit 95c76393de855d383bdba1ac924dac7fd043909a
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 15:23:18 2016 +0200
+
+    Changed __lt__ to compare at first common and prev diff. 0/23 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 299e251..183401a 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -270 +270,3 @@ class FragmentBoundLine():
+-    last_common_diff_i = max(common_diffs)
++    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
++    first_common_diff_i = min(common_diffs)
++    prev_diff_i = first_common_diff_i - 1
+@@ -274 +276 @@ class FragmentBoundLine():
+-      print "<<<<< Comparing at last_common=%d %s and %s" %(last_common_diff_i, a,b)
++      print "<<<<< Comparing at first_common=%d %s and %s" %(first_common_diff_i, a,b)
+@@ -276,2 +278,5 @@ class FragmentBoundLine():
+-
+-    if lt_at_diff(a, b, last_common_diff_i):
++    if lt_at_diff(a, b, prev_diff_i):
++      if DEBUG_SORTING:
++        print "Lines are < at prev diff", prev_diff_i
++      return True
++    if lt_at_diff(a, b, first_common_diff_i):
+@@ -279 +284 @@ class FragmentBoundLine():
+-        print "Lines are <"
++        print "Lines are < at first diff", first_common_diff_i
+diff --git a/test/main.py b/test/main.py
+index 2f8f339..ea874d7 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -152,4 +152,4 @@ class Test(unittest.TestCase):
+-                     ['#....',
+-                      '..#..',
+-                      '###..',
+-                      '####.'])
++                     ['##....',
++                      '..###.',
++                      '.####.',
++                      '...#..'])
+@@ -163,2 +163,2 @@ class Test(unittest.TestCase):
+-                                # (a((x(z)y)))
+-                                [[START],[START,START],[START],[END],[END,END,END]])
++                                # 5a3.54x2z2y43
++                                [[START],[START],[END,START],[START],[END],[END,END]])

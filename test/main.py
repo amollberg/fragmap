@@ -172,6 +172,19 @@ class Test(unittest.TestCase):
                       '.#..',
                       '..#.'])
 
+  def test_050_054(self):
+    self.check_diffs(['050-twofiles-create-a-with-a.diff',
+                      '051-twofiles-create-b-with-x.diff',
+                      '052-twofiles-add-y-to-b.diff',
+                      '053-twofiles-add-z-to-b.diff',
+                      '054-twofiles-add-w-to-b.diff'],
+                     ['#....',
+                      '.#...',
+                      '..#..',
+                      '...#.',
+                      '....#'])
+
+
   def get_node_lines(self, diff_filenames):
     diff = []
     for fn in diff_filenames:

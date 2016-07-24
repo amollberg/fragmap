@@ -264,7 +264,8 @@ class FragmentBoundLine():
           print "line %d < %d at diff %d" %(a_line, b_line, diff_i)
         return True
       return False
-
+    if DEBUG_SORTING:
+      print "<<<<< Comparing %s and %s" %(a,b)
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     #first_common_diff_i = min(common_diffs)
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
@@ -273,7 +274,7 @@ class FragmentBoundLine():
     # Order by filename at latest diff and then by
     # line at earliest common diff
     if DEBUG_SORTING:
-      print "<<<<< Comparing at first_common=%d %s and %s" %(first_common_diff_i, a,b)
+      print "First_common=", first_common_diff_i
 
     if lt_at_diff(a, b, prev_diff_i):
       if DEBUG_SORTING:

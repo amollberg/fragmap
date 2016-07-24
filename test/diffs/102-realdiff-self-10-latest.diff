@@ -1,0 +1,470 @@
+92db6205fe907808e442f9e86d228e7d227fee6b
+commit 92db6205fe907808e442f9e86d228e7d227fee6b
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 23:15:42 2016 +0200
+
+    Added test_011_012_groups which fails. 4/21 fail
+
+diff --git a/test/main.py b/test/main.py
+index ccc721e..0709fd6 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -96,0 +97,5 @@ class Test(unittest.TestCase):
++  def test_011_012_groups(self):
++    self.check_node_group_kinds(['011-add-x-to-A-and-N.diff',
++                                 '012-add-x-to-A-C.diff'],
++                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
++
+dd67bd067276dd4fa7c697d3976566fa6e2feb87
+commit dd67bd067276dd4fa7c697d3976566fa6e2feb87
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Fri Jul 22 23:50:28 2016 +0200
+
+    Improved test case readability: Automatic kind histograms
+
+diff --git a/test/main.py b/test/main.py
+index 0709fd6..2e526fd 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -17,0 +18,2 @@ def read_diff(filename):
++START = 0
++END = 1
+@@ -83 +85 @@ class Test(unittest.TestCase):
+-    self.check_node_group_kinds(files, [(2,0), (0,2)])
++    self.check_node_group_kinds(files, [[START,START], [END,END]]) # ((h))
+@@ -100 +102 @@ class Test(unittest.TestCase):
+-                     [(2,0),(0,1),(1,1),(0,1)]) # ((a)bc)(n)
++                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
+@@ -168,2 +170,10 @@ class Test(unittest.TestCase):
+-    START = 0
+-    END = 1
++    def histogram_kinds(kinds):
++      hist = []
++      for group in kinds:
++        group_hist = {START : 0, END : 0}
++        print group_hist
++        for node_line_kind in group:
++          group_hist[node_line_kind] += 1
++        hist += [(group_hist[START], group_hist[END])]
++      return hist
++    kinds_hist = histogram_kinds(kinds)
+@@ -172 +182 @@ class Test(unittest.TestCase):
+-    self.assertEqual(len(grouped_node_lines), len(kinds))
++    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
+@@ -174 +184 @@ class Test(unittest.TestCase):
+-    actual_kinds = [None]*len(grouped_node_lines)
++    actual_kinds_hist = [None]*len(grouped_node_lines)
+@@ -184 +194 @@ class Test(unittest.TestCase):
+-      actual_kinds[i] = (n_start, n_end)
++      actual_kinds_hist[i] = (n_start, n_end)
+@@ -188 +198 @@ class Test(unittest.TestCase):
+-    self.assertListEqual(actual_kinds, kinds, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
++    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
+510b9206aa3b6265bbb4e0a0bcedd68989a1d5ed
+commit 510b9206aa3b6265bbb4e0a0bcedd68989a1d5ed
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sat Jul 23 15:52:43 2016 +0200
+
+    Added fn to print node line equality relation
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 6fd69ba..b9e96c4 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -319,0 +320,16 @@ def earliest_diff(node_lines):
++def print_node_line_relation_table(node_lines):
++  """
++  Print a grid of '=' indicating which node_line
++  is equal to which.
++  """
++  N = len(node_lines)
++  grid = [['.' for i in xrange(N)] for j in xrange(N)]
++  for r in range(N):
++    for c in range(N):
++      if node_lines[r] == node_lines[c]:
++        grid[r][c] = '='
++  for row in grid:
++    print ''.join(row)
++
++
++
+@@ -357,0 +374 @@ def generate_matrix(ast):
++  print_node_line_relation_table(node_lines)
+@@ -358,0 +376 @@ def generate_matrix(ast):
++
+@@ -361,0 +380 @@ def generate_matrix(ast):
++
+3ffa603d9561f5cc7dc14ccc23b071420008654d
+commit 3ffa603d9561f5cc7dc14ccc23b071420008654d
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 09:57:58 2016 +0200
+
+    Factorized out eq_at_diff, added debugging prints
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index b9e96c4..a6323e7 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -263,0 +264,19 @@ class FragmentBoundLine():
++    def eq_at_diff(a, b, diff_i):
++      a_file = a._nodehistory[diff_i]._filename
++      b_file = b._nodehistory[diff_i]._filename
++      a_line = a._nodehistory[diff_i]._line
++      b_line = b._nodehistory[diff_i]._line
++      if a._kind == FragmentBoundNode.END:
++        a_line += 1
++      if b._kind == FragmentBoundNode.END:
++        b_line += 1
++      if a_file != b_file:
++        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
++        return False
++      if a_line != b_line:
++        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
++        return False
++      #return a_file == b_file and a_line == b_line
++      return True
++
++    print "===== Comparing %s and %s" %(a,b)
+@@ -267,10 +286 @@ class FragmentBoundLine():
+-    # Order by filename at latest diff and then by
+-    # line at earliest common diff
+-    a_file = a._nodehistory[first_common_diff_i]._filename
+-    b_file = b._nodehistory[first_common_diff_i]._filename
+-    a_line = a._nodehistory[first_common_diff_i]._line
+-    b_line = b._nodehistory[first_common_diff_i]._line
+-    if a._kind == FragmentBoundNode.END:
+-      a_line += 1
+-    if b._kind == FragmentBoundNode.END:
+-      b_line += 1
++    prev_diff_i = first_common_diff_i - 1
+@@ -278,2 +288,2 @@ class FragmentBoundLine():
+-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+-    print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
++    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
++    #print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
+@@ -283,2 +293,11 @@ class FragmentBoundLine():
+-    return a_file == b_file and a_line == b_line and (a._kind == b._kind or
+-                                                      a._startdiff_i != b._startdiff_i)
++    if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
++      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
++    if eq_at_diff(a, b, first_common_diff_i) \
++        and eq_at_diff(a, b, prev_diff_i) \
++        and (a._kind == b._kind or
++             a._startdiff_i != b._startdiff_i):
++      print "Lines are =="
++      return True
++    else:
++      print "Lines are !="
++      return False
+diff --git a/test/main.py b/test/main.py
+index 2e526fd..a96a954 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -178,0 +179,2 @@ class Test(unittest.TestCase):
++    def stringify_kinds_list(l):
++      return map(lambda e: {START:'start', END:'end'}[e], l)
+@@ -179,0 +182 @@ class Test(unittest.TestCase):
++    kinds = map(stringify_kinds_list, kinds)
+@@ -180,0 +184 @@ class Test(unittest.TestCase):
++    print_node_line_relation_table(node_lines)
+@@ -182 +186,3 @@ class Test(unittest.TestCase):
+-    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
++    error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
++      kinds, grouped_node_lines)
++    self.assertEqual(len(grouped_node_lines), len(kinds_hist), "Wrong length; " + error_string)
+@@ -198 +204 @@ class Test(unittest.TestCase):
+-    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
++    self.assertListEqual(actual_kinds_hist, kinds_hist, error_string)
+01e24deb8f1cfe9eed5f38d84b913c4501a5ed29
+commit 01e24deb8f1cfe9eed5f38d84b913c4501a5ed29
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 10:01:44 2016 +0200
+
+    Added group tests 030_032 and 030_033
+
+diff --git a/test/main.py b/test/main.py
+index a96a954..2f8f339 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -102 +102 @@ class Test(unittest.TestCase):
+-                                [[START, START],[END],[END,START],[END]]) # ((a)bc)(n)
++                                [[START, START],[END],[END],[START],[END]]) # ((a)bc)..(n)
+@@ -139,0 +140,5 @@ class Test(unittest.TestCase):
++  def test_030_032_groups(self):
++    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
++                                 '031-addmod-add-c.diff',
++                                 '032-addmod-change-bc-to-xy.diff'],
++                                [[START],[START],[END,START],[END,END]]) # (a((xy)))
+@@ -152,0 +158,9 @@ class Test(unittest.TestCase):
++  def test_030_033_groups(self):
++    self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
++                                 '031-addmod-add-c.diff',
++                                 '032-addmod-change-bc-to-xy.diff',
++                                 '033-addmod-add-z-between-xy.diff'],
++                                # (a((x(z)y)))
++                                [[START],[START,START],[START],[END],[END,END,END]])
++
++
+5aa021f2eac4111b53929bd5705ae7ecd9fc6cd7
+commit 5aa021f2eac4111b53929bd5705ae7ecd9fc6cd7
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:00:09 2016 +0200
+
+    Added console_ui with mockup
+
+diff --git a/console_ui.py b/console_ui.py
+new file mode 100644
+index 0000000..0d159ab
+--- /dev/null
++++ b/console_ui.py
+@@ -0,0 +1,34 @@
++from parse_patch import *
++from generate_matrix import *
++
++CONSOLE_WIDTH = 80
++
++# TODO: Change name?
++def print_hunkogram(diff_list):
++  matrix = generate_matrix(diff_list)
++  matrix_width = len(matrix[0])
++  hash_width = 8
++  padded_matrix_width = max(CONSOLE_WIDTH/2, matrix_width)
++  max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
++  for row in matrix:
++    commit_msg = "Test"
++    hash = "abcd0123"
++    # Pad short commit messages
++    commit_msg = commit_msg.ljust(max_commit_width, ' ')
++    # Truncate long commit messages
++    commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
++    # Print hash, commit, matrix row
++    hash = hash[0:hash_width]
++    print hash, commit_msg, ''.join(row)
++
++def main():
++  pp = PatchParser()
++  lines = [line.rstrip() for line in sys.stdin]
++  print lines
++  diff_list = pp.parse(lines)
++  print_hunkogram(diff_list)
++
++
++
++if __name__ == '__main__':
++  main()
+bd48487445b6ef3f24dac66ce00926b23d2fe24c
+commit bd48487445b6ef3f24dac66ce00926b23d2fe24c
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:07:12 2016 +0200
+
+    Fixed uninited patch _header, added actual hash to console_ui
+
+diff --git a/console_ui.py b/console_ui.py
+index 0d159ab..e0e2137 100644
+--- a/console_ui.py
++++ b/console_ui.py
+@@ -13 +13 @@ def print_hunkogram(diff_list):
+-  for row in matrix:
++  for r in range(len(matrix)):
+@@ -15 +15 @@ def print_hunkogram(diff_list):
+-    hash = "abcd0123"
++    hash = diff_list._patches[r]._header._hash
+@@ -22 +22 @@ def print_hunkogram(diff_list):
+-    print hash, commit_msg, ''.join(row)
++    print hash, commit_msg, ''.join(matrix[r])
+diff --git a/parse_patch.py b/parse_patch.py
+index 5bd6d12..aaa5496 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -230 +230 @@ class Patch():
+-  def __init__(self, filepatches):
++  def __init__(self, filepatches, header):
+@@ -231,0 +232 @@ class Patch():
++    self._header = header
+@@ -234 +235 @@ class Patch():
+-    return "\n <Patch: %s>" % (self._filepatches,)
++    return "\n <Patch: %s %s>" % (self._header, self._filepatches)
+@@ -261 +262 @@ class Patch():
+-    return Patch(filepatches), lines
++    return Patch(filepatches, header), lines
+58a8c50cd6abc0b2ac50f71f459ddf6582d36368
+commit 58a8c50cd6abc0b2ac50f71f459ddf6582d36368
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 11:26:21 2016 +0200
+
+    Added commit message parsing, added actual message to console_ui
+
+diff --git a/console_ui.py b/console_ui.py
+index e0e2137..43a675a 100644
+--- a/console_ui.py
++++ b/console_ui.py
+@@ -14,2 +14,3 @@ def print_hunkogram(diff_list):
+-    commit_msg = "Test"
+-    hash = diff_list._patches[r]._header._hash
++    cur_patch = diff_list._patches[r]._header
++    commit_msg = cur_patch._message[0] # First row of message
++    hash = cur_patch._hash
+diff --git a/parse_patch.py b/parse_patch.py
+index aaa5496..1c9ad7c 100644
+--- a/parse_patch.py
++++ b/parse_patch.py
+@@ -192,0 +193 @@ class PatchHeader():
++  _message = None
+@@ -194 +195 @@ class PatchHeader():
+-  def __init__(self, hash):
++  def __init__(self, hash, message):
+@@ -195,0 +197 @@ class PatchHeader():
++    self._message = message
+@@ -198 +200 @@ class PatchHeader():
+-    return "<PatchHeader: %s>" %(self._hash,)
++    return "<PatchHeader: %s\n%s>" %(self._hash, self._message)
+@@ -219,0 +222 @@ class PatchHeader():
++    message = []
+@@ -222,0 +226,3 @@ class PatchHeader():
++      if lines[0] != '':
++        # Add line to message list
++        message += [lines[0].strip()]
+@@ -224 +230 @@ class PatchHeader():
+-    return PatchHeader(hash), lines
++    return PatchHeader(hash, message), lines
+68f1ef779d8c11e97f7c29cba92c839ca6f53244
+commit 68f1ef779d8c11e97f7c29cba92c839ca6f53244
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 15:16:39 2016 +0200
+
+    Added debugging to node line __lt__. 4/23 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index a6323e7..299e251 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -25,0 +26,4 @@ from parse_patch import *
++DEBUG_SORTING = True
++DEBUG_GROUPING = False
++
++
+@@ -244,0 +249,19 @@ class FragmentBoundLine():
++    def lt_at_diff(a, b, diff_i):
++      a_file = a._nodehistory[diff_i]._filename
++      b_file = b._nodehistory[diff_i]._filename
++      a_line = a._nodehistory[diff_i]._line
++      b_line = b._nodehistory[diff_i]._line
++      if a._kind == FragmentBoundNode.END:
++        a_line += 1
++      if b._kind == FragmentBoundNode.END:
++        b_line += 1
++      if a_file < b_file:
++        if DEBUG_SORTING:
++          print "file %s < %s at diff %d" %(a_file, b_file, diff_i)
++        return True
++      if a_file == b_file and a_line < b_line:
++        if DEBUG_SORTING:
++          print "line %d < %d at diff %d" %(a_line, b_line, diff_i)
++        return True
++      return False
++
+@@ -250,12 +273,13 @@ class FragmentBoundLine():
+-    a_file = a._nodehistory[last_common_diff_i]._filename
+-    b_file = b._nodehistory[last_common_diff_i]._filename
+-    a_line = a._nodehistory[last_common_diff_i]._line
+-    b_line = b._nodehistory[last_common_diff_i]._line
+-
+-    if a._kind == FragmentBoundNode.END:
+-      a_line += 1
+-    if b._kind == FragmentBoundNode.END:
+-      b_line += 1
+-    print "Comparing (common diff %d) %s and %s" %(last_common_diff_i, a, b)
+-    print "Keys: (%s, %d) < (%s, %d)" %(a_file, a_line, b_file, b_line)
+-    return a_file < b_file or (a_file == b_file and a_line < b_line)
++    if DEBUG_SORTING:
++      print "<<<<< Comparing at last_common=%d %s and %s" %(last_common_diff_i, a,b)
++
++
++    if lt_at_diff(a, b, last_common_diff_i):
++      if DEBUG_SORTING:
++        print "Lines are <"
++      return True
++    else:
++      if DEBUG_SORTING:
++        print "Lines are !<"
++      return False
++
+@@ -274 +298,2 @@ class FragmentBoundLine():
+-        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
++        if DEBUG_GROUPING:
++          print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
+@@ -277 +302,2 @@ class FragmentBoundLine():
+-        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
++        if DEBUG_GROUPING:
++          print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
+@@ -282 +308,2 @@ class FragmentBoundLine():
+-    print "===== Comparing %s and %s" %(a,b)
++    if DEBUG_GROUPING:
++      print "===== Comparing %s and %s" %(a,b)
+@@ -294 +321,2 @@ class FragmentBoundLine():
+-      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
++      if DEBUG_GROUPING:
++        print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
+@@ -299 +327,2 @@ class FragmentBoundLine():
+-      print "Lines are =="
++      if DEBUG_GROUPING:
++        print "Lines are =="
+@@ -302 +331,2 @@ class FragmentBoundLine():
+-      print "Lines are !="
++      if DEBUG_GROUPING:
++        print "Lines are !="
+@@ -365,0 +396,2 @@ def group_fragment_bound_lines(node_lines):
++  if DEBUG_SORTING:
++    print "Sorted lines:", node_lines
+@@ -393 +425,2 @@ def generate_matrix(ast):
+-  print_node_line_relation_table(node_lines)
++  if DEBUG_GROUPING:
++    print_node_line_relation_table(node_lines)
+95c76393de855d383bdba1ac924dac7fd043909a
+commit 95c76393de855d383bdba1ac924dac7fd043909a
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Sun Jul 24 15:23:18 2016 +0200
+
+    Changed __lt__ to compare at first common and prev diff. 0/23 fail
+
+diff --git a/generate_matrix.py b/generate_matrix.py
+index 299e251..183401a 100644
+--- a/generate_matrix.py
++++ b/generate_matrix.py
+@@ -270 +270,3 @@ class FragmentBoundLine():
+-    last_common_diff_i = max(common_diffs)
++    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
++    first_common_diff_i = min(common_diffs)
++    prev_diff_i = first_common_diff_i - 1
+@@ -274 +276 @@ class FragmentBoundLine():
+-      print "<<<<< Comparing at last_common=%d %s and %s" %(last_common_diff_i, a,b)
++      print "<<<<< Comparing at first_common=%d %s and %s" %(first_common_diff_i, a,b)
+@@ -276,2 +278,5 @@ class FragmentBoundLine():
+-
+-    if lt_at_diff(a, b, last_common_diff_i):
++    if lt_at_diff(a, b, prev_diff_i):
++      if DEBUG_SORTING:
++        print "Lines are < at prev diff", prev_diff_i
++      return True
++    if lt_at_diff(a, b, first_common_diff_i):
+@@ -279 +284 @@ class FragmentBoundLine():
+-        print "Lines are <"
++        print "Lines are < at first diff", first_common_diff_i
+diff --git a/test/main.py b/test/main.py
+index 2f8f339..ea874d7 100644
+--- a/test/main.py
++++ b/test/main.py
+@@ -152,4 +152,4 @@ class Test(unittest.TestCase):
+-                     ['#....',
+-                      '..#..',
+-                      '###..',
+-                      '####.'])
++                     ['##....',
++                      '..###.',
++                      '.####.',
++                      '...#..'])
+@@ -163,2 +163,2 @@ class Test(unittest.TestCase):
+-                                # (a((x(z)y)))
+-                                [[START],[START,START],[START],[END],[END,END,END]])
++                                # 5a3.54x2z2y43
++                                [[START],[START],[END,START],[START],[END],[END,END]])
