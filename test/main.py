@@ -176,10 +176,16 @@ class Test(unittest.TestCase):
           group_hist[node_line_kind] += 1
         hist += [(group_hist[START], group_hist[END])]
       return hist
+    def stringify_kinds_list(l):
+      return map(lambda e: {START:'start', END:'end'}[e], l)
     kinds_hist = histogram_kinds(kinds)
+    kinds = map(stringify_kinds_list, kinds)
     node_lines = self.get_node_lines(diff_filenames)
+    print_node_line_relation_table(node_lines)
     grouped_node_lines = group_fragment_bound_lines(node_lines)
-    self.assertEqual(len(grouped_node_lines), len(kinds_hist))
+    error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
+      kinds, grouped_node_lines)
+    self.assertEqual(len(grouped_node_lines), len(kinds_hist), "Wrong length; " + error_string)
     i = 0
     actual_kinds_hist = [None]*len(grouped_node_lines)
     for group in grouped_node_lines:
@@ -195,7 +201,7 @@ class Test(unittest.TestCase):
       #self.assertEqual(n_start, kinds[i][START], "Wrong number of starts in group %d: %s" % (i, grouped_node_lines))
       #self.assertEqual(n_end, kinds[i][END], "Wrong number of ends in group %d: %s" % (i, grouped_node_lines))
       i += 1
-    self.assertListEqual(actual_kinds_hist, kinds_hist, "Wrong numbers (starts, ends) in a group: %s" %(grouped_node_lines,))
+    self.assertListEqual(actual_kinds_hist, kinds_hist, error_string)
 
 
   def check_diff(self, diff_filename, matrix):

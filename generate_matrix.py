@@ -261,27 +261,46 @@ class FragmentBoundLine():
     return a_file < b_file or (a_file == b_file and a_line < b_line)
 
   def __eq__(a, b):
+    def eq_at_diff(a, b, diff_i):
+      a_file = a._nodehistory[diff_i]._filename
+      b_file = b._nodehistory[diff_i]._filename
+      a_line = a._nodehistory[diff_i]._line
+      b_line = b._nodehistory[diff_i]._line
+      if a._kind == FragmentBoundNode.END:
+        a_line += 1
+      if b._kind == FragmentBoundNode.END:
+        b_line += 1
+      if a_file != b_file:
+        print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
+        return False
+      if a_line != b_line:
+        print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
+        return False
+      #return a_file == b_file and a_line == b_line
+      return True
+
+    print "===== Comparing %s and %s" %(a,b)
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
-    # Order by filename at latest diff and then by
-    # line at earliest common diff
-    a_file = a._nodehistory[first_common_diff_i]._filename
-    b_file = b._nodehistory[first_common_diff_i]._filename
-    a_line = a._nodehistory[first_common_diff_i]._line
-    b_line = b._nodehistory[first_common_diff_i]._line
-    if a._kind == FragmentBoundNode.END:
-      a_line += 1
-    if b._kind == FragmentBoundNode.END:
-      b_line += 1
+    prev_diff_i = first_common_diff_i - 1
 
-    print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
-    print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
+    #print "Comparing (common diff %d) %s and %s" %(first_common_diff_i, a, b)
+    #print "Keys:", (a_file, a_line, a._kind, a._startdiff_i), "==", (b_file, b_line, b._kind, b._startdiff_i)
     # If a start and an end does not share a startdiff then it is safe to
     # group them even though their kinds differ because it will still be
     # possible to distinguish the bounds.
-    return a_file == b_file and a_line == b_line and (a._kind == b._kind or
-                                                      a._startdiff_i != b._startdiff_i)
+    if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
+      print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
+    if eq_at_diff(a, b, first_common_diff_i) \
+        and eq_at_diff(a, b, prev_diff_i) \
+        and (a._kind == b._kind or
+             a._startdiff_i != b._startdiff_i):
+      print "Lines are =="
+      return True
+    else:
+      print "Lines are !="
+      return False
 
 
   def __init__(self, node):
