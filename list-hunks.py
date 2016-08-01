@@ -4,22 +4,16 @@ import subprocess
 
 GIT='git'
 
+def get_output_lines(args):
+  out_str = subprocess.check_output(args)
+  return [s.rstrip() for s in out_str.splitlines(True)]
+
 def get_diff(rev_range_str):
   output = []
-
-  p = subprocess.Popen([GIT, 'diff', '-U0', '--no-color'], stdout=subprocess.PIPE)
-  output_unstaged, _ = p.communicate()
-
-  output += [s.rstrip() for s in output_unstaged.splitlines(True)]
-
-  p = subprocess.Popen([GIT, 'rev-list', '--reverse', rev_range_str], stdout=subprocess.PIPE)
-  output_rev_list, _ = p.communicate()
-  for rev in output_rev_list.splitlines():
-    rev = rev.rstrip()
+  output += get_output_lines([GIT, 'diff', '-U0', '--no-color'])
+  for rev in get_output_lines([GIT, 'rev-list', '--reverse', rev_range_str]):
     if rev != '':
-      p = subprocess.Popen([GIT, 'show', '-U0', '--no-color', rev], stdout=subprocess.PIPE)
-      output_rev, _ = p.communicate()
-      output += [s.rstrip() for s in output_rev.splitlines()]
+      output += get_output_lines([GIT, 'show', '-U0', '--no-color', rev])
   return output
 
 if __name__ == '__main__':
