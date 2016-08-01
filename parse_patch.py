@@ -142,10 +142,10 @@ class FilePatchHeader():
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
-    while lines[0] != '' and lines[0][0:4] != '--- ':
+    while lines and lines[0] != '' and lines[0][0:4] != '--- ':
       lines = lines[1:]
 
-    if lines[0][0:4] != '--- ':
+    if not lines or lines[0][0:4] != '--- ':
       return None, lines
 
     match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
