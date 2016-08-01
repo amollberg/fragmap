@@ -1,5 +1,16 @@
+#!/usr/bin/env python
+# encoding: utf-8
+#import os
 from parse_patch import *
 from generate_matrix import *
+from list_hunks import get_diff
+
+NPYSCREEN_AVAILABLE = False
+try:
+  from curses_ui import *
+  NPYSCREEN_AVAILABLE = True
+except ImportError:
+  print "Curses unavailable; using plain text."
 
 CONSOLE_WIDTH = 80
 
@@ -22,13 +33,25 @@ def print_hunkogram(diff_list):
     hash = hash[0:hash_width]
     print hash, commit_msg, ''.join(matrix[r])
 
+def display_hunkogram_screen(diff_list):
+  matrix = generate_matrix(diff_list)
+  hash_width = 8
+  App = HunkogramApp()
+  App._diff_list = diff_list
+  App._matrix = matrix
+  App.run()
+
+
 def main():
   pp = PatchParser()
-  lines = [line.rstrip() for line in sys.stdin]
+  lines = get_diff('HEAD~4..HEAD')
   print lines
   diff_list = pp.parse(lines)
-  print_hunkogram(diff_list)
-
+  print diff_list
+  if NPYSCREEN_AVAILABLE:
+    display_hunkogram_screen(diff_list)
+  else:
+    print_hunkogram(diff_list)
 
 
 if __name__ == '__main__':
