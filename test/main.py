@@ -65,6 +65,13 @@ class Test(unittest.TestCase):
     self.assertEqual(update_new_bound(0, FragmentBoundNode.START, filepatch), 4)
     self.assertEqual(update_new_bound(0, FragmentBoundNode.END, filepatch), 7)
 
+  def test_002_004(self):
+    self.check_diffs(['003-add-one-line-to-empty-file.diff',
+                      '002-rename-empty-file.diff',
+                      '004-remove-one-line-empty-file.diff'],
+                     ['#.',
+                      '..',
+                      '#.'])
 
   def test_003(self):
     self.check_diff('003-add-one-line-to-empty-file.diff', ['#.'])
