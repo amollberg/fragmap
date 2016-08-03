@@ -4,6 +4,37 @@
 DEBUG_CURSES=False
 
 import npyscreen
+
+def get_uncommitted_changes_indices(matrix):
+    return [0, 2]
+
+def has_hunks_conflicting_with_uncommitted(row_i, matrix):
+    for uncommitted_col_i in get_uncommitted_changes_indices(matrix):
+        if matrix[row_i][uncommitted_col_i] == '#':
+            return True
+    return False
+
+
+class HunkogramGrid(npyscreen.SimpleGrid):
+    _diff_list = None
+    _matrix = None
+    _start_row = None
+    _start_col = None
+
+    def custom_print_cell(self, actual_cell, cell_display_value):
+        index = actual_cell.grid_current_value_index
+        if index != -1:
+            row_i, col_i = index
+            row_i -= self._start_row
+            col_i -= self._start_col
+            if col_i < 0:
+                if has_hunks_conflicting_with_uncommitted(row_i, self._matrix):
+                    actual_cell.color = 'WARNING'
+            elif cell_display_value == '#':
+                if col_i in get_uncommitted_changes_indices(self._matrix):
+                    actual_cell.color = 'WARNING'
+
+
 class HunkogramApp(npyscreen.NPSApp):
     _diff_list = None
     _matrix = None
@@ -41,6 +72,11 @@ class HunkogramApp(npyscreen.NPSApp):
                 print hash, commit_msg, grid_column_widths
             grid[r] = [hash, commit_msg] + matrix[r]
         F = npyscreen.ActionFormWithMenus(name = "Welcome to Npyscreen",)
-        g = F.add(npyscreen.SimpleGrid, values=grid, name="simple grid",
+        g = F.add(HunkogramGrid, values=grid, name="simple grid",
                   column_width=grid_column_widths, col_margin=0)
+        g._diff_list = self._diff_list
+        g._matrix = self._matrix
+        g._start_row = 0
+        g._start_col = 2
+
         F.edit()
