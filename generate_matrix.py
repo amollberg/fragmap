@@ -134,9 +134,9 @@ def extract_nodes(diff, diff_i):
     for fragment_i in range(len(file_patch._fragments)):
       fragment = file_patch._fragments[fragment_i]
       node_list += [
-        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
+        FragmentBoundNode(diff_i, file_patch, fragment_i, fragment._header._oldrange,
                           FragmentBoundNode.START),
-        FragmentBoundNode(diff, diff_i, file_patch, fragment_i, fragment._header._oldrange,
+        FragmentBoundNode(diff_i, file_patch, fragment_i, fragment._header._oldrange,
                           FragmentBoundNode.END),
         ]
   return node_list
@@ -222,8 +222,7 @@ class FragmentBoundNode():
     return a._filename < b._filename or (
            a._filename == b._filename and a._line < b._line)
 
-  def __init__(self, diff, diff_i, file_patch, fragment_i, fragment_range, kind):
-    self._diff = diff
+  def __init__(self, diff_i, file_patch, fragment_i, fragment_range, kind):
     self._diff_i = diff_i
     self._file = file_patch
     self._fragment = file_patch._fragments[fragment_i]
