@@ -1,0 +1,12 @@
+commit c655de12180e908f6fb68b4e209b8a4d46136fdf
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Wed Aug 3 15:32:27 2016 +0200
+
+    Add text to empty.txt
+
+diff --git a/empty.txt b/empty.txt
+index e69de29..3de705a 100644
+--- a/empty.txt
++++ b/empty.txt
+@@ -0,0 +1 @@
++Text
