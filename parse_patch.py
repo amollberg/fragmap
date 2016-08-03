@@ -32,6 +32,15 @@ def is_nullfile(fn):
   return fn == '/dev/null'
 
 
+def nonnull_file(file_patch_header):
+  if not is_nullfile(file_patch_header._oldfile):
+    return file_patch_header._oldfile
+  if not is_nullfile(file_patch_header._newfile):
+    return file_patch_header._newfile
+  # Both files are null files
+  return None
+
+
 class Range():
   _start = 0
   _end = 0
@@ -339,6 +348,10 @@ class PatchParser():
     if DEBUG_PARSER and len(lines_after) > 0:
       print "Unparsable content left at end of file."
     return ast
+
+
+
+
 
 def main():
   pp = PatchParser()
