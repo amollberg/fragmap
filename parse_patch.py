@@ -236,10 +236,10 @@ class PatchHeader():
     hash = match.group(1)
 
     if lines[1][0:8] != 'Author: ':
-      print "'%s'!='Author: '" %(lines[1][0:8],)
+      if DEBUG_PARSER:
+        print "'%s'!='Author: '" %(lines[1][0:8],)
       return None, lines
     if lines[2][0:6] != 'Date: ':
-      print "##2"
       return None, lines
     lines = lines[3:]
     message = []

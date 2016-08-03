@@ -180,7 +180,8 @@ def update_positions(node_lines, patch, diff_i):
         print "Updated node lines:", file_node_lines
   else:
     # No fragments in patch
-    print "No fragments in patch"
+    if DEBUG_UPDATE:
+      print "No fragments in patch"
     for nl in node_lines:
       if DEBUG_UPDATE:
         print "last:", nl.last()._filename
