@@ -22,21 +22,14 @@ class HunkogramGrid(npyscreen.SimpleGrid):
     _grouped_node_lines = None
     _start_row = None
     _start_col = None
+    _cursor_event_callback = None
 
     def when_cursor_moved(self):
         cursor_row = self.edit_cell[0] - self._start_row
         cursor_col = self.edit_cell[1] - self._start_col
-        # Look up fragments from matrix cells
-        diff_i = cursor_row
-        found_node_line = None
-        for node_line in self._grouped_node_lines[cursor_col]:
-            if node_line._startdiff_i == diff_i:
-                found_node_line = node_line
-                break
-        if found_node_line is None:
+        if cursor_row < 0 or cursor_col < 0:
             return
-        # TODO: Write contents of found_node_line.last()._fragment
-        # to some text field
+        self._cursor_event_callback(cursor_row, cursor_col)
 
 
     def custom_print_cell(self, actual_cell, cell_display_value):
@@ -59,6 +52,27 @@ class HunkogramApp(npyscreen.NPSApp):
     _hash_width = None
     _console_width = None
     _grouped_node_lines = None
+
+    # UI components
+    _grid = None
+    _text_field = None
+
+    def on_cursor_event(self, cursor_row, cursor_col):
+        # Look up fragments from matrix cells
+        diff_i = cursor_row
+        found_node_line = None
+        for node_line in self._grouped_node_lines[cursor_col]:
+            if node_line._startdiff_i == diff_i:
+                found_node_line = node_line
+                break
+        text_content = ""
+        if found_node_line is not None:
+            text_content = '\n'.join(found_node_line.last()._fragment._content)
+        # TODO: Write contents of found_node_line.last()._fragment
+        # to some text field
+        self._text_field.value = text_content
+        self._text_field.update()
+
 
     def main(self):
         matrix = self._matrix
@@ -85,6 +99,8 @@ class HunkogramApp(npyscreen.NPSApp):
             grid[r] = [hash, commit_msg] + matrix[r]
         # Create the form and populate it with widgets
         F = npyscreen.ActionFormWithMenus(name = "Hunkogram",)
+        self._text_field = F.add(npyscreen.MultiLineEdit, value="""sdfsdf\nsdfsdf""", max_height=3, rely=9)
+
         g = F.add(HunkogramGrid, values=grid, name="simple grid",
                   column_width=grid_column_widths, col_margin=0)
         g._diff_list = self._diff_list
@@ -92,4 +108,7 @@ class HunkogramApp(npyscreen.NPSApp):
         g._grouped_node_lines = self._grouped_node_lines
         g._start_row = 0
         g._start_col = 2
+        g._cursor_event_callback = self.on_cursor_event
+        self._grid = g
+
         F.edit()
