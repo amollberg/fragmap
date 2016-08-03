@@ -43,11 +43,6 @@ class HunkogramApp(npyscreen.NPSApp):
     _console_width = None
 
     def main(self):
-        # These lines create the form and populate it with widgets.
-        # A fairly complex screen in only 8 or so lines of code - a line for each control.
-        #matrix = [['#','.','#','#','#','.','.'],
-        #          ['#','#','.','.','.','#','.'],
-        #          ['.','#','.','#','.','.','.']]
         matrix = self._matrix
         diff_list = self._diff_list
         n_matrix_cols = len(matrix[0])
@@ -64,20 +59,18 @@ class HunkogramApp(npyscreen.NPSApp):
         grid = [[''] * n_cols ]* n_rows
 
         for r in range(n_rows):
-            #hash = 'abcd0123'
             hash = diff_list._patches[r]._header._hash[0:hash_width]
-            #commit_msg = 'Test commit message about this or that'
             commit_msg = diff_list._patches[r]._header._message[0] # First row of message
             grid_column_widths = [hash_width, msg_width] + [2]*len(matrix[0])
             if DEBUG_CURSES:
                 print hash, commit_msg, grid_column_widths
             grid[r] = [hash, commit_msg] + matrix[r]
-        F = npyscreen.ActionFormWithMenus(name = "Welcome to Npyscreen",)
+        # Create the form and populate it with widgets
+        F = npyscreen.ActionFormWithMenus(name = "Hunkogram",)
         g = F.add(HunkogramGrid, values=grid, name="simple grid",
                   column_width=grid_column_widths, col_margin=0)
         g._diff_list = self._diff_list
         g._matrix = self._matrix
         g._start_row = 0
         g._start_col = 2
-
         F.edit()
