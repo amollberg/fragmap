@@ -22,6 +22,11 @@ class HunkogramGrid(npyscreen.SimpleGrid):
     _start_row = None
     _start_col = None
 
+    def when_cursor_moved(self):
+        cursor_pos = self.edit_cell
+        # TODO: Create data structure for looking up fragments
+        # from matrix cells
+
     def custom_print_cell(self, actual_cell, cell_display_value):
         index = actual_cell.grid_current_value_index
         if index != -1:
