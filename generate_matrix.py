@@ -161,23 +161,31 @@ def update_positions(node_lines, patch, diff_i):
   """
   Update all node lines with a multi-file patch.
   """
-  for file_patch in patch._filepatches:
-    oldfile = file_patch._header._oldfile
-    #file_node_lines = [nl for nl in node_lines if nl.last()._file == oldfile]
-    file_node_lines = []
+  if len(patch._filepatches) > 0:
+    for file_patch in patch._filepatches:
+      oldfile = file_patch._header._oldfile
+      file_node_lines = []
+      for nl in node_lines:
+        if DEBUG_UPDATE:
+          print "last:", nl.last()._filename
+        if nl.last()._filename == oldfile:
+          file_node_lines += [nl]
+        else:
+          nl.update_unchanged(diff_i)
+      if DEBUG_UPDATE:
+        print "Updating file:", oldfile
+        print "Node lines:", file_node_lines
+      update_file_positions(file_node_lines, file_patch, diff_i)
+      if DEBUG_UPDATE:
+        print "Updated node lines:", file_node_lines
+  else:
+    # No fragments in patch
+    print "No fragments in patch"
     for nl in node_lines:
       if DEBUG_UPDATE:
         print "last:", nl.last()._filename
-      if nl.last()._filename == oldfile:
-        file_node_lines += [nl]
-      else:
-        nl.update_unchanged(diff_i)
-    if DEBUG_UPDATE:
-      print "Updating file:", oldfile
-      print "Node lines:", file_node_lines
-    update_file_positions(file_node_lines, file_patch, diff_i)
-    if DEBUG_UPDATE:
-      print "Updated node lines:", file_node_lines
+      nl.update_unchanged(diff_i)
+  return node_lines
 
 
 #def update_positions_to_latest(node_lines, patch_list):
