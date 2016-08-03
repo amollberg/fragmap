@@ -39,6 +39,8 @@ def display_hunkogram_screen(diff_list):
   App = HunkogramApp()
   App._diff_list = diff_list
   App._matrix = matrix
+  App._console_width = CONSOLE_WIDTH
+  App._hash_width = 8
   App.run()
 
 
