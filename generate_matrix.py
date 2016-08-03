@@ -46,13 +46,13 @@ def nonnull_file(file_patch_header):
   return None
 
 
-def update_new_bound(fragment_i, bound_kind, file_patch):
+def update_new_bound(fragment, bound_kind):
   """
   Update a bound that belongs to the current diff. Simply apply whatever
   fragment it belongs to.
   """
   line = 0
-  marker = file_patch._fragments[fragment_i]._header
+  marker = fragment._header
   if bound_kind == FragmentBoundNode.START:
     line = marker._newrange._start
     if DEBUG_UPDATE:
@@ -109,12 +109,12 @@ def update_inherited_bound(line, bound_kind, file_patch):
     pass
   return line
 
-def update_line(line, bound_kind, fragment_i, startdiff_i, diff_i, file_patch):
+def update_line(line, bound_kind, fragment, startdiff_i, diff_i, file_patch):
   # If the current diff is the start diff of the
   # affected node line:
   if diff_i == startdiff_i:
     # The bound is new
-    return update_new_bound(fragment_i, bound_kind, file_patch)
+    return update_new_bound(fragment, bound_kind)
   else:
     # The bound is inherited
     return update_inherited_bound(line, bound_kind, file_patch)
@@ -131,7 +131,7 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
     node_line.update(diff_i, file_patch._header._newfile,
                      update_line(node_line.last()._line,
                                  node_line.last()._kind,
-                                 node_line.last()._fragment_i,
+                                 node_line.last()._fragment,
                                  node_line._startdiff_i,
                                  diff_i,
                                  file_patch))

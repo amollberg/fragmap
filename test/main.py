@@ -60,10 +60,11 @@ class Test(unittest.TestCase):
   def test_update_new_bound(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
         Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+    fragment = Fragment(FragmentHeader(Range(4,2), Range(4,4)))
 
     # Related bounds updated
-    self.assertEqual(update_new_bound(0, FragmentBoundNode.START, filepatch), 4)
-    self.assertEqual(update_new_bound(0, FragmentBoundNode.END, filepatch), 7)
+    self.assertEqual(update_new_bound(fragment, FragmentBoundNode.START), 4)
+    self.assertEqual(update_new_bound(fragment, FragmentBoundNode.END), 7)
 
   def test_update_positions(self):
     filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
