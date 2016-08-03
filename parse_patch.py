@@ -137,26 +137,49 @@ class FilePatchHeader():
 
   @staticmethod
   def parse(lines):
+    def parse_rename_header(lines):
+      if lines[0][0:16] == "similarity index":
+        lines = lines[1:]
+      match = re.match('^rename from (.*)$', lines[0])
+      if match is None:
+        return None, lines
+      oldfile = match.group(1)
+
+      match = re.match('^rename to (.*)$', lines[1])
+      if match is None:
+        return None, lines
+      newfile = match.group(1)
+
+      return FilePatchHeader(oldfile, newfile), lines[2:]
+
+    def parse_diff_header(lines):
+      while lines and lines[0] != '' and lines[0][0:4] != '--- ':
+        lines = lines[1:]
+
+      if not lines or lines[0][0:4] != '--- ':
+        return None, lines
+
+      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
+      if match is None:
+        return None, lines
+      oldfile = match.group(1)
+
+      match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
+      if match is not None:
+        newfile = match.group(1)
+      return FilePatchHeader(oldfile, newfile), lines[2:]
+
     if DEBUG_PARSER:
       print "FilePatchHeader? ", lines[0]
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
-    while lines and lines[0] != '' and lines[0][0:4] != '--- ':
-      lines = lines[1:]
-
-    if not lines or lines[0][0:4] != '--- ':
-      return None, lines
-
-    match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
-    if match is None:
-      return None, lines
-    oldfile = match.group(1)
-
-    match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
-    if match is not None:
-      newfile = match.group(1)
-    return FilePatchHeader(oldfile, newfile), lines[2:]
+    # Try a rename header
+    header, lines = parse_rename_header(lines)
+    if header is None:
+      # Try a regular (diff) header
+      header, lines = parse_diff_header(lines)
+    return header, lines
 
 
 class FilePatch():
