@@ -19,13 +19,25 @@ def has_hunks_conflicting_with_uncommitted(row_i, matrix):
 class HunkogramGrid(npyscreen.SimpleGrid):
     _diff_list = None
     _matrix = None
+    _grouped_node_lines = None
     _start_row = None
     _start_col = None
 
     def when_cursor_moved(self):
-        cursor_pos = self.edit_cell
-        # TODO: Create data structure for looking up fragments
-        # from matrix cells
+        cursor_row = self.edit_cell[0] - self._start_row
+        cursor_col = self.edit_cell[1] - self._start_col
+        # Look up fragments from matrix cells
+        diff_i = cursor_row
+        found_node_line = None
+        for node_line in self._grouped_node_lines[cursor_col]:
+            if node_line._startdiff_i == diff_i:
+                found_node_line = node_line
+                break
+        if found_node_line is None:
+            return
+        # TODO: Write contents of found_node_line.last()._fragment
+        # to some text field
+
 
     def custom_print_cell(self, actual_cell, cell_display_value):
         index = actual_cell.grid_current_value_index
@@ -46,6 +58,7 @@ class HunkogramApp(npyscreen.NPSApp):
     _matrix = None
     _hash_width = None
     _console_width = None
+    _grouped_node_lines = None
 
     def main(self):
         matrix = self._matrix
@@ -76,6 +89,7 @@ class HunkogramApp(npyscreen.NPSApp):
                   column_width=grid_column_widths, col_margin=0)
         g._diff_list = self._diff_list
         g._matrix = self._matrix
+        g._grouped_node_lines = self._grouped_node_lines
         g._start_row = 0
         g._start_col = 2
         F.edit()

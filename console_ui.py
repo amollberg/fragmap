@@ -16,7 +16,7 @@ CONSOLE_WIDTH = 80
 
 # TODO: Change name?
 def print_hunkogram(diff_list):
-  matrix = generate_matrix(diff_list)
+  matrix, _ = generate_matrix(diff_list)
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = min(CONSOLE_WIDTH/2, matrix_width)
@@ -34,11 +34,12 @@ def print_hunkogram(diff_list):
     print hash, commit_msg, ''.join(matrix[r])
 
 def display_hunkogram_screen(diff_list):
-  matrix = generate_matrix(diff_list)
+  matrix, grouped_node_lines = generate_matrix(diff_list)
   hash_width = 8
   App = HunkogramApp()
   App._diff_list = diff_list
   App._matrix = matrix
+  App._grouped_node_lines = grouped_node_lines
   App._console_width = CONSOLE_WIDTH
   App._hash_width = 8
   App.run()

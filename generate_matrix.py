@@ -121,7 +121,7 @@ def generate_matrix(ast):
           print "%d,%d: %d" %(r, c, inside_fragment)
         if inside_fragment:
           matrix[r][c] = '#'
-  return matrix
+  return matrix, grouped_node_lines
 
 
 def main():
@@ -129,7 +129,7 @@ def main():
   lines = [line.rstrip() for line in sys.stdin]
   diff_list =  pp.parse(lines)
   print diff_list
-  matrix = generate_matrix(diff_list)
+  matrix, _ = generate_matrix(diff_list)
   for row in matrix:
     print ''.join(row)
 
