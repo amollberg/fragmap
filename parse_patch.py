@@ -95,11 +95,13 @@ class FragmentHeader():
 
 class Fragment():
   _header = None
-  def __init__(self, header):
+  _content = None
+  def __init__(self, header, content=''):
     self._header = header
+    self._content = content
 
   def __repr__(self):
-    return "\n   <Fragment: %s>" % (self._header,)
+    return "\n   <Fragment: %s %s>" % (self._header, self._content)
 
   def update_positions(self, start_delta, length_delta):
     self._header._newrange.update_positions(start_delta, length_delta)
@@ -113,15 +115,17 @@ class Fragment():
     #print i
     i = 0
     if header is not None:
+      content = []
       for line in lines:
         #print "line: '%s', length: %d" % (line, len(line))
         if len(line) == 0 or line[0] in {' ', '+', '-', '\\'}:
           #print "in fragment '%s'" % line, i
+          content += [line]
           i += 1
         else:
           #print "not in fragment: '%s'" % line, i
           break
-      return Fragment(header), lines[i:]
+      return Fragment(header, content), lines[i:]
     if DEBUG_PARSER:
       print "Not fragment"
     return None, lines
