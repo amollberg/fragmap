@@ -227,9 +227,7 @@ def update_all_positions_to_latest(diff_list):
 
 class FragmentBoundNode():
   # References back into the diffs
-  _diff = None
   _diff_i = None
-  _file = None
   _fragment = None
 
   # Info to sort on
@@ -249,7 +247,6 @@ class FragmentBoundNode():
 
   def __init__(self, diff_i, file_patch, fragment_i, fragment_range, kind):
     self._diff_i = diff_i
-    self._file = file_patch
     self._fragment = file_patch._fragments[fragment_i]
     self._fragment_i = fragment_i
     self._filename = nonnull_file(file_patch._header)
@@ -401,7 +398,7 @@ class FragmentBoundLine():
       print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
     # Apply changes to new node
     updated_node._diff_i = diff_i
-    updated_node._file = filename
+    updated_node._filename = filename
     updated_node._line = line
 
 
