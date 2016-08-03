@@ -6,7 +6,8 @@ DEBUG_CURSES=False
 import npyscreen
 
 def get_uncommitted_changes_indices(matrix):
-    return [0, 2]
+    return [i for i in range(len(matrix[0])) if matrix[-1][i] == '#']
+
 
 def has_hunks_conflicting_with_uncommitted(row_i, matrix):
     for uncommitted_col_i in get_uncommitted_changes_indices(matrix):
