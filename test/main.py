@@ -65,6 +65,19 @@ class Test(unittest.TestCase):
     self.assertEqual(update_new_bound(0, FragmentBoundNode.START, filepatch), 4)
     self.assertEqual(update_new_bound(0, FragmentBoundNode.END, filepatch), 7)
 
+  def test_update_positions(self):
+    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+    patch = Patch([filepatch],
+                  PatchHeader("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
+                              "dummy message"))
+    node_lines = [FragmentBoundLine(FragmentBoundNode(0, filepatch, 0, Range(4,2), FragmentBoundNode.END))]
+    update_positions(node_lines, patch, 0)
+    self.assertEqual(node_lines[0].last()._filename, "dummy")
+    self.assertEqual(node_lines[0].last()._line, 7)
+
+
+
   def test_002_004(self):
     self.check_diffs(['003-add-one-line-to-empty-file.diff',
                       '002-rename-empty-file.diff',
