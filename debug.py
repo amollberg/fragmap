@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import sys
 
 curses = 0
 grid = 1
@@ -57,3 +58,5 @@ def parse_args():
       if cat == "all" or cat == "matrix":
         category_constants += [matrix]
     enable_logging(category_constants)
+  # Remove the above known args from subsequent parsers e.g. unittest.
+  sys.argv[1:] = args[1]
