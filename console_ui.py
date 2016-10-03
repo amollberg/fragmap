@@ -4,6 +4,7 @@
 from parse_patch import *
 from generate_matrix import *
 from list_hunks import get_diff
+import debug
 
 NPYSCREEN_AVAILABLE = False
 try:
@@ -48,9 +49,9 @@ def display_hunkogram_screen(diff_list):
 def main():
   pp = PatchParser()
   lines = get_diff('HEAD~4..HEAD')
-  print lines
+  debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
-  print diff_list
+  debug.log(debug.console, diff_list)
   if NPYSCREEN_AVAILABLE:
     display_hunkogram_screen(diff_list)
   else:
@@ -58,4 +59,5 @@ def main():
 
 
 if __name__ == '__main__':
+  debug.parse_args()
   main()

@@ -2,10 +2,6 @@
 import copy
 from parse_patch import *
 
-DEBUG_UPDATE = True
-DEBUG_SORTING = False
-DEBUG_GROUPING = False
-
 
 class FragmentBoundNode():
   # References back into the diffs
@@ -61,36 +57,29 @@ class FragmentBoundLine():
       if b._kind == FragmentBoundNode.END:
         b_line += 1
       if a_file < b_file:
-        if DEBUG_SORTING:
-          print "file %s < %s at diff %d" %(a_file, b_file, diff_i)
+        debug.log(debug.sorting, "file %s < %s at diff %d" %(a_file, b_file, diff_i))
         return True
       if a_file == b_file and a_line < b_line:
-        if DEBUG_SORTING:
-          print "line %d < %d at diff %d" %(a_line, b_line, diff_i)
+        debug.log(debug.sorting, "line %d < %d at diff %d" %(a_line, b_line, diff_i))
         return True
       return False
-    if DEBUG_SORTING:
-      print "<<<<< Comparing %s and %s" %(a,b)
+    debug.log(debug.sorting, "<<<<< Comparing %s and %s" %(a,b))
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1
     # Order by filename at latest diff and then by
     # line at earliest common diff
-    if DEBUG_SORTING:
-      print "First_common=", first_common_diff_i
+    debug.log(debug.sorting, "First_common=", first_common_diff_i)
 
     if lt_at_diff(a, b, prev_diff_i):
-      if DEBUG_SORTING:
-        print "Lines are < at prev diff", prev_diff_i
+      debug.log(debug.sorting, "Lines are < at prev diff", prev_diff_i)
       return True
     if lt_at_diff(a, b, first_common_diff_i):
-      if DEBUG_SORTING:
-        print "Lines are < at first diff", first_common_diff_i
+      debug.log(debug.sorting, "Lines are < at first diff", first_common_diff_i)
       return True
     else:
-      if DEBUG_SORTING:
-        print "Lines are !<"
+      debug.log(debug.sorting, "Lines are !<")
       return False
 
 
@@ -105,17 +94,14 @@ class FragmentBoundLine():
       if b._kind == FragmentBoundNode.END:
         b_line += 1
       if a_file != b_file:
-        if DEBUG_GROUPING:
-          print "file %s != %s at diff %d" %(a_file, b_file, diff_i)
+        debug.log(debug.grouping, "file %s != %s at diff %d" %(a_file, b_file, diff_i))
         return False
       if a_line != b_line:
-        if DEBUG_GROUPING:
-          print "line %d != %d at diff %d" %(a_line, b_line, diff_i)
+        debug.log(debug.grouping, "line %d != %d at diff %d" %(a_line, b_line, diff_i))
         return False
       return True
 
-    if DEBUG_GROUPING:
-      print "===== Comparing %s and %s" %(a,b)
+    debug.log(debug.grouping, "===== Comparing %s and %s" %(a,b))
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
@@ -125,18 +111,15 @@ class FragmentBoundLine():
     # group them even though their kinds differ because it will still be
     # possible to distinguish the bounds.
     if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
-      if DEBUG_GROUPING:
-        print "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i)
+      debug.log(debug.grouping, "kind %d != %d and same startdiff %d" %(a._kind, b._kind, a._startdiff_i))
     if eq_at_diff(a, b, first_common_diff_i) \
         and eq_at_diff(a, b, prev_diff_i) \
         and (a._kind == b._kind or
              a._startdiff_i != b._startdiff_i):
-      if DEBUG_GROUPING:
-        print "Lines are =="
+      debug.log(debug.grouping, "Lines are ==")
       return True
     else:
-      if DEBUG_GROUPING:
-        print "Lines are !="
+      debug.log(debug.grouping, "Lines are !=")
       return False
 
 
@@ -172,8 +155,7 @@ class FragmentBoundLine():
   def update(self, diff_i, filename, line):
     # Copy previous node without changing anything
     updated_node = self.update_unchanged(diff_i)
-    if DEBUG_UPDATE:
-      print "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line)
+    debug.log(debug.update, "Updating %s with (%d, %s, %d)" %(self, diff_i, filename, line))
     # Apply changes to new node
     updated_node._diff_i = diff_i
     updated_node._filename = filename
@@ -189,12 +171,10 @@ def update_new_bound(fragment, bound_kind):
   marker = fragment._header
   if bound_kind == FragmentBoundNode.START:
     line = marker._newrange._start
-    if DEBUG_UPDATE:
-      print "Setting new start line to", line
+    debug.log(debug.update, "Setting new start line to", line)
   elif bound_kind == FragmentBoundNode.END:
     line = marker._newrange._end
-    if DEBUG_UPDATE:
-      print "Setting new end line to", line
+    debug.log(debug.update, "Setting new end line to", line)
   return line
 
 
@@ -215,28 +195,23 @@ def update_inherited_bound(line, bound_kind, file_patch):
       marker = patch_fragment._header
     else:
       break
-  if DEBUG_UPDATE:
-    print "Update_line:", line, bound_kind, file_patch
-    print "Marker:", marker
+  debug.log(debug.update, "Update_line:", line, bound_kind, file_patch)
+  debug.log(debug.update, "Marker:", marker)
   # TODO: Fix sorting of node line groups after this.
   if marker is not None:
     if line <= marker._oldrange._end:
       # line is inside the range
-      if DEBUG_UPDATE:
-        print "Line %d is inside range %s" %(line, marker._oldrange)
+      debug.log(debug.update, "Line %d is inside range %s" %(line, marker._oldrange))
       if bound_kind == FragmentBoundNode.START:
         line = marker._newrange._start
-        if DEBUG_UPDATE:
-          print "Setting start line to", line
+        debug.log(debug.update, "Setting start line to", line)
       elif bound_kind == FragmentBoundNode.END:
         line = marker._newrange._end
-        if DEBUG_UPDATE:
-          print "Setting end line to", line
+        debug.log(debug.update, "Setting end line to", line)
     else:
       # line is after the range
-      if DEBUG_UPDATE:
-        print "Line %d is after range %s; shifting %d" % (
-          line, marker._oldrange, marker._newrange._end - marker._oldrange._end)
+      debug.log(debug.update, "Line %d is after range %s; shifting %d" % (
+        line, marker._oldrange, marker._newrange._end - marker._oldrange._end))
       line += marker._newrange._end - marker._oldrange._end
   else:
     # line is before any fragment; no update required
@@ -262,8 +237,7 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
   # TODO: Verify that filenames are the same
   # TODO Ensure sorted fragments
   for node_line in file_node_lines:
-    if DEBUG_UPDATE:
-      print "Node before:", node_line.last()
+    debug.log(debug.update, "Node before:", node_line.last())
     node_line.update(diff_i, file_patch._header._newfile,
                      update_line(node_line.last()._line,
                                  node_line.last()._kind,
@@ -271,8 +245,7 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
                                  node_line._startdiff_i,
                                  diff_i,
                                  file_patch))
-    if DEBUG_UPDATE:
-      print "Node after:", node_line.last()
+    debug.log(debug.update, "Node after:", node_line.last())
 
 
 def update_positions(node_lines, patch, diff_i):
@@ -284,25 +257,20 @@ def update_positions(node_lines, patch, diff_i):
       oldfile = file_patch._header._oldfile
       file_node_lines = []
       for nl in node_lines:
-        if DEBUG_UPDATE:
-          print "last:", nl.last()._filename
+        debug.log(debug.update, "last:", nl.last()._filename)
         if nl.last()._filename == oldfile:
           file_node_lines += [nl]
         else:
           nl.update_unchanged(diff_i)
-      if DEBUG_UPDATE:
-        print "Updating file:", oldfile
-        print "Node lines:", file_node_lines
+      debug.log(debug.update, "Updating file:", oldfile)
+      debug.log(debug.update, "Node lines:", file_node_lines)
       update_file_positions(file_node_lines, file_patch, diff_i)
-      if DEBUG_UPDATE:
-        print "Updated node lines:", file_node_lines
+      debug.log(debug.update, "Updated node lines:", file_node_lines)
   else:
     # No fragments in patch
-    if DEBUG_UPDATE:
-      print "No fragments in patch"
+    debug.log(debug.update, "No fragments in patch")
     for nl in node_lines:
-      if DEBUG_UPDATE:
-        print "last:", nl.last()._filename
+      debug.log(debug.update, "last:", nl.last()._filename)
       nl.update_unchanged(diff_i)
   return node_lines
 
@@ -338,14 +306,11 @@ def update_all_positions_to_latest(diff_list):
   newer diffs act as patches for older diffs.
   Assumes diff_list is sorted in ascending time.
   """
-  if DEBUG_UPDATE:
-    print "update_all_positions:", diff_list
+  debug.log(debug.update, "update_all_positions:", diff_list)
   node_line_list = []
   for i in range(len(diff_list)):
     node_line_list += extract_node_lines(diff_list[i], i)
-    if DEBUG_UPDATE:
-      print "= All to latest: All extracted:", i, node_line_list
+    debug.log(debug.update, "= All to latest: All extracted:", i, node_line_list)
     update_positions(node_line_list, diff_list[i], i)
-    if DEBUG_UPDATE:
-      print "= All to latest: All updated:", node_line_list
+    debug.log(debug.update, "= All to latest: All updated:", node_line_list)
   return node_line_list

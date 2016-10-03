@@ -2,6 +2,7 @@
 
 from parse_patch import *
 from update_fragments import *
+import debug
 # Hierarchy:
 # AST
 #  Patch
@@ -22,9 +23,6 @@ from update_fragments import *
 # FragmentNodeLine
 #  FragmentNode
 #  _startdiff_i
-
-
-DEBUG_GRID = False
 
 
 def earliest_diff(node_lines):
@@ -56,8 +54,7 @@ def group_fragment_bound_lines(node_lines):
   grouped by position (file, line) at first common diff.
   """
   node_lines = sorted(node_lines)
-  if DEBUG_SORTING:
-    print "Sorted lines:", node_lines
+  debug.log(debug.sorting, "Sorted lines:", node_lines)
   groups = []
   for node_line in node_lines:
     added = False
@@ -83,42 +80,38 @@ def group_fragment_bound_lines(node_lines):
 
 
 def generate_matrix(ast):
-  print "AST:", ast
+  debug.log(debug.matrix, "AST:", ast)
   node_lines = update_all_positions_to_latest(ast._patches)
-  if DEBUG_GROUPING:
+  if debug.is_logging(debug.grouping):
     print_node_line_relation_table(node_lines)
-  print "Node lines:", node_lines
+  debug.log(debug.matrix, "Node lines:", node_lines)
 
   grouped_node_lines = group_fragment_bound_lines(node_lines)
-  print "Grouped lines:", grouped_node_lines
+  debug.log(debug.matrix, "Grouped lines:", grouped_node_lines)
   #bound_list = generate_fragment_bound_list(ast)
 
   n_rows = len(ast._patches)
   n_cols = len(grouped_node_lines)
-  if DEBUG_GRID:
-    print "Matrix size: rows, cols: ", n_rows, n_cols
+  debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
   matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
   for r in range(n_rows):
     diff_i = r
     inside_fragment = False
     for c in range(n_cols):
       node_line_group = grouped_node_lines[c]
-      if DEBUG_GRID:
-        print "%d,%d: %s" %(r, c, node_line_group)
+      debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
       if True: #earliest_diff(node_line_group) <= diff_i:
         for node_line in node_line_group:
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
             inside_fragment = (node_line._kind == FragmentBoundNode.START)
-            if DEBUG_GRID:
-              print "Setting inside_fragment =", inside_fragment
+            debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
             # If it was updated to False:
             if not inside_fragment:
               # False overrides True so that if start and end from same diff
               # appear in same group we don't get stuck at True
               break
-        if DEBUG_GRID:
-          print "%d,%d: %d" %(r, c, inside_fragment)
+        debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment))
         if inside_fragment:
           matrix[r][c] = '#'
   return matrix, grouped_node_lines
@@ -128,11 +121,12 @@ def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
   diff_list =  pp.parse(lines)
-  print diff_list
+  debug.log(debug.matrix, diff_list)
   matrix, _ = generate_matrix(diff_list)
   for row in matrix:
     print ''.join(row)
 
 
 if __name__ == '__main__':
+  debug.parse_args()
   main()

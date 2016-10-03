@@ -8,6 +8,7 @@ TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(TEST_DIR, '..'))
 from parse_patch import *
 from generate_matrix import *
+import debug
 
 def read_diff(filename):
   filepath = os.path.join(TEST_DIR, 'diffs', filename)
@@ -210,7 +211,7 @@ class Test(unittest.TestCase):
     diff = []
     for fn in diff_filenames:
       diff += read_diff(fn)
-    print diff
+    debug.log(debug.test, diff)
     pp = PatchParser()
     return update_all_positions_to_latest(pp.parse(diff)._patches)
 
@@ -219,7 +220,7 @@ class Test(unittest.TestCase):
       hist = []
       for group in kinds:
         group_hist = {START : 0, END : 0}
-        print group_hist
+        debug.log(debug.test, group_hist)
         for node_line_kind in group:
           group_hist[node_line_kind] += 1
         hist += [(group_hist[START], group_hist[END])]
@@ -229,7 +230,8 @@ class Test(unittest.TestCase):
     kinds_hist = histogram_kinds(kinds)
     kinds = map(stringify_kinds_list, kinds)
     node_lines = self.get_node_lines(diff_filenames)
-    print_node_line_relation_table(node_lines)
+    if debug.is_logging(debug.test):
+      print_node_line_relation_table(node_lines)
     grouped_node_lines = group_fragment_bound_lines(node_lines)
     error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
       kinds, grouped_node_lines)
@@ -270,9 +272,10 @@ class Test(unittest.TestCase):
   def check_matrix(self, matrix, reference):
     joined_matrix = [''.join(row) for row in matrix]
     for row in joined_matrix:
-      print row
+      debug.log(debug.test, row)
     self.assertEqual(joined_matrix, reference)
 
 
 if __name__ == '__main__':
+  debug.parse_args()
   unittest.main()

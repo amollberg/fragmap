@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-DEBUG_CURSES=False
 
 import npyscreen
 
@@ -86,16 +85,14 @@ class HunkogramApp(npyscreen.NPSApp):
             F = npyscreen.ActionFormWithMenus(name = "Error: Diagram too wide")
             F.edit()
             return
-        if DEBUG_CURSES:
-            print matrix, diff_list, n_matrix_cols, n_cols, n_rows, hash_width, msg_width
+        debug.log(debug.curses, matrix, diff_list, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
         grid = [[''] * n_cols ]* n_rows
 
         for r in range(n_rows):
             hash = diff_list._patches[r]._header._hash[0:hash_width]
             commit_msg = diff_list._patches[r]._header._message[0] # First row of message
             grid_column_widths = [hash_width, msg_width] + [2]*len(matrix[0])
-            if DEBUG_CURSES:
-                print hash, commit_msg, grid_column_widths
+            debug.log(debug.curses, hash, commit_msg, grid_column_widths)
             grid[r] = [hash, commit_msg] + matrix[r]
         # Create the form and populate it with widgets
         F = npyscreen.ActionFormWithMenus(name = "Hunkogram",)
