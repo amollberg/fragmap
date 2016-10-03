@@ -108,18 +108,14 @@ class Fragment():
   def parse(lines):
     debug.log(debug.parser, "Fragment? ", lines[0])
     header, lines = FragmentHeader.parse(lines)
-    #print i
     i = 0
     if header is not None:
       content = []
       for line in lines:
-        #print "line: '%s', length: %d" % (line, len(line))
         if len(line) == 0 or line[0] in {' ', '+', '-', '\\'}:
-          #print "in fragment '%s'" % line, i
           content += [line]
           i += 1
         else:
-          #print "not in fragment: '%s'" % line, i
           break
       return Fragment(header, content), lines[i:]
     debug.log(debug.parser, "Not fragment")
@@ -345,7 +341,7 @@ class PatchParser():
 def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
-  print  pp.parse(lines)
+  print pp.parse(lines)
 
 if __name__ == '__main__':
   debug.parse_args()
