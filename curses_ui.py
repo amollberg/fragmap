@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-
+import debug
 import npyscreen
+
 
 def get_uncommitted_changes_indices(matrix):
     return [i for i in range(len(matrix[0])) if matrix[-1][i] == '#']
