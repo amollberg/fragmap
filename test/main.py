@@ -206,6 +206,30 @@ class Test(unittest.TestCase):
                       '....#..',
                       '.....#.'])
 
+  def test_args_no_args(self):
+    import list_hunks
+    old_argv = sys.argv # Backup real value
+    # No args -> default to some nonempty set of revs
+    sys.argv = [sys.argv[0], '']
+    self.assertTrue(list_hunks.get_rev_range_from_args() is not None)
+    sys.argv = old_argv # Restore real value
+
+  def test_args_n_arg_valid(self):
+    import list_hunks
+    old_argv = sys.argv # Backup real value
+    # -n 5 given -> should get HEAD~5..HEAD
+    sys.argv = [sys.argv[0], '-n', '5']
+    self.assertEqual(list_hunks.get_rev_range_from_args(), 'HEAD~5..HEAD')
+    sys.argv = old_argv # Restore real value
+
+  def test_args_n_arg_invalid(self):
+    import list_hunks
+    old_argv = sys.argv # Backup real value
+    # -n foo given -> should get None
+    sys.argv = [sys.argv[0], '-n', 'foo']
+    self.assertEqual(list_hunks.get_rev_range_from_args(), None)
+    sys.argv = old_argv # Restore real value
+
 
   def get_node_lines(self, diff_filenames):
     diff = []

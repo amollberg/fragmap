@@ -3,7 +3,7 @@
 #import os
 from parse_patch import *
 from generate_matrix import *
-from list_hunks import get_diff
+from list_hunks import get_diff, get_rev_range_from_args
 import debug
 
 NPYSCREEN_AVAILABLE = False
@@ -48,7 +48,7 @@ def display_hunkogram_screen(diff_list):
 
 def main():
   pp = PatchParser()
-  lines = get_diff('HEAD~4..HEAD')
+  lines = get_diff(get_rev_range_from_args())
   debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
   debug.log(debug.console, diff_list)
