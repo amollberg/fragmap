@@ -57,7 +57,10 @@ class SimpleGrid(widget.Widget):
         self.make_contained_widgets()
 
     def make_contained_widgets(self):
-        if self.column_width_requested:
+        column_width_list_requested = hasattr(self.column_width_requested, "__getitem__")
+        if column_width_list_requested:
+            self.columns = len(self.column_width_requested)
+        elif self.column_width_requested:
             # don't need a margin for the final column
             self.columns = (self.width + self.col_margin) // (self.column_width_requested + self.col_margin)
         elif self.columns_requested:
@@ -65,16 +68,19 @@ class SimpleGrid(widget.Widget):
         else:
             self.columns = self.default_column_number
         self._my_widgets = []
-        column_width = (self.width + self.col_margin - self.additional_x_offset) // self.columns
-        column_width -= self.col_margin
+        if column_width_list_requested:
+            column_width = self.column_width_requested
+        else:
+            column_width = [(self.width + self.col_margin - self.additional_x_offset) // self.columns - self.col_margin] * self.columns
+            if column_width[0] < 1: raise Exception("Too many columns for space available")
         self._column_width = column_width
-        if column_width < 1: raise Exception("Too many columns for space available")
         for h in range( (self.height - self.additional_y_offset) // self.row_height ):
             h_coord = h * self.row_height
             row = []
-            for cell in range(self.columns):
-                x_offset = cell * (self._column_width + self.col_margin)
-                row.append(self._contained_widgets(self.parent, rely=h_coord+self.rely + self.additional_y_offset, relx = self.relx + x_offset + self.additional_x_offset, width=column_width, height=self.row_height))
+            x_offset = 0
+            for cell_width in column_width:
+                row.append(self._contained_widgets(self.parent, rely=h_coord+self.rely + self.additional_y_offset, relx = self.relx + x_offset + self.additional_x_offset, width=cell_width, height=self.row_height))
+                x_offset += cell_width + self.col_margin
             self._my_widgets.append(row)
     
     def display_value(self, vl):
