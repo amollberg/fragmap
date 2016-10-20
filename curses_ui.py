@@ -17,9 +17,8 @@ def has_hunks_conflicting_with_uncommitted(row_i, matrix):
 
 
 class HunkogramGrid(npyscreen.SimpleGrid):
-    _diff_list = None
-    _matrix = None
-    _grouped_node_lines = None
+    _hunkogram = None
+    _matrix = None # TODO: Keep in sync with _hunkogram
     _start_row = None
     _start_col = None
     _cursor_event_callback = None
@@ -47,11 +46,9 @@ class HunkogramGrid(npyscreen.SimpleGrid):
 
 
 class HunkogramApp(npyscreen.NPSApp):
-    _diff_list = None
-    _matrix = None
     _hash_width = None
     _console_width = None
-    _grouped_node_lines = None
+    _hunkogram = None
 
     # UI components
     _grid = None
@@ -61,7 +58,7 @@ class HunkogramApp(npyscreen.NPSApp):
         # Look up fragments from matrix cells
         diff_i = cursor_row
         found_node_line = None
-        for node_line in self._grouped_node_lines[cursor_col]:
+        for node_line in self._hunkogram.grouped_node_lines[cursor_col]:
             if node_line._startdiff_i == diff_i:
                 found_node_line = node_line
                 break
@@ -75,8 +72,8 @@ class HunkogramApp(npyscreen.NPSApp):
 
 
     def main(self):
-        matrix = self._matrix
-        diff_list = self._diff_list
+        matrix = self._hunkogram.generate_matrix()
+        patches = self._hunkogram.patches
         n_matrix_cols = len(matrix[0])
         n_cols = 2 + n_matrix_cols
         n_rows = len(matrix)
@@ -84,12 +81,12 @@ class HunkogramApp(npyscreen.NPSApp):
         grid_width = (2 + hash_width + 1 + 2*n_matrix_cols + 2)
         msg_width = 30
         total_width = msg_width + 1 + grid_width
-        debug.log(debug.curses, matrix, diff_list, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
+        debug.log(debug.curses, matrix, patches, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
         grid = [[''] * n_cols ]* n_rows
 
         for r in range(n_rows):
-            hash = diff_list._patches[r]._header._hash[0:hash_width]
-            commit_msg = diff_list._patches[r]._header._message[0] # First row of message
+            hash = patches[r]._header._hash[0:hash_width]
+            commit_msg = patches[r]._header._message[0] # First row of message
             grid_column_widths = [hash_width, msg_width] + [2]*len(matrix[0])
             debug.log(debug.curses, hash, commit_msg, grid_column_widths)
             grid[r] = [hash, commit_msg] + matrix[r]
@@ -99,9 +96,8 @@ class HunkogramApp(npyscreen.NPSApp):
 
         g = F.add(HunkogramGrid, values=grid, name="simple grid",
                   column_width=grid_column_widths, col_margin=0)
-        g._diff_list = self._diff_list
-        g._matrix = self._matrix
-        g._grouped_node_lines = self._grouped_node_lines
+        g._matrix = matrix
+        g._hunkogram = self._hunkogram
         g._start_row = 0
         g._start_col = 2
         g._cursor_event_callback = self.on_cursor_event

@@ -40,8 +40,7 @@ def display_hunkogram_screen(diff_list):
   hash_width = 8
   App = HunkogramApp()
   App._diff_list = diff_list
-  App._matrix = hunkogram.generate_matrix()
-  App._grouped_node_lines = hunkogram.group_fragment_bound_lines()
+  App._hunkogram = hunkogram
   App._console_width = CONSOLE_WIDTH
   App._hash_width = hash_width
   App.run()
