@@ -81,11 +81,9 @@ class HunkogramApp(npyscreen.NPSApp):
         n_cols = 2 + n_matrix_cols
         n_rows = len(matrix)
         hash_width = self._hash_width
-        msg_width = self._console_width - (2 + hash_width + 1 + 2*n_matrix_cols + 2)
-        if msg_width < 1:
-            F = npyscreen.ActionFormWithMenus(name = "Error: Diagram too wide")
-            F.edit()
-            return
+        grid_width = (2 + hash_width + 1 + 2*n_matrix_cols + 2)
+        msg_width = 30
+        total_width = msg_width + 1 + grid_width
         debug.log(debug.curses, matrix, diff_list, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
         grid = [[''] * n_cols ]* n_rows
 
@@ -96,7 +94,7 @@ class HunkogramApp(npyscreen.NPSApp):
             debug.log(debug.curses, hash, commit_msg, grid_column_widths)
             grid[r] = [hash, commit_msg] + matrix[r]
         # Create the form and populate it with widgets
-        F = npyscreen.ActionFormWithMenus(name = "Hunkogram",)
+        F = npyscreen.ActionFormWithMenus(name = "Hunkogram", minimum_columns = total_width)
         self._text_field = F.add(npyscreen.MultiLineEdit, value="""sdfsdf\nsdfsdf""", max_height=3, rely=9)
 
         g = F.add(HunkogramGrid, values=grid, name="simple grid",
