@@ -45,63 +45,67 @@ def print_node_line_relation_table(node_lines):
 
 
 
+# Group node lines that are equal, i.e. that at the first
+# common diff are at the same position and of the same kind.
+# As a note, at any subsequent diffs they will consequently be the same too.
+def group_fragment_bound_lines(node_lines):
+  node_lines = sorted(node_lines)
+  if debug.is_logging(debug.grouping):
+    print_node_line_relation_table(node_lines)
+  debug.log(debug.sorting, "Sorted lines:", node_lines)
+  groups = []
+  for node_line in node_lines:
+    added = False
+    for group in groups:
+      inter_diff_collision = False
+      for member in group:
+        if member._startdiff_i == node_line._startdiff_i \
+        and member._kind != node_line._kind:
+          inter_diff_collision = True
+          break
+      if node_line == group[0] and not inter_diff_collision:
+        # Append to group
+        group += [node_line]
+        added = True
+        break
+    if not added:
+      # Create new group
+      groups += [[node_line]]
+  return groups
+
 
 class Hunkogram():
 
-  def __init__(self, ast):
-    self.ast = ast
-    debug.log(debug.matrix, "AST:", ast)
-    self.node_lines = update_all_positions_to_latest(ast._patches)
+  def __init__(self, patches, grouped_node_lines):
+    self.patches = patches
+    self.grouped_node_lines = grouped_node_lines
+    debug.log(debug.matrix, "Patches:", patches)
 
-  # Group node lines that are equal, i.e. that at the first
-  # common diff are at the same position and of the same kind.
-  # As a note, at any subsequent diffs they will consequently be the same too.
-  def group_fragment_bound_lines(self):
-    """
-    Takes a list of up-to date list of bound node lines.
-    Returns a list with ordered bound node lines
-    grouped by position (file, line) at first common diff.
-    """
-    self.node_lines = sorted(self.node_lines)
-    debug.log(debug.sorting, "Sorted lines:", self.node_lines)
-    groups = []
-    for node_line in self.node_lines:
-      added = False
-      for group in groups:
-        inter_diff_collision = False
-        for member in group:
-          if member._startdiff_i == node_line._startdiff_i \
-          and member._kind != node_line._kind:
-            inter_diff_collision = True
-            break
-        if node_line == group[0] and not inter_diff_collision:
-          # Append to group
-          group += [node_line]
-          added = True
-          break
-      if not added:
-        # Create new group
-        groups += [[node_line]]
-    return groups
+  @staticmethod
+  def from_ast(ast):
+    node_lines = update_all_positions_to_latest(ast._patches)
+    grouped_lines = group_fragment_bound_lines(node_lines)
+    return Hunkogram(ast._patches, grouped_lines)
+
+  def get_n_patches(self):
+    return len(self.patches)
+
+  def get_patch(self, n):
+    return self.patches[n]
 
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
-    if debug.is_logging(debug.grouping):
-      print_node_line_relation_table(self.node_lines)
-    debug.log(debug.matrix, "Node lines:", self.node_lines)
+    debug.log(debug.matrix, "Grouped lines:", self.grouped_node_lines)
 
-    grouped_node_lines = self.group_fragment_bound_lines()
-    debug.log(debug.matrix, "Grouped lines:", grouped_node_lines)
-
-    n_rows = len(self.ast._patches) # TODO: Make this dependent on self.node_lines instead
-    n_cols = len(grouped_node_lines)
+    n_rows = self.get_n_patches()
+    n_cols = len(self.grouped_node_lines)
     debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
     matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
     for r in range(n_rows):
       diff_i = r
       inside_fragment = False
       for c in range(n_cols):
-        node_line_group = grouped_node_lines[c]
+        node_line_group = self.grouped_node_lines[c]
         debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
         if True: #earliest_diff(node_line_group) <= diff_i:
           for node_line in node_line_group:
@@ -127,9 +131,9 @@ class Hunkogram():
 def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
-  diff_list =  pp.parse(lines)
+  ast = pp.parse(lines)
   debug.log(debug.matrix, diff_list)
-  h = Hunkogram(diff_list)
+  h = Hunkogram.from_ast(ast)
   print h.str()
 
 

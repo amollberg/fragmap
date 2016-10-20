@@ -36,7 +36,7 @@ def print_hunkogram(diff_list):
     print hash, commit_msg, ''.join(matrix[r])
 
 def display_hunkogram_screen(diff_list):
-  hunkogram = Hunkogram(diff_list)
+  hunkogram = Hunkogram.from_ast(diff_list)
   hash_width = 8
   App = HunkogramApp()
   App._diff_list = diff_list
