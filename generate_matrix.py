@@ -96,6 +96,30 @@ class Hunkogram():
     grouped_lines = group_fragment_bound_lines(node_lines)
     return Hunkogram(ast._patches, grouped_lines)
 
+  def group_by_patch_connection(self):
+    groups = self.grouped_node_lines
+    # connections : '01001000..010' -> [node, node, ..]
+    # The key strings are formatted such that
+    # character i is 1 if the node line group has a node with start from patch i, and
+    #                0 otherwise.
+    connections = {}
+    for group in groups:
+      # Initialize key with '0000..00'
+      key = ['0'] * self.get_n_patches()
+      for nodeline in group:
+        # Fill in with 1 where appropriate
+        key[nodeline._startdiff_i] = '1'
+      key = ''.join(key) # Convert from character list to string
+      print 'key:', key
+      if key in connections.keys():
+        # Append to existing dict entry
+        connections[key].extend(group)
+      else:
+        # Make a new entry in the dict
+        connections[key] = group
+    print connections
+    return Hunkogram(self.patches, connections.values())
+
   def get_n_patches(self):
     return len(self.patches)
 
