@@ -8,11 +8,13 @@ import debug
 #  Patch
 #   PatchHeader
 #    _hash
+#    _message
 #   FilePatch
 #     FilePatchHeader
 #      _oldfile
 #      _newfile
 #     Fragment
+#      _content
 #      FragmentHeader
 #       Range _oldrange
 #        _start
@@ -20,9 +22,16 @@ import debug
 #       Range _newrange
 #        _start
 #        _end
-# FragmentNodeLine
-#  FragmentNode
+# FragmentBoundLine
 #  _startdiff_i
+#  FragmentBoundNode
+#   _diff_i
+#   _filename
+#   _line
+#   _kind
+#   Fragment
+#     (see above)
+
 
 
 def earliest_diff(node_lines):

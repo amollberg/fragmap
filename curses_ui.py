@@ -38,6 +38,7 @@ class HunkogramGrid(npyscreen.SimpleGrid):
             row_i -= self._start_row
             col_i -= self._start_col
             if col_i < 0:
+                # We are in the hash or commit message column
                 if has_hunks_conflicting_with_uncommitted(row_i, self._matrix):
                     actual_cell.color = 'WARNING'
             elif cell_display_value == '#':
@@ -65,8 +66,8 @@ class HunkogramApp(npyscreen.NPSApp):
         text_content = ""
         if found_node_line is not None:
             text_content = '\n'.join(found_node_line.last()._fragment._content)
-        # TODO: Write contents of found_node_line.last()._fragment
-        # to some text field
+        # Write contents of found_node_line.last()._fragment
+        # to the text field
         self._text_field.value = text_content
         self._text_field.update()
 
