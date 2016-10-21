@@ -281,7 +281,8 @@ class Test(unittest.TestCase):
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
     pp = PatchParser()
-    actual_matrix, _ = generate_matrix(pp.parse(diff))
+    h = Hunkogram.from_ast(pp.parse(diff))
+    actual_matrix = h.generate_matrix()
     self.check_matrix(actual_matrix, matrix)
 
   def check_diffs(self, diff_filenames, matrix):
@@ -289,7 +290,8 @@ class Test(unittest.TestCase):
     for fn in diff_filenames:
       diff += read_diff(fn)
     pp = PatchParser()
-    actual_matrix, _ = generate_matrix(pp.parse(diff))
+    h = Hunkogram.from_ast(pp.parse(diff))
+    actual_matrix = h.generate_matrix()
     self.check_matrix(actual_matrix, matrix)
 
 
