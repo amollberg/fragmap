@@ -359,6 +359,8 @@ class Test(unittest.TestCase):
     self.assertEqual(joined_matrix, reference)
 
 
+
+
 if __name__ == '__main__':
-  debug.parse_args()
+  debug_parser = debug.parse_args(extendable=True)
   unittest.main()

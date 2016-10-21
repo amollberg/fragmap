@@ -61,5 +61,12 @@ def parse_args(extendable=False):
   # Remove the above known args from subsequent parsers e.g. unittest.
   sys.argv[1:] = unknown_args
   if extendable:
+    class NonExitingArgumentParser(argparse.ArgumentParser):
+      def exit(self, status=0, message=None):
+        pass
+    # Take care of the possible -h which is unhandled above
+    # This way, we can get help output from both this and extending argparsers
+    helpparser = NonExitingArgumentParser(parents=[p])
+    helpparser.parse_known_args()
     return p
   return None
