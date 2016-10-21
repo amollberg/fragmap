@@ -5,6 +5,7 @@ from parse_patch import *
 from generate_matrix import *
 from list_hunks import get_diff, get_rev_range_from_args
 import debug
+import argparse
 
 NPYSCREEN_AVAILABLE = False
 try:
@@ -45,19 +46,22 @@ def display_hunkogram_screen(diff_list):
   App._hash_width = hash_width
   App.run()
 
-
-def main():
+def main(parent_argparser):
+  # Parse command line arguments
+  argparser = argparse.ArgumentParser(parents=[parent_argparser])
+  argparser.add_argument('-p', '--plain', action='store_true', required=False)
+  args, unknown_args = argparser.parse_known_args()
+  # Parse diffs
   pp = PatchParser()
   lines = get_diff(get_rev_range_from_args())
   debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
   debug.log(debug.console, diff_list)
-  if NPYSCREEN_AVAILABLE:
+  if not args.plain and NPYSCREEN_AVAILABLE:
     display_hunkogram_screen(diff_list)
   else:
     print_hunkogram(diff_list)
 
-
 if __name__ == '__main__':
-  debug.parse_args()
-  main()
+  debug_parser = debug.parse_args(extendable=True)
+  main(debug_parser)

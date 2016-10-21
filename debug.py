@@ -28,17 +28,17 @@ def log(category, *args):
       print arg,
 
 
-def parse_args():
+def parse_args(extendable=False):
   # Parse command line arguments
-  p = argparse.ArgumentParser(description="")
+  p = argparse.ArgumentParser(description = "", add_help = not extendable)
   p.add_argument("--log", nargs="+",
                  choices=["all", "curses", "grid", "sorting", "grouping", "parser", "update", "console", "test", "matrix"],
                  help="Which categories of log messages to send to standard output.")
-  args = p.parse_known_args()
-  if args[0].log:
+  args, unknown_args = p.parse_known_args()
+  if args.log:
     # Translate textual arguments to numeric constants to be passed to enable_logging
     category_constants = []
-    for cat in args[0].log:
+    for cat in args.log:
       if cat == "all" or cat == "curses":
         category_constants += [curses]
       if cat == "all" or cat == "grid":
@@ -59,4 +59,7 @@ def parse_args():
         category_constants += [matrix]
     enable_logging(category_constants)
   # Remove the above known args from subsequent parsers e.g. unittest.
-  sys.argv[1:] = args[1]
+  sys.argv[1:] = unknown_args
+  if extendable:
+    return p
+  return None
