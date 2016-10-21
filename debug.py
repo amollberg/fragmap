@@ -26,6 +26,7 @@ def log(category, *args):
   if _enable_logging[category]:
     for arg in args:
       print arg,
+    print ''
 
 
 def parse_args(extendable=False):
