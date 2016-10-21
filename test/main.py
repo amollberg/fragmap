@@ -206,6 +206,46 @@ class Test(unittest.TestCase):
                       '....#..',
                       '.....#.'])
 
+  # == Test brief hunkograms ==
+
+  def test_016_004_brief(self):
+    self.check_diffs_brief(['016-add-one-line-to-empty.txt.diff',
+                            '002-rename-empty-file.diff',
+                            '004-remove-one-line-empty-file.diff'],
+                           ['#',
+                            '.',
+                            '#'])
+
+  def test_003_brief(self):
+    self.check_diff_brief('003-add-one-line-to-empty-file.diff',
+                          ['#'])
+
+  def test_004_brief(self):
+    self.check_diff_brief('004-remove-one-line-empty-file.diff',
+                          ['#'])
+
+  def test_003_004_brief(self):
+    self.check_diffs_brief(['003-add-one-line-to-empty-file.diff',
+                            '004-remove-one-line-empty-file.diff'],
+                           ['#',
+                            '#'])
+
+  def test_011(self):
+    self.check_diff_brief('011-add-x-to-A-and-N.diff',
+                          ['#'])
+
+  def test_012(self):
+    self.check_diff_brief('012-add-x-to-A-C.diff',
+                          ['#'])
+
+  def test_011_012(self):
+    self.check_diffs_brief(['011-add-x-to-A-and-N.diff',
+                            '012-add-x-to-A-C.diff'],
+                           ['#.#',
+                            '##.'])
+
+  # == Test command line arguments ==
+
   def test_args_no_args(self):
     import list_hunks
     old_argv = sys.argv # Backup real value
@@ -249,6 +289,7 @@ class Test(unittest.TestCase):
           group_hist[node_line_kind] += 1
         hist += [(group_hist[START], group_hist[END])]
       return hist
+
     def stringify_kinds_list(l):
       return map(lambda e: {START:'start', END:'end'}[e], l)
     kinds_hist = histogram_kinds(kinds)
@@ -285,6 +326,13 @@ class Test(unittest.TestCase):
     actual_matrix = h.generate_matrix()
     self.check_matrix(actual_matrix, matrix)
 
+  def check_diff_brief(self, diff_filename, matrix):
+    diff = read_diff(diff_filename)
+    pp = PatchParser()
+    h = Hunkogram.from_ast(pp.parse(diff)).group_by_patch_connection()
+    actual_matrix = h.generate_matrix()
+    self.check_matrix(actual_matrix, matrix)
+
   def check_diffs(self, diff_filenames, matrix):
     diff = []
     for fn in diff_filenames:
@@ -294,6 +342,15 @@ class Test(unittest.TestCase):
     actual_matrix = h.generate_matrix()
     self.check_matrix(actual_matrix, matrix)
 
+
+  def check_diffs_brief(self, diff_filenames, matrix):
+    diff = []
+    for fn in diff_filenames:
+      diff += read_diff(fn)
+    pp = PatchParser()
+    h = Hunkogram.from_ast(pp.parse(diff)).group_by_patch_connection()
+    actual_matrix = h.generate_matrix()
+    self.check_matrix(actual_matrix, matrix)
 
   def check_matrix(self, matrix, reference):
     joined_matrix = [''.join(row) for row in matrix]
