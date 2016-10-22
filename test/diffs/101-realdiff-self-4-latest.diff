@@ -9,13 +9,13 @@ diff --git a/console_ui.py b/console_ui.py
 index 0d159ab..e0e2137 100644
 --- a/console_ui.py
 +++ b/console_ui.py
-@@ -13 +13 @@ def print_hunkogram(diff_list):
+@@ -13 +13 @@ def print_fragmap(diff_list):
 -  for row in matrix:
 +  for r in range(len(matrix)):
-@@ -15 +15 @@ def print_hunkogram(diff_list):
+@@ -15 +15 @@ def print_fragmap(diff_list):
 -    hash = "abcd0123"
 +    hash = diff_list._patches[r]._header._hash
-@@ -22 +22 @@ def print_hunkogram(diff_list):
+@@ -22 +22 @@ def print_fragmap(diff_list):
 -    print hash, commit_msg, ''.join(row)
 +    print hash, commit_msg, ''.join(matrix[r])
 diff --git a/parse_patch.py b/parse_patch.py
@@ -44,7 +44,7 @@ diff --git a/console_ui.py b/console_ui.py
 index e0e2137..43a675a 100644
 --- a/console_ui.py
 +++ b/console_ui.py
-@@ -14,2 +14,3 @@ def print_hunkogram(diff_list):
+@@ -14,2 +14,3 @@ def print_fragmap(diff_list):
 -    commit_msg = "Test"
 -    hash = diff_list._patches[r]._header._hash
 +    cur_patch = diff_list._patches[r]._header

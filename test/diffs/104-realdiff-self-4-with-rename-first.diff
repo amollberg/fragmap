@@ -32,11 +32,11 @@ index 5c7a4cf..5f1ac32 100644
 +  NPYSCREEN_AVAILABLE = True
 +except ImportError:
 +  print "Curses unavailable; using plain text."
-@@ -24,0 +36,9 @@ def print_hunkogram(diff_list):
-+def display_hunkogram_screen(diff_list):
+@@ -24,0 +36,9 @@ def print_fragmap(diff_list):
++def display_fragmap_screen(diff_list):
 +  matrix = generate_matrix(diff_list)
 +  hash_width = 8
-+  App = HunkogramApp()
++  App = FragmapApp()
 +  App._diff_list = diff_list
 +  App._matrix = matrix
 +  App.run()
@@ -46,14 +46,14 @@ index 5c7a4cf..5f1ac32 100644
 -  lines = [line.rstrip() for line in sys.stdin]
 +  lines = get_diff('HEAD~4..HEAD')
 @@ -30,2 +50,6 @@ def main():
--  print_hunkogram(diff_list)
+-  print_fragmap(diff_list)
 -
 +  print diff_list
 +  return
 +  if NPYSCREEN_AVAILABLE:
-+    display_hunkogram_screen(diff_list)
++    display_fragmap_screen(diff_list)
 +  else:
-+    print_hunkogram(diff_list)
++    print_fragmap(diff_list)
 
 commit 67aa22e3a76e752102aab31a8b411bea27b8419c
 Author: amollberg <amollberg@users.noreply.github.com>

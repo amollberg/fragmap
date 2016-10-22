@@ -83,7 +83,7 @@ def group_fragment_bound_lines(node_lines):
   return groups
 
 
-class Hunkogram():
+class Fragmap():
 
   def __init__(self, patches, grouped_node_lines):
     self.patches = patches
@@ -94,7 +94,7 @@ class Hunkogram():
   def from_ast(ast):
     node_lines = update_all_positions_to_latest(ast._patches)
     grouped_lines = group_fragment_bound_lines(node_lines)
-    return Hunkogram(ast._patches, grouped_lines)
+    return Fragmap(ast._patches, grouped_lines)
 
   def group_by_patch_connection(self):
     groups = self.grouped_node_lines
@@ -131,7 +131,7 @@ class Hunkogram():
       key = connections_key_index[c]
       for r in range(n_rows):
         matrix[r][c] = '#' if key[r] == '1' else '.'
-    bh = BriefHunkogram(self.patches, connections.values())
+    bh = BriefFragmap(self.patches, connections.values())
     bh._prerendered_matrix = matrix
     return bh
 
@@ -191,7 +191,7 @@ class Hunkogram():
     matrix = self.generate_matrix()
     return '\n'.join([''.join(row) for row in matrix])
 
-class BriefHunkogram(Hunkogram):
+class BriefFragmap(Fragmap):
 
   _prerendered_matrix = None
 
@@ -203,7 +203,7 @@ def main():
   lines = [line.rstrip() for line in sys.stdin]
   ast = pp.parse(lines)
   debug.log(debug.matrix, diff_list)
-  h = Hunkogram.from_ast(ast)
+  h = Fragmap.from_ast(ast)
   print h.str()
 
 

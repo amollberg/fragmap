@@ -17,11 +17,11 @@ except ImportError:
 
 CONSOLE_WIDTH = 80
 
-def make_hunkogram(diff_list, brief=False):
-  hunkogram = Hunkogram.from_ast(diff_list)
+def make_fragmap(diff_list, brief=False):
+  fragmap = Fragmap.from_ast(diff_list)
   if brief:
-    hunkogram = hunkogram.group_by_patch_connection()
-  return hunkogram
+    fragmap = fragmap.group_by_patch_connection()
+  return fragmap
 
 ANSI_ESC = '\033'
 ANSI_FG_RED = ANSI_ESC + '[31m'
@@ -64,8 +64,8 @@ def decorate_matrix(matrix):
 
 
 # TODO: Change name?
-def print_hunkogram(hunkogram, do_decorate=False):
-  matrix = hunkogram.generate_matrix()
+def print_fragmap(fragmap, do_decorate=False):
+  matrix = fragmap.generate_matrix()
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = min(CONSOLE_WIDTH/2, matrix_width)
@@ -75,7 +75,7 @@ def print_hunkogram(hunkogram, do_decorate=False):
     matrix = decorate_matrix(matrix)
   # Draw the text and matrix
   for r in range(len(matrix)):
-    cur_patch = hunkogram.patches[r]._header
+    cur_patch = fragmap.patches[r]._header
     commit_msg = cur_patch._message[0] # First row of message
     hash = cur_patch._hash
     # Pad short commit messages
@@ -86,10 +86,10 @@ def print_hunkogram(hunkogram, do_decorate=False):
     hash = hash[0:hash_width]
     print ANSI_FG_CYAN + hash + ANSI_RESET, commit_msg, ''.join(matrix[r])
 
-def display_hunkogram_screen(hunkogram):
+def display_fragmap_screen(fragmap):
   hash_width = 8
-  App = HunkogramApp()
-  App._hunkogram = hunkogram
+  App = FragmapApp()
+  App._fragmap = fragmap
   App._console_width = CONSOLE_WIDTH
   App._hash_width = hash_width
   App.run()
@@ -107,11 +107,11 @@ def main(parent_argparser):
   debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
   debug.log(debug.console, diff_list)
-  hunkogram = make_hunkogram(diff_list, args.brief)
+  fragmap = make_fragmap(diff_list, args.brief)
   if not args.plain and NPYSCREEN_AVAILABLE:
-    display_hunkogram_screen(hunkogram)
+    display_fragmap_screen(fragmap)
   else:
-    print_hunkogram(hunkogram, do_decorate = not args.no_decoration)
+    print_fragmap(fragmap, do_decorate = not args.no_decoration)
 
 if __name__ == '__main__':
   debug_parser = debug.parse_args(extendable=True)

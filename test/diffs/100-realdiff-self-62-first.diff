@@ -14,7 +14,7 @@ index 0000000..14ab82b
 +#!/bin/env bash
 +
 +while read -r rev; do
-+	echo $rev 
++	echo $rev
 +    #git diff "$rev~1" "$rev"  --
 +	git show "$rev"  -- | grep "^@"
 +done < <(git rev-list "$1")
@@ -39,7 +39,7 @@ index 14ab82b..1d945d6 100644
 --- a/list-hunks.sh
 +++ b/list-hunks.sh
 @@ -4 +4 @@ while read -r rev; do
--	echo $rev 
+-	echo $rev
 +    echo $rev
 @@ -6,2 +6,7 @@ while read -r rev; do
 -	git show "$rev"  -- | grep "^@"
@@ -111,8 +111,8 @@ index 0000000..b41e6bc
 +                              Range(int(match.group(3)), newlength)), 1
 +    print "Not fragment header"
 +    return None, 0
-+    
-+    
++
++
 +class Fragment():
 +  _header = None
 +  def __init__(self, header):
@@ -165,11 +165,11 @@ index 0000000..b41e6bc
 +          return FilePatchHeader(oldfile, newfile), 2
 +    return None, 0
 +
-+  
++
 +class FilePatch():
 +  _fragments = None
 +  _header = None
-+  
++
 +  def __init__(self, header, fragments):
 +    self._header = header
 +    self._fragments = fragments
@@ -202,7 +202,7 @@ index 0000000..b41e6bc
 +        fragments += [fragment]
 +    return None, 0
 +
-+  
++
 +class AST():
 +  _filePatches = None
 +  def __init__(self, filePatches):
@@ -232,7 +232,7 @@ index 0000000..b41e6bc
 +        i += 1
 +        continue
 +    return None, 0
-+  
++
 +class PatchParser():
 +  _ast = None
 +
@@ -441,8 +441,8 @@ index f8efce2..7aedd35 100644
 -                              Range(int(match.group(3)), newlength)), lines[1:]
 -    print "Not fragment header"
 -    return None, lines
--    
--    
+-
+-
 -class Fragment():
 -  _header = None
 -  def __init__(self, header):
@@ -493,11 +493,11 @@ index f8efce2..7aedd35 100644
 -        return FilePatchHeader(oldfile, newfile), lines[2:]
 -    return None, lines
 -
--  
+-
 -class FilePatch():
 -  _fragments = None
 -  _header = None
--  
+-
 -  def __init__(self, header, fragments):
 -    self._header = header
 -    self._fragments = fragments
@@ -529,7 +529,7 @@ index f8efce2..7aedd35 100644
 -    else:
 -      return None, lines
 -
--  
+-
 -class AST():
 -  _filePatches = None
 -  def __init__(self, filePatches):
@@ -551,7 +551,7 @@ index f8efce2..7aedd35 100644
 -        lines = lines[1:]
 -        continue
 -    return AST(filePatches), lines
--  
+-
 -class PatchParser():
 -  _ast = None
 -
@@ -617,8 +617,8 @@ index f8efce2..7aedd35 100644
 +                              Range(int(match.group(3)), newlength)), lines[1:]
 +    print "Not fragment header"
 +    return None, lines
-+    
-+    
++
++
 +class Fragment():
 +  _header = None
 +  def __init__(self, header):
@@ -669,11 +669,11 @@ index f8efce2..7aedd35 100644
 +        return FilePatchHeader(oldfile, newfile), lines[2:]
 +    return None, lines
 +
-+  
++
 +class FilePatch():
 +  _fragments = None
 +  _header = None
-+  
++
 +  def __init__(self, header, fragments):
 +    self._header = header
 +    self._fragments = fragments
@@ -705,7 +705,7 @@ index f8efce2..7aedd35 100644
 +    else:
 +      return None, lines
 +
-+  
++
 +class AST():
 +  _filePatches = None
 +  def __init__(self, filePatches):
@@ -727,7 +727,7 @@ index f8efce2..7aedd35 100644
 +        lines = lines[1:]
 +        continue
 +    return AST(filePatches), lines
-+  
++
 +class PatchParser():
 +  _ast = None
 +
@@ -770,7 +770,7 @@ index cf529d7..fa6dc11 100644
 +    # TODO: Remove this return
 +    # Naive version - no update
 +    return
-+    
++
 +    # TODO: Verify that filenames are the same
 +    # patch fragment +a,b -c,d means the map [a,a+b] -> [c,c+d]
 +    # previous lines are unaffected, mapping e -> e
@@ -789,7 +789,7 @@ index cf529d7..fa6dc11 100644
 +    #        # Old start is after the patch fragment; shift the starts
 +  # TODO
 +  pass
-+          
++
 +
 +def update_positions_to_latest(old_ast, patch_list):
 +  """
@@ -798,7 +798,7 @@ index cf529d7..fa6dc11 100644
 +  """
 +  # TODO
 +  pass
-+  
++
 +# For each commit: project fragment positions iteratively up past the latest commit
 +#  => a list of nodes, each pointing to commit and kind (start or end of fragment)
 +
@@ -818,11 +818,11 @@ index cf529d7..fa6dc11 100644
 +  _AST_i = None
 +  _file_i = None
 +  _fragment_i = None
-+  
++
 +  # Info to sort on
 +  _filename = None
 +  _line = None
-+  
++
 +  # Other attributes
 +  _kind = None
 +  # Two kinds of fragment bounds:
@@ -848,7 +848,7 @@ index cf529d7..fa6dc11 100644
 +
 +  def __repr__(self):
 +    return "[Node: %d, %d, %d, (%s, %d), %d]" %(self._AST_i, self._file_i, self._fragment_i, self._filename, self._line, self._kind)
-+    
++
 +
 +def extract_fragments(ast_list):
 +  fragment_list = []
@@ -868,7 +868,7 @@ index cf529d7..fa6dc11 100644
 +  """
 +  return sorted(extract_fragments(ast_list))
 +
-+      
++
 +# Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
 +
 +def generate_matrix(ast_list):
@@ -886,7 +886,7 @@ index cf529d7..fa6dc11 100644
 +      if inside_fragment:
 +        matrix[r][c] = '#'
 +  return matrix
-+ 
++
 +def main():
 +  pp = PatchParser()
 +  lines = [line.rstrip() for line in sys.stdin]
@@ -895,7 +895,7 @@ index cf529d7..fa6dc11 100644
 +  matrix = generate_matrix(ast_list)
 +  for row in matrix:
 +    print ''.join(row)
-+  
++
 +
 +if __name__ == '__main__':
 +  main()
@@ -976,21 +976,21 @@ index cf16990..21d9c62 100644
 +    lines = lines[1:]
 +    while lines[0] != '' and lines[0][0:4] != '--- ':
 +      lines = lines[1:]
-+      
++
 +    if lines[0][0:4] != '--- ':
 +      return None, lines
-+    
++
 +    match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
 +    if match is None:
 +      return None, lines
 +    oldfile = match.group(1)
-+    
++
 +    match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[1])
 +    if match is not None:
 +      newfile = match.group(1)
 +    return FilePatchHeader(oldfile, newfile), lines[2:]
 @@ -144,5 +153,5 @@ class FilePatch():
--  
+-
 -class AST():
 -  _filePatches = None
 -  def __init__(self, filePatches):
@@ -1027,7 +1027,7 @@ index cf16990..21d9c62 100644
 +      print "in PatchHeader:", lines[0]
 +      lines = lines[1:]
 +    return PatchHeader(hash), lines
-+        
++
 +class Patch():
 +  _header = None
 +  _filepatches = None
@@ -1056,7 +1056,7 @@ index cf16990..21d9c62 100644
 +      else:
 +        # No more parsable filepatches; return
 +        return Patch(filepatches), lines
-+  
++
 +class AST():
 +  _patches = None
 +  def __init__(self, patches):
@@ -1858,11 +1858,11 @@ index 0000000..a352b48
 +    self.check_diff('011-add-x-to-A-and-N.diff', ['#.#.'])
 +
 +  def test_011_012(self):
-+    self.check_diffs(['011-add-x-to-A-and-N.diff', 
++    self.check_diffs(['011-add-x-to-A-and-N.diff',
 +                      '012-add-x-to-A-C.diff'],
-+                     ['#..#.', 
++                     ['#..#.',
 +                      '##...'])
-+    
++
 +  def check_diff(self, diff_filename, matrix):
 +    diff = read_diff(diff_filename)
 +    pp = PatchParser()
@@ -1877,12 +1877,12 @@ index 0000000..a352b48
 +    actual_matrix = generate_matrix(pp.parse(diff))
 +    self.check_matrix(actual_matrix, matrix)
 +
-+    
++
 +  def check_matrix(self, matrix, reference):
 +    joined_matrix = [''.join(row) for row in matrix]
 +    self.assertEqual(joined_matrix, reference)
 +
-+            
++
 +if __name__ == '__main__':
 +  unittest.main()
 5470e93b63843c573a06c4ceea12c342ec07843c
@@ -1928,7 +1928,7 @@ index a352b48..00dd72b 100644
 +
 +  def test_003_004(self):
 +    self.check_diffs(['003-add-one-line-to-empty-file.diff',
-+                      '004-remove-one-line-empty-file.diff'], 
++                      '004-remove-one-line-empty-file.diff'],
 +                     ['#.',
 +                      '#.'])
 @@ -26,0 +36,3 @@ class Test(unittest.TestCase):
@@ -1971,7 +1971,7 @@ index 00dd72b..74ef6f3 100644
 -
 -  def test_003_004(self):
 -    self.check_diffs(['003-add-one-line-to-empty-file.diff',
--                      '004-remove-one-line-empty-file.diff'], 
+-                      '004-remove-one-line-empty-file.diff'],
 -                     ['#.',
 -                      '#.'])
 +  #def test_003(self):
@@ -1982,7 +1982,7 @@ index 00dd72b..74ef6f3 100644
 +  #
 +  #def test_003_004(self):
 +  #  self.check_diffs(['003-add-one-line-to-empty-file.diff',
-+  #                    '004-remove-one-line-empty-file.diff'], 
++  #                    '004-remove-one-line-empty-file.diff'],
 +  #                   ['#.',
 +  #                    '#.'])
 a6b586858676323fc9625191cb2bb06bf624c97a
@@ -2017,7 +2017,7 @@ index 74ef6f3..4a96eb3 100644
 -  #
 -  #def test_003_004(self):
 -  #  self.check_diffs(['003-add-one-line-to-empty-file.diff',
--  #                    '004-remove-one-line-empty-file.diff'], 
+-  #                    '004-remove-one-line-empty-file.diff'],
 -  #                   ['#.',
 -  #                    '#.'])
 +  def test_003(self):
@@ -2028,7 +2028,7 @@ index 74ef6f3..4a96eb3 100644
 +
 +  def test_003_004(self):
 +    self.check_diffs(['003-add-one-line-to-empty-file.diff',
-+                      '004-remove-one-line-empty-file.diff'], 
++                      '004-remove-one-line-empty-file.diff'],
 +                     ['#.',
 +                      '..'])
 12a121877586a87bafcc1890c10fd4c741946c0b
@@ -2205,7 +2205,7 @@ index 30752b4..ab7d1af 100644
 --- a/test/main.py
 +++ b/test/main.py
 @@ -44 +44,19 @@ class Test(unittest.TestCase):
--    
+-
 +
 +  def test_020(self):
 +    self.check_diff('020-modfile-create.diff', ['#.'])
@@ -2348,7 +2348,7 @@ index 9305a63..139c505 100644
 -    # TODO: Remove this return
 -    # Naive version - no update
 -    return
--    
+-
 +    def update_range(fragment_range, file_patch):
 +      # patch fragment +a,b -c,d means the map [a,b[ -> [c,d[
 +      # previous lines are unaffected, mapping e -> e
@@ -2372,7 +2372,7 @@ index 9305a63..139c505 100644
 +        fragment_range._end = marker._newrange._end
 +      else:
 +        fragment_range._end += marker._newrange._end - marker._oldrange._end
-+      
++
 @@ -16,3 +62,0 @@ def update_positions(old_ast, patch):
 -    # patch fragment +a,b -c,d means the map [a,a+b] -> [c,c+d]
 -    # previous lines are unaffected, mapping e -> e
@@ -2452,9 +2452,9 @@ index 139c505..539dbd0 100644
 +++ b/generate_matrix.py
 @@ -22,0 +23,8 @@ from parse_patch import *
 +# TODO:
-+# Generate nodes as we update the diff list, not just after every one 
++# Generate nodes as we update the diff list, not just after every one
 +# Each update has to also update each node and sort new nodes into the
-+# list of existing. We may be able to work recursively, patching older 
++# list of existing. We may be able to work recursively, patching older
 +# diffs and adding new nodes. We probably will never remove nodes as to
 +# signal that fragments have been joined together. They still need to
 +# be represented at the last level as separate (?).
@@ -2469,14 +2469,14 @@ index cd9530a..35b4013 100644
 +
 +  def test_030_031(self):
 +    self.check_diffs(['030-addmod-create-with-ab.diff',
-+                      '031-addmod-add-c.diff'], 
++                      '031-addmod-add-c.diff'],
 +                     [['#..'],
 +                      ['.#.']])
 +
 +  def test_030_032(self):
 +    self.check_diffs(['030-addmod-create-with-ab.diff',
 +                      '031-addmod-add-c.diff',
-+                      '032-addmod-change-bc-to-xy.diff'], 
++                      '032-addmod-change-bc-to-xy.diff'],
 +                     [['#...'],
 +                      ['..#.'],
 +                      ['###.']])
@@ -2486,7 +2486,7 @@ index cd9530a..35b4013 100644
 +    self.check_diffs(['030-addmod-create-with-ab.diff',
 +                      '031-addmod-add-c.diff',
 +                      '032-addmod-change-bc-to-xy.diff',
-+                      '033-addmod-add-z-between-xy.diff'], 
++                      '033-addmod-add-z-between-xy.diff'],
 +                     [['#....'],
 +                      ['..#..'],
 +                      ['###..'],
@@ -2506,7 +2506,7 @@ index 539dbd0..41bc0e3 100644
 --- a/generate_matrix.py
 +++ b/generate_matrix.py
 @@ -147 +147,28 @@ class FragmentBoundNode():
--    
+-
 +
 +def FragmentBoundLine():
 +  _nodehistory = None
@@ -2579,7 +2579,7 @@ index 41bc0e3..759b2d5 100644
 -        fragment_range._end = marker._newrange._end
 -      else:
 -        fragment_range._end += marker._newrange._end - marker._oldrange._end
--      
+-
 -    # TODO: Verify that filenames are the same
 -    # TODO Ensure sorted fragments
 -    for ast_fragment in file_ast._fragments:
@@ -2621,7 +2621,7 @@ index 41bc0e3..759b2d5 100644
 -        update_file_positions(file_ast, file_patch)
 -        file_ast._header._oldfile = file_patch._header._newfile
 -        file_ast._header._newfile = file_patch._header._newfile
--          
+-
 -
 -def update_positions_to_latest(old_diff, patch_list):
 +
@@ -2939,7 +2939,7 @@ index a00c76f..4af008b 100644
 +    # Subsequent lines shifted
 +    self.assertEqual(update_line(10, FragmentBoundNode.START, filepatch), 11)
 +    self.assertEqual(update_line(13, FragmentBoundNode.END, filepatch), 14)
-+    
++
 a6d48e7424f7bb51245648a83208bff6db045e37
 commit a6d48e7424f7bb51245648a83208bff6db045e37
 Author: amollberg <amollberg@users.noreply.github.com>
@@ -3021,61 +3021,61 @@ index 5467137..b00df54 100644
 --- a/generate_matrix.py
 +++ b/generate_matrix.py
 @@ -27 +27 @@ from parse_patch import *
--# Generate nodes as we update the diff list, not just after every one 
+-# Generate nodes as we update the diff list, not just after every one
 +# Generate nodes as we update the diff list, not just after every one
 @@ -29 +29 @@ from parse_patch import *
--# list of existing. We may be able to work recursively, patching older 
+-# list of existing. We may be able to work recursively, patching older
 +# list of existing. We may be able to work recursively, patching older
 @@ -142 +142 @@ def update_positions(node_lines, patch, diff_i):
--  
+-
 +
 @@ -172 +172 @@ class FragmentBoundNode():
--  
+-
 +
 @@ -176 +176 @@ class FragmentBoundNode():
--  
+-
 +
 @@ -279 +279 @@ def generate_fragment_bound_list(ast):
--      
+-
 +
 @@ -304 +304 @@ def generate_matrix(ast):
-- 
+-
 +
 @@ -313 +313 @@ def main():
--  
+-
 +
 diff --git a/parse_patch.py b/parse_patch.py
 index 2674d85..fe5fc0b 100644
 --- a/parse_patch.py
 +++ b/parse_patch.py
 @@ -80,2 +80,2 @@ class FragmentHeader():
--    
--    
+-
+-
 +
 +
 @@ -134 +134 @@ class FilePatchHeader():
--      
+-
 +
 @@ -137 +137 @@ class FilePatchHeader():
--    
+-
 +
 @@ -142 +142 @@ class FilePatchHeader():
--    
+-
 +
 @@ -148 +148 @@ class FilePatchHeader():
--  
+-
 +
 @@ -152 +152 @@ class FilePatch():
--  
+-
 +
 @@ -212 +212 @@ class PatchHeader():
--        
+-
 +
 @@ -249 +249 @@ class Patch():
--  
+-
 +
 @@ -272 +272 @@ class AST():
--  
+-
 +
 6362117fbc40e3ddf8eab7c668e221b93d49d462
 commit 6362117fbc40e3ddf8eab7c668e221b93d49d462
@@ -3330,26 +3330,26 @@ index c2d5554..23986aa 100644
 --- a/test/main.py
 +++ b/test/main.py
 @@ -42 +42 @@ class Test(unittest.TestCase):
--    
+-
 +
 @@ -53 +53 @@ class Test(unittest.TestCase):
--                      '004-remove-one-line-empty-file.diff'], 
+-                      '004-remove-one-line-empty-file.diff'],
 +                      '004-remove-one-line-empty-file.diff'],
 @@ -64 +64 @@ class Test(unittest.TestCase):
--    self.check_diffs(['011-add-x-to-A-and-N.diff', 
+-    self.check_diffs(['011-add-x-to-A-and-N.diff',
 +    self.check_diffs(['011-add-x-to-A-and-N.diff',
 @@ -66 +66 @@ class Test(unittest.TestCase):
--                     ['#..#.', 
+-                     ['#..#.',
 +                     ['#..#.',
 @@ -93,3 +93,3 @@ class Test(unittest.TestCase):
--                      '031-addmod-add-c.diff'], 
+-                      '031-addmod-add-c.diff'],
 -                     [['#..'],
 -                      ['.#.']])
 +                      '031-addmod-add-c.diff'],
 +                     ['#..',
 +                      '.#.'])
 @@ -100,4 +100,4 @@ class Test(unittest.TestCase):
--                      '032-addmod-change-bc-to-xy.diff'], 
+-                      '032-addmod-change-bc-to-xy.diff'],
 -                     [['#...'],
 -                      ['..#.'],
 -                      ['###.']])
@@ -3358,7 +3358,7 @@ index c2d5554..23986aa 100644
 +                      '..#.',
 +                      '###.'])
 @@ -110,5 +110,5 @@ class Test(unittest.TestCase):
--                      '033-addmod-add-z-between-xy.diff'], 
+-                      '033-addmod-add-z-between-xy.diff'],
 -                     [['#....'],
 -                      ['..#..'],
 -                      ['###..'],
@@ -3369,10 +3369,10 @@ index c2d5554..23986aa 100644
 +                      '###..',
 +                      '####.'])
 @@ -132 +132 @@ class Test(unittest.TestCase):
--    
+-
 +
 @@ -139 +139 @@ class Test(unittest.TestCase):
--            
+-
 +
 774c186d8a8e66bd9fe33509b0302e121ee3caf1
 commit 774c186d8a8e66bd9fe33509b0302e121ee3caf1
@@ -3998,7 +3998,7 @@ index 0000000..0d159ab
 +CONSOLE_WIDTH = 80
 +
 +# TODO: Change name?
-+def print_hunkogram(diff_list):
++def print_fragmap(diff_list):
 +  matrix = generate_matrix(diff_list)
 +  matrix_width = len(matrix[0])
 +  hash_width = 8
@@ -4020,7 +4020,7 @@ index 0000000..0d159ab
 +  lines = [line.rstrip() for line in sys.stdin]
 +  print lines
 +  diff_list = pp.parse(lines)
-+  print_hunkogram(diff_list)
++  print_fragmap(diff_list)
 +
 +
 +
@@ -4037,13 +4037,13 @@ diff --git a/console_ui.py b/console_ui.py
 index 0d159ab..e0e2137 100644
 --- a/console_ui.py
 +++ b/console_ui.py
-@@ -13 +13 @@ def print_hunkogram(diff_list):
+@@ -13 +13 @@ def print_fragmap(diff_list):
 -  for row in matrix:
 +  for r in range(len(matrix)):
-@@ -15 +15 @@ def print_hunkogram(diff_list):
+@@ -15 +15 @@ def print_fragmap(diff_list):
 -    hash = "abcd0123"
 +    hash = diff_list._patches[r]._header._hash
-@@ -22 +22 @@ def print_hunkogram(diff_list):
+@@ -22 +22 @@ def print_fragmap(diff_list):
 -    print hash, commit_msg, ''.join(row)
 +    print hash, commit_msg, ''.join(matrix[r])
 diff --git a/parse_patch.py b/parse_patch.py
@@ -4072,7 +4072,7 @@ diff --git a/console_ui.py b/console_ui.py
 index e0e2137..43a675a 100644
 --- a/console_ui.py
 +++ b/console_ui.py
-@@ -14,2 +14,3 @@ def print_hunkogram(diff_list):
+@@ -14,2 +14,3 @@ def print_fragmap(diff_list):
 -    commit_msg = "Test"
 -    hash = diff_list._patches[r]._header._hash
 +    cur_patch = diff_list._patches[r]._header

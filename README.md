@@ -1,4 +1,4 @@
-# git hunkogram - better commit visualization for git
+# git fragmap - better commit visualization for git
 
 
 # Requirements
