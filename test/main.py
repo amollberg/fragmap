@@ -208,41 +208,110 @@ class Test(unittest.TestCase):
 
   # == Test brief hunkograms ==
 
-  def test_016_004_brief(self):
-    self.check_diffs_brief(['016-add-one-line-to-empty.txt.diff',
-                            '002-rename-empty-file.diff',
-                            '004-remove-one-line-empty-file.diff'],
-                           ['#',
-                            '.',
-                            '#'])
-
-  def test_003_brief(self):
-    self.check_diff_brief('003-add-one-line-to-empty-file.diff',
-                          ['#'])
-
-  def test_004_brief(self):
-    self.check_diff_brief('004-remove-one-line-empty-file.diff',
-                          ['#'])
-
-  def test_003_004_brief(self):
-    self.check_diffs_brief(['003-add-one-line-to-empty-file.diff',
-                            '004-remove-one-line-empty-file.diff'],
-                           ['#',
-                            '#'])
-
-  def test_011(self):
-    self.check_diff_brief('011-add-x-to-A-and-N.diff',
-                          ['#'])
-
-  def test_012(self):
-    self.check_diff_brief('012-add-x-to-A-C.diff',
-                          ['#'])
-
-  def test_011_012(self):
-    self.check_diffs_brief(['011-add-x-to-A-and-N.diff',
-                            '012-add-x-to-A-C.diff'],
-                           ['#.#',
-                            '##.'])
+  #def test_016_004_brief(self):
+  #  self.check_diffs_brief(['016-add-one-line-to-empty.txt.diff',
+  #                          '002-rename-empty-file.diff',
+  #                          '004-remove-one-line-empty-file.diff'],
+  #                         ['#',
+  #                          '.',
+  #                          '#'])
+  #
+  #def test_003_brief(self):
+  #  self.check_diff_brief('003-add-one-line-to-empty-file.diff',
+  #                        ['#'])
+  #
+  #def test_004_brief(self):
+  #  self.check_diff_brief('004-remove-one-line-empty-file.diff',
+  #                        ['#'])
+  #
+  #def test_003_004_brief(self):
+  #  self.check_diffs_brief(['003-add-one-line-to-empty-file.diff',
+  #                          '004-remove-one-line-empty-file.diff'],
+  #                         ['#',
+  #                          '#'])
+  #
+  #def test_011_brief(self):
+  #  self.check_diff_brief('011-add-x-to-A-and-N.diff',
+  #                        ['#'])
+  #
+  #def test_012_brief(self):
+  #  self.check_diff_brief('012-add-x-to-A-C.diff',
+  #                        ['#'])
+  #
+  #def test_011_012_brief(self):
+  #  self.check_diffs_brief(['011-add-x-to-A-and-N.diff',
+  #                          '012-add-x-to-A-C.diff'],
+  #                         ['##.',
+  #                          '#.#'])
+  #
+  #def test_020_brief(self):
+  #  self.check_diff_brief('020-modfile-create.diff',
+  #                        ['#'])
+  #
+  #def test_021_brief(self):
+  #  self.check_diff_brief('021-modfile-remove-first-line.diff',
+  #                        ['#'])
+  #
+  #def test_020_021_brief(self):
+  #  self.check_diffs_brief(['020-modfile-create.diff',
+  #                    '021-modfile-remove-first-line.diff'],
+  #                   ['##',
+  #                    '#.'])
+  #
+  #def test_022_023_brief(self):
+  #  self.check_diffs_brief(['022-modfile-mod-second-line.diff',
+  #                    '023-modfile-readd-first-line.diff'],
+  #                   ['.#',
+  #                    '#.'])
+  #
+  #
+  #def test_030_brief(self):
+  #  self.check_diff_brief('030-addmod-create-with-ab.diff',
+  #                        ['#.'])
+  #
+  #def test_030_031_brief(self):
+  #  self.check_diffs_brief(['030-addmod-create-with-ab.diff',
+  #                    '031-addmod-add-c.diff'],
+  #                   ['#.',
+  #                    '.#'])
+  #
+  #def test_030_032_brief(self):
+  #  self.check_diffs_brief(['030-addmod-create-with-ab.diff',
+  #                    '031-addmod-add-c.diff',
+  #                    '032-addmod-change-bc-to-xy.diff'],
+  #                   ['##.',
+  #                    '..#',
+  #                    '.##'])
+  #
+  #def test_030_033_brief(self):
+  #  self.check_diffs_brief(['030-addmod-create-with-ab.diff',
+  #                    '031-addmod-add-c.diff',
+  #                    '032-addmod-change-bc-to-xy.diff',
+  #                    '033-addmod-add-z-between-xy.diff'],
+  #                   ['##..',
+  #                    '..##',
+  #                    '.###',
+  #                    '...#'])
+  #
+  #def test_041_042_043_brief(self):
+  #  self.check_diffs_brief(['041-successivemod-mod-ab.diff',
+  #                    '042-successivemod-mod-cd.diff',
+  #                    '043-successivemod-mod-ef.diff'],
+  #                   ['#..',
+  #                    '.#.',
+  #                    '..#'])
+  #
+  #def test_050_054_brief(self):
+  #  self.check_diffs_brief(['050-twofiles-create-a-with-a.diff',
+  #                    '051-twofiles-create-b-with-x.diff',
+  #                    '052-twofiles-add-y-to-b.diff',
+  #                    '053-twofiles-add-z-to-b.diff',
+  #                    '054-twofiles-add-w-to-b.diff'],
+  #                   ['#....',
+  #                    '.#...',
+  #                    '..#..',
+  #                    '...#.',
+  #                    '....#'])
 
   # == Test command line arguments ==
 
