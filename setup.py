@@ -27,8 +27,9 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
+    install_requires=["npyscreen==4.9.1.dev99"],
     dependency_links=[
-        "git+https://github.com/amollberg/npyscreen@7ce0475df840666dcf0a2ab7d2cf437f95d8c03e#egg=npyscreen"
+        "git+https://github.com/amollberg/npyscreen.git@6e219e47c760f060d5dc4209056389c69592ed59#egg=npyscreen-4.9.1.dev99"
     ],
     entry_points={
         'console_scripts': ['fragmap=fragmap.console_ui:main'],
