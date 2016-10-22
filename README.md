@@ -1,9 +1,17 @@
 # git fragmap - better commit visualization for git
 
+# Install
+After installing the requirements (see below), simply run:
+
+    pip install fragmap
 
 # Requirements
 
-npyscreen, which requires curses. For Windows curses can be obtained precompiled from http://www.lfd.uci.edu/~gohlke/pythonlibs/#curses
+- Git
+
+- Python 2.7
+
+- Curses (required by npyscreen). For Windows curses can be obtained precompiled from http://www.lfd.uci.edu/~gohlke/pythonlibs/#curses
 Install using pip, example:
 
     pip install curses-2.2-cp27-none-win_amd64.whl
