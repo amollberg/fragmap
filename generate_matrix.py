@@ -103,14 +103,16 @@ class Hunkogram():
     # character i is 1 if the node line group has a node with start from patch i, and
     #                0 otherwise.
     connections = {}
+    connections_key_index = []
     debug.log(debug.matrix, "Group by connection: Before:", groups)
-    for group in groups:
-      # Initialize key with '0000..00'
-      key = ['0'] * self.get_n_patches()
-      for nodeline in group:
-        # Fill in with 1 where appropriate
-        key[nodeline._startdiff_i] = '1'
-      key = ''.join(key) # Convert from character list to string
+    for c in range(len(groups)):
+      group = groups[c]
+      column = self.generate_column(c) # TODO: Pass previous column
+      if column == [False] * self.get_n_patches():
+        # Skip empty columns
+        continue
+      # Convert from list of True,False to string of 1,0
+      key = ''.join(map(lambda b: '1' if b else '0', column))
       debug.log(debug.matrix, 'key:', key)
       if key in connections.keys():
         # Append to existing dict entry
@@ -118,8 +120,20 @@ class Hunkogram():
       else:
         # Make a new entry in the dict
         connections[key] = group
+        connections_key_index.append(key)
     debug.log(debug.matrix, "Group by connection: After:", connections)
-    return BriefHunkogram(self.patches, connections.values())
+    # Generate matrix
+    n_rows = self.get_n_patches()
+    n_cols = len(connections)
+    debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
+    matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
+    for c in range(n_cols):
+      key = connections_key_index[c]
+      for r in range(n_rows):
+        matrix[r][c] = '#' if key[r] == '1' else '.'
+    bh = BriefHunkogram(self.patches, connections.values())
+    bh._prerendered_matrix = matrix
+    return bh
 
   def get_n_patches(self):
     return len(self.patches)
@@ -178,22 +192,11 @@ class Hunkogram():
     return '\n'.join([''.join(row) for row in matrix])
 
 class BriefHunkogram(Hunkogram):
-  # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
-  def generate_matrix(self):
-    debug.log(debug.matrix, "Grouped lines:", self.grouped_node_lines)
 
-    n_rows = self.get_n_patches()
-    n_cols = len(self.grouped_node_lines)
-    debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
-    matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
-    prev_col = None
-    for c in range(n_cols):
-      column = self.generate_column(c, prev_col)
-      for r in range(n_rows):
-        if column[r]:
-          matrix[r][c] = '#'
-      prev_col = column
-    return matrix
+  _prerendered_matrix = None
+
+  def generate_matrix(self):
+    return self._prerendered_matrix
 
 def main():
   pp = PatchParser()
