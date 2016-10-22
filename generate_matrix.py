@@ -103,6 +103,7 @@ class Hunkogram():
     # character i is 1 if the node line group has a node with start from patch i, and
     #                0 otherwise.
     connections = {}
+    debug.log(debug.matrix, "Group by connection: Before:", groups)
     for group in groups:
       # Initialize key with '0000..00'
       key = ['0'] * self.get_n_patches()
@@ -110,15 +111,15 @@ class Hunkogram():
         # Fill in with 1 where appropriate
         key[nodeline._startdiff_i] = '1'
       key = ''.join(key) # Convert from character list to string
-      print 'key:', key
+      debug.log(debug.matrix, 'key:', key)
       if key in connections.keys():
         # Append to existing dict entry
         connections[key].extend(group)
       else:
         # Make a new entry in the dict
         connections[key] = group
-    print connections
-    return Hunkogram(self.patches, connections.values())
+    debug.log(debug.matrix, "Group by connection: After:", connections)
+    return BriefHunkogram(self.patches, connections.values())
 
   def get_n_patches(self):
     return len(self.patches)
@@ -160,6 +161,32 @@ class Hunkogram():
     matrix = self.generate_matrix()
     return '\n'.join([''.join(row) for row in matrix])
 
+class BriefHunkogram(Hunkogram):
+  # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
+  def generate_matrix(self):
+    debug.log(debug.matrix, "Grouped lines:", self.grouped_node_lines)
+
+    n_rows = self.get_n_patches()
+    n_cols = len(self.grouped_node_lines)
+    debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
+    matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
+    for r in range(n_rows):
+      diff_i = r
+      for c in range(n_cols):
+        node_line_group = self.grouped_node_lines[c]
+        debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
+        if True: #earliest_diff(node_line_group) <= diff_i:
+          for node_line in node_line_group:
+            # If node belongs in on this row
+            inside_fragment = (node_line._startdiff_i == diff_i) # and node_line._kind == FragmentBoundNode.START)
+            #inside_fragment = (node_line._kind == FragmentBoundNode.START)
+            debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
+            if inside_fragment:
+              break
+          debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment))
+          if inside_fragment:
+            matrix[r][c] = '#'
+    return matrix
 
 def main():
   pp = PatchParser()
