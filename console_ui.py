@@ -27,6 +27,7 @@ ANSI_ESC = '\033'
 ANSI_FG_RED = ANSI_ESC + '[31m'
 ANSI_BG_RED = ANSI_ESC + '[41m'
 ANSI_BG_WHITE = ANSI_ESC + '[47m'
+ANSI_FG_CYAN = ANSI_ESC + '[36m'
 ANSI_RESET = ANSI_ESC + '[0m'
 
 def decorate_matrix(matrix):
@@ -83,7 +84,7 @@ def print_hunkogram(hunkogram, do_decorate=False):
     commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
-    print hash, commit_msg, ''.join(matrix[r])
+    print ANSI_FG_CYAN + hash + ANSI_RESET, commit_msg, ''.join(matrix[r])
 
 def display_hunkogram_screen(hunkogram):
   hash_width = 8
