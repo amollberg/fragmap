@@ -127,6 +127,35 @@ class Hunkogram():
   def get_patch(self, n):
     return self.patches[n]
 
+  def generate_column(self, col_index, prev_column=None):
+    c = col_index
+    n_rows = self.get_n_patches()
+    node_line_group = self.grouped_node_lines[c]
+    # Initialize inside_fragment
+    inside_fragment = prev_column
+    if prev_column is None:
+      if col_index <= 0:
+        inside_fragment = [False] * n_rows
+      else:
+        inside_fragment = self.generate_column(col_index - 1)
+    # For each row in the column
+    for r in range(n_rows):
+      diff_i = r
+      debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
+      if True: #earliest_diff(node_line_group) <= diff_i:
+        for node_line in node_line_group:
+          # If node belongs in on this row
+          if node_line._startdiff_i == diff_i:
+            inside_fragment[r] = (node_line._kind == FragmentBoundNode.START)
+            debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
+            # If it was updated to False:
+            if not inside_fragment[r]:
+              # False overrides True so that if start and end from same diff
+              # appear in same group we don't get stuck at True
+              break
+        debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment[r]))
+    return inside_fragment
+
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
     debug.log(debug.matrix, "Grouped lines:", self.grouped_node_lines)
@@ -135,26 +164,13 @@ class Hunkogram():
     n_cols = len(self.grouped_node_lines)
     debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
     matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
-    for r in range(n_rows):
-      diff_i = r
-      inside_fragment = False
-      for c in range(n_cols):
-        node_line_group = self.grouped_node_lines[c]
-        debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
-        if True: #earliest_diff(node_line_group) <= diff_i:
-          for node_line in node_line_group:
-            # If node belongs in on this row
-            if node_line._startdiff_i == diff_i:
-              inside_fragment = (node_line._kind == FragmentBoundNode.START)
-              debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
-              # If it was updated to False:
-              if not inside_fragment:
-                # False overrides True so that if start and end from same diff
-                # appear in same group we don't get stuck at True
-                break
-          debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment))
-          if inside_fragment:
-            matrix[r][c] = '#'
+    prev_col = None
+    for c in range(n_cols):
+      column = self.generate_column(c, prev_col)
+      for r in range(n_rows):
+        if column[r]:
+          matrix[r][c] = '#'
+      prev_col = column
     return matrix
 
   def str(self):
@@ -170,22 +186,13 @@ class BriefHunkogram(Hunkogram):
     n_cols = len(self.grouped_node_lines)
     debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
     matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
-    for r in range(n_rows):
-      diff_i = r
-      for c in range(n_cols):
-        node_line_group = self.grouped_node_lines[c]
-        debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
-        if True: #earliest_diff(node_line_group) <= diff_i:
-          for node_line in node_line_group:
-            # If node belongs in on this row
-            inside_fragment = (node_line._startdiff_i == diff_i) # and node_line._kind == FragmentBoundNode.START)
-            #inside_fragment = (node_line._kind == FragmentBoundNode.START)
-            debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
-            if inside_fragment:
-              break
-          debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment))
-          if inside_fragment:
-            matrix[r][c] = '#'
+    prev_col = None
+    for c in range(n_cols):
+      column = self.generate_column(c, prev_col)
+      for r in range(n_rows):
+        if column[r]:
+          matrix[r][c] = '#'
+      prev_col = column
     return matrix
 
 def main():
