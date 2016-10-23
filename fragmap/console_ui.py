@@ -7,6 +7,7 @@ from fragmap.list_hunks import get_diff, get_rev_range_str
 import fragmap.debug
 import argparse
 import copy
+import os
 
 NPYSCREEN_AVAILABLE = False
 try:
@@ -97,11 +98,16 @@ def display_fragmap_screen(fragmap):
   App.run()
 
 def main():
-  debug_parser = debug.parse_args(extendable=True)
+  if 'FRAGMAP_DEBUG' in os.environ:
+    debug_parser = debug.parse_args(extendable=True)
+    parent_parsers = [debug_parser]
+  else:
+    parent_parsers = []
+
   # Parse command line arguments
   argparser = argparse.ArgumentParser(prog='fragmap',
                                       description='Visualize a timeline of Git commit changes on a grid',
-                                      parents=[debug_parser])
+                                      parents=parent_parsers)
   argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store',
                          help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
   argparser.add_argument('-c', '--curses-ui', action='store_true', required=False,
