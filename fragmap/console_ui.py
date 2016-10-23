@@ -105,6 +105,8 @@ def main():
   # Parse diffs
   pp = PatchParser()
   lines = get_diff(get_rev_range_from_args())
+  if lines is None:
+    exit(1)
   debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
   debug.log(debug.console, diff_list)
