@@ -31,10 +31,11 @@ def log(category, *args):
 
 def parse_args(extendable=False):
   # Parse command line arguments
-  p = argparse.ArgumentParser(description = "", add_help = not extendable)
+  p = argparse.ArgumentParser(add_help = not extendable)
   p.add_argument("--log", nargs="+",
                  choices=["all", "curses", "grid", "sorting", "grouping", "parser", "update", "console", "test", "matrix"],
-                 help="Which categories of log messages to send to standard output.")
+                 metavar="CATEGORY",
+                 help="Which categories of log messages to send to standard output: %(choices)s")
   args, unknown_args = p.parse_known_args()
   if args.log:
     # Translate textual arguments to numeric constants to be passed to enable_logging
@@ -62,12 +63,5 @@ def parse_args(extendable=False):
   # Remove the above known args from subsequent parsers e.g. unittest.
   sys.argv[1:] = unknown_args
   if extendable:
-    class NonExitingArgumentParser(argparse.ArgumentParser):
-      def exit(self, status=0, message=None):
-        pass
-    # Take care of the possible -h which is unhandled above
-    # This way, we can get help output from both this and extending argparsers
-    helpparser = NonExitingArgumentParser(parents=[p])
-    helpparser.parse_known_args()
     return p
   return None

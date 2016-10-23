@@ -97,11 +97,13 @@ def display_fragmap_screen(fragmap):
 def main():
   debug_parser = debug.parse_args(extendable=True)
   # Parse command line arguments
-  argparser = argparse.ArgumentParser(parents=[debug_parser])
+  argparser = argparse.ArgumentParser(prog='fragmap',
+                                      description='Visualize a timeline of Git commit changes on a grid',
+                                      parents=[debug_parser])
+  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
   argparser.add_argument('-p', '--plain', action='store_true', required=False)
   argparser.add_argument('-b', '--brief', action='store_true', required=False)
   argparser.add_argument('--no-decoration', action='store_true', required=False)
-  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
   args, unknown_args = argparser.parse_known_args()
   # Parse diffs
   pp = PatchParser()
