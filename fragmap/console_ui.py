@@ -13,7 +13,7 @@ try:
   from curses_ui import *
   NPYSCREEN_AVAILABLE = True
 except ImportError:
-  print "Curses unavailable; using plain text."
+  pass
 
 CONSOLE_WIDTH = 80
 
@@ -101,8 +101,8 @@ def main():
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=[debug_parser])
   argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
-  argparser.add_argument('-p', '--plain', action='store_true', required=False)
-  argparser.add_argument('-b', '--brief', action='store_true', required=False)
+  argparser.add_argument('-c', '--curses-ui', action='store_true', required=False)
+  argparser.add_argument('-f', '--full', action='store_true', required=False)
   argparser.add_argument('--no-decoration', action='store_true', required=False)
   args, unknown_args = argparser.parse_known_args()
   # Parse diffs
@@ -113,9 +113,13 @@ def main():
   debug.log(debug.console, lines)
   diff_list = pp.parse(lines)
   debug.log(debug.console, diff_list)
-  fragmap = make_fragmap(diff_list, args.brief)
-  if not args.plain and NPYSCREEN_AVAILABLE:
-    display_fragmap_screen(fragmap)
+  fragmap = make_fragmap(diff_list, not args.full)
+  if args.curses_ui:
+    if NPYSCREEN_AVAILABLE:
+      display_fragmap_screen(fragmap)
+    else:
+      print "Curses unavailable; using plain text."
+      print_fragmap(fragmap, do_decorate = not args.no_decoration)
   else:
     print_fragmap(fragmap, do_decorate = not args.no_decoration)
 
