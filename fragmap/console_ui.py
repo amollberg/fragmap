@@ -84,7 +84,9 @@ def print_fragmap(fragmap, do_decorate=False):
     commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
-    print ANSI_FG_CYAN + hash + ANSI_RESET, commit_msg, ''.join(matrix[r])
+    if do_decorate:
+      hash = ANSI_FG_CYAN + hash + ANSI_RESET
+    print hash, commit_msg, ''.join(matrix[r])
 
 def display_fragmap_screen(fragmap):
   hash_width = 8
@@ -100,10 +102,14 @@ def main():
   argparser = argparse.ArgumentParser(prog='fragmap',
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=[debug_parser])
-  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
-  argparser.add_argument('-c', '--curses-ui', action='store_true', required=False)
-  argparser.add_argument('-f', '--full', action='store_true', required=False)
-  argparser.add_argument('--no-decoration', action='store_true', required=False)
+  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store',
+                         help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
+  argparser.add_argument('-c', '--curses-ui', action='store_true', required=False,
+                         help='Show an interactive curses-based interface instead of plain text.')
+  argparser.add_argument('-f', '--full', action='store_true', required=False,
+                         help='Show the full fragmap, disabling deduplication of the columns.')
+  argparser.add_argument('--no-decoration', action='store_true', required=False,
+                         help='Disable color coding of the output.')
   args, unknown_args = argparser.parse_known_args()
   # Parse diffs
   pp = PatchParser()
