@@ -35,14 +35,12 @@ def get_diff(rev_range_str):
       print 'fragmap: Unknown error while executing ', e.cmd, ", git exit code:", e.returncode
     return None
 
-def get_rev_range_from_args():
-  p = argparse.ArgumentParser(description='')
-  p.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
-  args = p.parse_known_args()[0]
-  n_revs = 2
+def get_rev_range_str(n_revs):
   try:
-    if args.n:
-      n_revs = int(args.n)
+    if n_revs:
+      n_revs = int(n_revs)
+    else:
+      n_revs = 2
   except ValueError:
     return None
   return 'HEAD~%d..HEAD' %(n_revs,)

@@ -3,7 +3,7 @@
 #import os
 from fragmap.parse_patch import *
 from fragmap.generate_matrix import *
-from fragmap.list_hunks import get_diff, get_rev_range_from_args
+from fragmap.list_hunks import get_diff, get_rev_range_str
 import fragmap.debug
 import argparse
 import copy
@@ -101,10 +101,11 @@ def main():
   argparser.add_argument('-p', '--plain', action='store_true', required=False)
   argparser.add_argument('-b', '--brief', action='store_true', required=False)
   argparser.add_argument('--no-decoration', action='store_true', required=False)
+  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store')
   args, unknown_args = argparser.parse_known_args()
   # Parse diffs
   pp = PatchParser()
-  lines = get_diff(get_rev_range_from_args())
+  lines = get_diff(get_rev_range_str(args.n))
   if lines is None:
     exit(1)
   debug.log(debug.console, lines)
