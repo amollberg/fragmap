@@ -59,9 +59,9 @@ def print_node_line_relation_table(node_lines):
 # As a note, at any subsequent diffs they will consequently be the same too.
 def group_fragment_bound_lines(node_lines):
   node_lines = sorted(node_lines)
-  if debug.is_logging(debug.grouping):
+  if debug.is_logging('grouping'):
     print_node_line_relation_table(node_lines)
-  debug.log(debug.sorting, "Sorted lines:", node_lines)
+  debug.get('sorting').debug("Sorted lines: %s", node_lines)
   groups = []
   for node_line in node_lines:
     added = False
@@ -88,7 +88,7 @@ class Fragmap():
   def __init__(self, patches, grouped_node_lines):
     self.patches = patches
     self.grouped_node_lines = grouped_node_lines
-    debug.log(debug.matrix, "Patches:", patches)
+    debug.get('matrix').debug("Patches: %s", patches)
 
   @staticmethod
   def from_ast(ast):
@@ -104,16 +104,18 @@ class Fragmap():
     #                0 otherwise.
     connections = {}
     connections_key_index = []
-    debug.log(debug.matrix, "Group by connection: Before:", groups)
+    prev_column = None
+    debug.get('matrix').debug("Group by connection: Before: %s", groups)
     for c in range(len(groups)):
       group = groups[c]
-      column = self.generate_column(c) # TODO: Pass previous column
+      column = self.generate_column(c, prev_column)
+      prev_column = column
       if column == [False] * self.get_n_patches():
         # Skip empty columns
         continue
       # Convert from list of True,False to string of 1,0
       key = ''.join(map(lambda b: '1' if b else '0', column))
-      debug.log(debug.matrix, 'key:', key)
+      debug.get('matrix').debug('key: %s', key)
       if key in connections.keys():
         # Append to existing dict entry
         connections[key].extend(group)
@@ -121,11 +123,11 @@ class Fragmap():
         # Make a new entry in the dict
         connections[key] = group
         connections_key_index.append(key)
-    debug.log(debug.matrix, "Group by connection: After:", connections)
+    debug.get('matrix').debug("Group by connection: After: %s", connections)
     # Generate matrix
     n_rows = self.get_n_patches()
     n_cols = len(connections)
-    debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
+    debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
     matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
     for c in range(n_cols):
       key = connections_key_index[c]
@@ -155,28 +157,28 @@ class Fragmap():
     # For each row in the column
     for r in range(n_rows):
       diff_i = r
-      debug.log(debug.grid, "%d,%d: %s" %(r, c, node_line_group))
+      debug.get('grid').debug("%d,%d: %s", r, c, node_line_group)
       if True: #earliest_diff(node_line_group) <= diff_i:
         for node_line in node_line_group:
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
             inside_fragment[r] = (node_line._kind == FragmentBoundNode.START)
-            debug.log(debug.grid, "Setting inside_fragment =", inside_fragment)
+            debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
             # If it was updated to False:
             if not inside_fragment[r]:
               # False overrides True so that if start and end from same diff
               # appear in same group we don't get stuck at True
               break
-        debug.log(debug.grid, "%d,%d: %d" %(r, c, inside_fragment[r]))
+        debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
     return inside_fragment
 
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
-    debug.log(debug.matrix, "Grouped lines:", self.grouped_node_lines)
+    debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
 
     n_rows = self.get_n_patches()
     n_cols = len(self.grouped_node_lines)
-    debug.log(debug.grid, "Matrix size: rows, cols: ", n_rows, n_cols)
+    debug.get('grid').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
     matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
     prev_col = None
     for c in range(n_cols):
@@ -202,7 +204,7 @@ def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
   ast = pp.parse(lines)
-  debug.log(debug.matrix, diff_list)
+  debug.get('matrix').debug(diff_list)
   h = Fragmap.from_ast(ast)
   print h.str()
 

@@ -335,7 +335,7 @@ class Test(unittest.TestCase):
     diff = []
     for fn in diff_filenames:
       diff += read_diff(fn)
-    debug.log(debug.test, diff)
+    debug.get('test').debug(diff)
     pp = PatchParser()
     return update_all_positions_to_latest(pp.parse(diff)._patches)
 
@@ -344,7 +344,7 @@ class Test(unittest.TestCase):
       hist = []
       for group in kinds:
         group_hist = {START : 0, END : 0}
-        debug.log(debug.test, group_hist)
+        debug.get('test').debug(group_hist)
         for node_line_kind in group:
           group_hist[node_line_kind] += 1
         hist += [(group_hist[START], group_hist[END])]
@@ -355,7 +355,7 @@ class Test(unittest.TestCase):
     kinds_hist = histogram_kinds(kinds)
     kinds = map(stringify_kinds_list, kinds)
     node_lines = self.get_node_lines(diff_filenames)
-    if debug.is_logging(debug.test):
+    if debug.is_logging('test'):
       print_node_line_relation_table(node_lines)
     grouped_node_lines = group_fragment_bound_lines(node_lines)
     error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
@@ -415,7 +415,7 @@ class Test(unittest.TestCase):
   def check_matrix(self, matrix, reference):
     joined_matrix = '\n'.join([''.join(row) for row in matrix])
     reference = '\n'.join(reference)
-    debug.log(debug.test, "Actual:\n", joined_matrix, "\nReference:\n", reference)
+    debug.get('test').debug("Actual: \n%s \nReference: \n%s", joined_matrix, reference)
     self.assertEqual(joined_matrix, reference)
 
 

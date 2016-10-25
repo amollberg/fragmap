@@ -122,9 +122,9 @@ def main():
   lines = get_diff(get_rev_range_str(args.n))
   if lines is None:
     exit(1)
-  debug.log(debug.console, lines)
+  debug.get('console').debug(lines)
   diff_list = pp.parse(lines)
-  debug.log(debug.console, diff_list)
+  debug.get('console').debug(diff_list)
   fragmap = make_fragmap(diff_list, not args.full)
   if args.curses_ui:
     if NPYSCREEN_AVAILABLE:

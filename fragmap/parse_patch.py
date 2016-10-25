@@ -74,7 +74,7 @@ class FragmentHeader():
 
   @staticmethod
   def parse(lines):
-    debug.log(debug.parser, "FragmentHeader? ", lines[0])
+    debug.get('parser').debug("FragmentHeader? %s", lines[0])
     if lines[0][0:4] == '@@ -':
       match = re.match('^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', lines[0])
       if match is not None:
@@ -86,7 +86,7 @@ class FragmentHeader():
           newlength = int(match.group(4))
         return FragmentHeader(Range(int(match.group(1)), oldlength),
                               Range(int(match.group(3)), newlength)), lines[1:]
-    debug.log(debug.parser, "Not fragment header")
+    debug.get('parser').debug("Not fragment header")
     return None, lines
 
 
@@ -106,7 +106,7 @@ class Fragment():
 
   @staticmethod
   def parse(lines):
-    debug.log(debug.parser, "Fragment? ", lines[0])
+    debug.get('parser').debug("Fragment? %s", lines[0])
     header, lines = FragmentHeader.parse(lines)
     i = 0
     if header is not None:
@@ -118,7 +118,7 @@ class Fragment():
         else:
           break
       return Fragment(header, content), lines[i:]
-    debug.log(debug.parser, "Not fragment")
+    debug.get('parser').debug("Not fragment")
     return None, lines
 
 class FilePatchHeader():
@@ -173,7 +173,7 @@ class FilePatchHeader():
         newfile = match.group(1)
       return FilePatchHeader(oldfile, newfile), lines[2:]
 
-    debug.log(debug.parser, "FilePatchHeader? ", lines[0])
+    debug.get('parser').debug("FilePatchHeader? %s", lines[0])
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
@@ -198,7 +198,7 @@ class FilePatch():
 
   @staticmethod
   def parse(lines):
-    debug.log(debug.parser, "FilePatch? ", lines[0])
+    debug.get('parser').debug("FilePatch? %s", lines[0])
     header, lines = FilePatchHeader.parse(lines)
     if header is not None:
       fragments = []
@@ -226,7 +226,7 @@ class PatchHeader():
 
   @staticmethod
   def parse(lines):
-    debug.log(debug.parser, "PatchHeader?", lines[0])
+    debug.get('parser').debug("PatchHeader? %s", lines[0])
     match = re.match("^([0-9a-f]{40})", lines[0][0:40])
     if match is not None:
       lines = lines[1:]
@@ -237,14 +237,14 @@ class PatchHeader():
     hash = match.group(1)
 
     if lines[1][0:8] != 'Author: ':
-      debug.log(debug.parser, "'%s'!='Author: '" %(lines[1][0:8],))
+      debug.get('parser').debug("'%s'!='Author: '", lines[1][0:8])
       return None, lines
     if lines[2][0:6] != 'Date: ':
       return None, lines
     lines = lines[3:]
     message = []
     while lines[0] == '' or lines[0][0] == ' ':
-      debug.log(debug.parser, "in PatchHeader:", lines[0])
+      debug.get('parser').debug("in PatchHeader: %s", lines[0])
       if lines[0] != '':
         # Add line to message list
         message += [lines[0].strip()]
@@ -270,15 +270,15 @@ class Patch():
 
   @staticmethod
   def parse(lines):
-    debug.log(debug.parser, "Patch?", lines[0])
+    debug.get('parser').debug("Patch? %s", lines[0])
     header, lines = PatchHeader.parse(lines)
-    debug.log(debug.parser, "PatchHeader: ", header)
+    debug.get('parser').debug("PatchHeader: %s", header)
     if header is None:
       return None, lines
     filepatches = []
     while len(lines) > 0:
       filepatch, lines = FilePatch.parse(lines)
-      debug.log(debug.parser, "FilePatch:", filepatch)
+      debug.get('parser').debug("FilePatch: %s", filepatch)
       if filepatch is not None:
         filepatches += [filepatch]
       else:
@@ -301,13 +301,13 @@ class AST():
     while len(lines) > 0:
       # Try parsing a Patch
       patch, lines = Patch.parse(lines)
-      debug.log(debug.parser, "Patch: ", patch)
+      debug.get('parser').debug("Patch: %s", patch)
       if patch is not None:
         patches += [patch]
       else:
         # Try parsing a FilePatch
         filepatch, lines = FilePatch.parse(lines)
-        debug.log(debug.parser, "Filepatch without patch header:", filepatch)
+        debug.get('parser').debug("Filepatch without patch header: %s", filepatch)
         if filepatch is not None:
           unheadered_filepatches += [filepatch]
         else:
@@ -318,7 +318,7 @@ class AST():
       dummy_patch = Patch(unheadered_filepatches,
                           PatchHeader('0000000000000000000000000000000000000000',
                                       [' (uncommitted changes)']))
-      debug.log(debug.parser, "Created dummy Patch:", dummy_patch)
+      debug.get('parser').debug("Created dummy Patch: %s", dummy_patch)
       patches += [dummy_patch]
     return AST(patches), lines
 
@@ -329,9 +329,9 @@ class PatchParser():
   def parse(lines):
     ast, lines_after = AST.parse(lines)
     if len(lines_after) == len(lines):
-      debug.log(debug.parser, "No lines parsed!")
+      debug.get('parser').debug("No lines parsed!")
     if len(lines_after) > 0:
-      debug.log(debug.parser, "Unparsable content left at end of file.")
+      debug.get('parser').debug("Unparsable content left at end of file.")
     return ast
 
 

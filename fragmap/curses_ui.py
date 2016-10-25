@@ -82,14 +82,14 @@ class FragmapApp(npyscreen.NPSApp):
         grid_width = (2 + hash_width + 1 + 2*n_matrix_cols + 2)
         msg_width = 30
         total_width = msg_width + 1 + grid_width
-        debug.log(debug.curses, matrix, patches, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
+        debug.get('curses').debug(matrix, patches, n_matrix_cols, n_cols, n_rows, hash_width, msg_width)
         grid = [[''] * n_cols ]* n_rows
 
         for r in range(n_rows):
             hash = patches[r]._header._hash[0:hash_width]
             commit_msg = patches[r]._header._message[0] # First row of message
             grid_column_widths = [hash_width, msg_width] + [2]*len(matrix[0])
-            debug.log(debug.curses, hash, commit_msg, grid_column_widths)
+            debug.get('curses').debug(hash, commit_msg, grid_column_widths)
             grid[r] = [hash, commit_msg] + matrix[r]
         # Create the form and populate it with widgets
         F = npyscreen.ActionFormWithMenus(name = "Fragmap", minimum_columns = total_width)
