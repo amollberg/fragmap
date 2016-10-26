@@ -116,7 +116,7 @@ def main():
                          help='Show the full fragmap, disabling deduplication of the columns.')
   argparser.add_argument('--no-decoration', action='store_true', required=False,
                          help='Disable color coding of the output.')
-  args, unknown_args = argparser.parse_known_args()
+  args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
   lines = get_diff(get_rev_range_str(args.n))
