@@ -23,9 +23,12 @@ def get_diff(rev_range_str):
     return None
   output = []
   try:
+    print '... Retrieving uncommitted changes\r',
     output += get_output_lines([GIT, 'diff', '-U0', '--no-color'])
+    print '... Finding revisions             \r',
     rev_list = get_output_lines([GIT, 'rev-list', '--reverse', rev_range_str])
     if rev_list:
+      print '... Retrieving fragments          \r',
       output += get_output_lines([GIT, 'show', '-U0', '--no-color'] + rev_list)
     return output
   except subprocess.CalledProcessError, e:
