@@ -66,17 +66,18 @@ def group_fragment_bound_lines(node_lines):
   for node_line in node_lines:
     added = False
     for group in groups:
-      inter_diff_collision = False
-      for member in group:
-        if member._startdiff_i == node_line._startdiff_i \
-        and member._kind != node_line._kind:
-          inter_diff_collision = True
+      if node_line == group[0]:
+        inter_diff_collision = False
+        for member in group:
+          if member._startdiff_i == node_line._startdiff_i \
+          and member._kind != node_line._kind:
+            inter_diff_collision = True
+            break
+        if not inter_diff_collision:
+          # Append to group
+          group += [node_line]
+          added = True
           break
-      if node_line == group[0] and not inter_diff_collision:
-        # Append to group
-        group += [node_line]
-        added = True
-        break
     if not added:
       # Create new group
       groups += [[node_line]]

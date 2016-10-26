@@ -83,23 +83,31 @@ class FragmentBoundLine():
       return False
 
 
+  # Helper function for __eq__
+  def eq_at_diff(a, b, diff_i):
+    a_file = a._nodehistory[diff_i]._filename
+    b_file = b._nodehistory[diff_i]._filename
+    a_line = a._nodehistory[diff_i]._line
+    b_line = b._nodehistory[diff_i]._line
+    if a._kind == FragmentBoundNode.END:
+      a_line += 1
+    if b._kind == FragmentBoundNode.END:
+      b_line += 1
+    if a_file != b_file:
+      debug.get('grouping').debug("file %s != %s at diff %d", a_file, b_file, diff_i)
+      return False
+    if a_line != b_line:
+      debug.get('grouping').debug("line %d != %d at diff %d", a_line, b_line, diff_i)
+      return False
+    return True
+
   def __eq__(a, b):
-    def eq_at_diff(a, b, diff_i):
-      a_file = a._nodehistory[diff_i]._filename
-      b_file = b._nodehistory[diff_i]._filename
-      a_line = a._nodehistory[diff_i]._line
-      b_line = b._nodehistory[diff_i]._line
-      if a._kind == FragmentBoundNode.END:
-        a_line += 1
-      if b._kind == FragmentBoundNode.END:
-        b_line += 1
-      if a_file != b_file:
-        debug.get('grouping').debug("file %s != %s at diff %d", a_file, b_file, diff_i)
-        return False
-      if a_line != b_line:
-        debug.get('grouping').debug("line %d != %d at diff %d", a_line, b_line, diff_i)
-        return False
-      return True
+    # If a start and an end share a startdiff then it is not safe to
+    # group them even though their kinds differ because it will not be
+    # possible to distinguish the bounds.
+    if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
+      debug.get('grouping').debug("kind %d != %d and same startdiff %d", a._kind, b._kind, a._startdiff_i)
+      return False
 
     debug.get('grouping').debug("===== Comparing %s and %s", a, b)
     common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
@@ -107,13 +115,10 @@ class FragmentBoundLine():
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1
 
-    # If a start and an end does not share a startdiff then it is safe to
-    # group them even though their kinds differ because it will still be
-    # possible to distinguish the bounds.
-    if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
-      debug.get('grouping').debug("kind %d != %d and same startdiff %d", a._kind, b._kind, a._startdiff_i)
-    if eq_at_diff(a, b, first_common_diff_i) \
-        and eq_at_diff(a, b, prev_diff_i) \
+    # If a start and an end does NOT share a startdiff then it is safe to
+    # group them.
+    if a.eq_at_diff(b, first_common_diff_i) \
+        and a.eq_at_diff(b, prev_diff_i) \
         and (a._kind == b._kind or
              a._startdiff_i != b._startdiff_i):
       debug.get('grouping').debug("Lines are ==")
