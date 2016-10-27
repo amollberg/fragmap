@@ -69,7 +69,7 @@ def print_fragmap(fragmap, do_decorate=False):
   matrix = fragmap.generate_matrix()
   matrix_width = len(matrix[0])
   hash_width = 8
-  padded_matrix_width = min(CONSOLE_WIDTH/2, matrix_width)
+  padded_matrix_width = matrix_width
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
   if do_decorate:
     # Colorize the matrix
