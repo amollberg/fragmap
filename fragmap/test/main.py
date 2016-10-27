@@ -313,23 +313,6 @@ class Test(unittest.TestCase):
                       '...#.',
                       '....#'])
 
-  # == Test command line arguments ==
-
-  def test_args_no_args(self):
-    import list_hunks
-    # No args -> default to some nonempty set of revs
-    self.assertTrue(list_hunks.get_rev_range_str('') is not None)
-
-  def test_args_n_arg_valid(self):
-    import list_hunks
-    # -n 5 given -> should get HEAD~5..HEAD
-    self.assertEqual(list_hunks.get_rev_range_str('5'), 'HEAD~5..HEAD')
-
-  def test_args_n_arg_invalid(self):
-    import list_hunks
-    # -n foo given -> should get None
-    self.assertEqual(list_hunks.get_rev_range_str('foo'), None)
-
 
   def get_node_lines(self, diff_filenames):
     diff = []

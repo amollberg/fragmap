@@ -3,7 +3,7 @@
 #import os
 from fragmap.parse_patch import *
 from fragmap.generate_matrix import *
-from fragmap.list_hunks import get_diff, get_rev_range_str
+from fragmap.list_hunks import get_diff
 import fragmap.debug
 import argparse
 import copy
@@ -119,7 +119,7 @@ def main():
   args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
-  lines = get_diff(get_rev_range_str(args.n))
+  lines = get_diff(args.n)
   if lines is None:
     exit(1)
   debug.get('console').debug(lines)
