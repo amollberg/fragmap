@@ -110,6 +110,8 @@ def main():
                                       parents=parent_parsers)
   argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store',
                          help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
+  argparser.add_argument('-s', metavar='START_REV', action='store',
+                         help='Which revision to start showing from.')
   argparser.add_argument('-c', '--curses-ui', action='store_true', required=False,
                          help='Show an interactive curses-based interface instead of plain text.')
   argparser.add_argument('-f', '--full', action='store_true', required=False,
@@ -119,7 +121,7 @@ def main():
   args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
-  lines = get_diff(args.n)
+  lines = get_diff(max_count=args.n, start=args.s)
   if lines is None:
     exit(1)
   debug.get('console').debug(lines)

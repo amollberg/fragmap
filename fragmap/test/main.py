@@ -8,6 +8,7 @@ TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(TEST_DIR, '..'))
 from parse_patch import *
 from generate_matrix import *
+import list_hunks
 import debug
 
 def read_diff(filename):
@@ -312,6 +313,33 @@ class Test(unittest.TestCase):
                       '..#..',
                       '...#.',
                       '....#'])
+
+  # === Test rev-list command assembly ===
+
+  def test_revlist_n(self):
+    self.assertEqual(list_hunks._assemble_revlist_command(max_count='4'),
+                     [list_hunks.GIT, 'rev-list', '--reverse',
+                      '--max-count', '4', 'HEAD'])
+
+  def test_revlist_s(self):
+    self.assertEqual(list_hunks._assemble_revlist_command(start='somebranch'),
+                     [list_hunks.GIT, 'rev-list', '--reverse',
+                      'somebranch..HEAD'])
+
+  def test_revlist_s_n(self):
+    self.assertEqual(list_hunks._assemble_revlist_command(max_count='5',
+                                                          start='abcd0123'),
+                     [list_hunks.GIT, 'rev-list', '--reverse',
+                      '--max-count', '5', 'abcd0123..HEAD'])
+
+  def test_revlist_neither(self):
+    self.assertEqual(list_hunks._assemble_revlist_command(None, None),
+                     [list_hunks.GIT, 'rev-list', '--reverse',
+                      '--max-count', '3', 'HEAD'])
+
+
+
+  # === Helper functions ===
 
 
   def get_node_lines(self, diff_filenames):

@@ -17,7 +17,23 @@ def get_output_lines(args):
   out_str = subprocess.check_output(args, stderr=NULLFILE)
   return [s.rstrip() for s in out_str.splitlines(True)]
 
-def get_diff(max_count_str):
+def _assemble_revlist_command(max_count=None, start=None):
+  args = [GIT, 'rev-list', '--reverse']
+  rev_spec = 'HEAD'
+  if start is not None:
+    rev_spec = start + '..HEAD'
+  if max_count is not None:
+    args += ['--max-count', max_count]
+  elif start is None:
+    # Default to 3 revs
+    args += ['--max-count', '3']
+  args += [rev_spec]
+  return args
+
+def get_rev_list(max_count=None, start=None):
+  return get_output_lines(_assemble_revlist_command(max_count, start))
+
+def get_diff(max_count=None, start=None):
   if not is_git_available():
     print "Error: git cannot be found. Has it been installed?"
     return None
@@ -26,7 +42,7 @@ def get_diff(max_count_str):
     print '... Retrieving uncommitted changes\r',
     output += get_output_lines([GIT, 'diff', '-U0', '--no-color'])
     print '... Finding revisions             \r',
-    rev_list = get_output_lines([GIT, 'rev-list', '--reverse', '--max-count', max_count_str, 'HEAD'])
+    rev_list = get_rev_list(max_count, start)
     if rev_list:
       print '... Retrieving fragments          \r',
       output += get_output_lines([GIT, 'show', '-U0', '--no-color'] + rev_list)
