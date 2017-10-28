@@ -210,8 +210,8 @@ class Test(unittest.TestCase):
   def test_060_061(self):
     self.check_diffs(['060-binaryfile-added.diff',
                       '061-binaryfile-changed.diff'],
-                     ['#',
-                      '#'])
+                     ['#.',
+                      '#.'])
 
   # == Test brief fragmaps ==
 

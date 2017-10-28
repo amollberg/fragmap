@@ -86,6 +86,17 @@ class FragmentHeader():
           newlength = int(match.group(4))
         return FragmentHeader(Range(int(match.group(1)), oldlength),
                               Range(int(match.group(3)), newlength)), lines[1:]
+    if lines[0][0:6] == 'Binary':
+      match = re.match('^Binary files (?:a/|b/)?(.*) and (?:a/|b/)?(.*) differ$', lines[0])
+      if match is not None:
+        oldlength = 1
+        if match.group(1) == '/dev/null':
+          oldlength = 0
+        newlength = 1
+        if match.group(2) == '/dev/null':
+          newlength = 0
+        return FragmentHeader(Range(0, oldlength),
+                              Range(0, newlength)), lines[1:]
     debug.get('parser').debug("Not fragment header")
     return None, lines
 
@@ -173,15 +184,41 @@ class FilePatchHeader():
         newfile = match.group(1)
       return FilePatchHeader(oldfile, newfile), lines[2:]
 
+    def parse_binary_header(lines):
+      while lines and lines[0] != '' and lines[0][0:6] != 'Binary':
+        lines = lines[1:]
+      if not lines or lines[0][0:6] != 'Binary':
+        return None, lines
+
+      match = re.match('^Binary files (?:a/|b/)?(.*) and (?:a/|b/)?(.*) differ$', lines[0])
+      if match is None:
+        return None, lines
+      oldfile = match.group(1)
+      newfile = match.group(2)
+      # Returning lines and not lines[1:] here because we need
+      # the 'Binary files ... differ' line for the Fragment parsing as well,
+      # otherwise the FilePatch will have no fragments.
+      return FilePatchHeader(oldfile, newfile), lines
+
     debug.get('parser').debug("FilePatchHeader? %s", lines[0])
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
     # Try a rename header
-    header, lines = parse_rename_header(lines)
-    if header is None:
-      # Try a regular (diff) header
-      header, lines = parse_diff_header(lines)
+    header, rlines = parse_rename_header(lines)
+    if header is not None:
+      debug.get('parser').debug("Parsed rename FilePatchHeader: %s", header)
+      return header, rlines
+    # Try a regular (diff) header
+    header, rlines = parse_diff_header(lines)
+    if header is not None:
+      debug.get('parser').debug("Parsed diff FilePatchHeader: %s", header)
+      return header, rlines
+    # Try a binary header
+    header, rlines = parse_binary_header(lines)
+    if header is not None:
+      debug.get('parser').debug("Parsed binary FilePatchHeader: %s", header)
+      return header, rlines
     return header, lines
 
 
