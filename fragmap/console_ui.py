@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
-#import os
-from fragmap.parse_patch import *
-from fragmap.generate_matrix import *
+
+from fragmap.generate_matrix import Fragmap
 from fragmap.list_hunks import get_diff
-import fragmap.debug
 import argparse
 import copy
 import os
 
 NPYSCREEN_AVAILABLE = False
 try:
-  from curses_ui import *
+  from fragmap.curses_ui import FragmapApp, PatchParser, debug
   NPYSCREEN_AVAILABLE = True
 except ImportError:
   pass
