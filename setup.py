@@ -27,7 +27,7 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
-    install_requires=["npyscreen==4.9.1.dev99"],
+    install_requires=["npyscreen==4.9.1.dev99", "yattag==1.10.0"],
     dependency_links=[
         "git+https://github.com/amollberg/npyscreen.git@6e219e47c760f060d5dc4209056389c69592ed59#egg=npyscreen-4.9.1.dev99"
     ],

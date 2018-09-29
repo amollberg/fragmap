@@ -3,13 +3,17 @@
 
 from fragmap.generate_matrix import Fragmap
 from fragmap.list_hunks import get_diff
+from fragmap.parse_patch import PatchParser
+from fragmap.web_ui import open_fragmap_page
+import debug
+
 import argparse
 import copy
 import os
 
 NPYSCREEN_AVAILABLE = False
 try:
-  from fragmap.curses_ui import FragmapApp, PatchParser, debug
+  from fragmap.curses_ui import FragmapApp
   NPYSCREEN_AVAILABLE = True
 except ImportError:
   pass
@@ -110,12 +114,16 @@ def main():
                          help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
   argparser.add_argument('-s', metavar='START_REV', action='store',
                          help='Which revision to start showing from.')
-  argparser.add_argument('-c', '--curses-ui', action='store_true', required=False,
-                         help='Show an interactive curses-based interface instead of plain text.')
   argparser.add_argument('-f', '--full', action='store_true', required=False,
                          help='Show the full fragmap, disabling deduplication of the columns.')
   argparser.add_argument('--no-decoration', action='store_true', required=False,
                          help='Disable color coding of the output.')
+  outformatarg = argparser.add_mutually_exclusive_group(required=False)
+  outformatarg.add_argument('-w', '--web', action='store_true', required=False,
+                            help='Generate and open an HTML document instead of printing to console')
+  outformatarg.add_argument('-c', '--curses-ui', action='store_true', required=False,
+                            help='Show an interactive curses-based interface instead of plain text.')
+
   args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
@@ -132,6 +140,8 @@ def main():
     else:
       print "Curses unavailable; using plain text."
       print_fragmap(fragmap, do_decorate = not args.no_decoration)
+  elif args.web:
+    open_fragmap_page(fragmap)
   else:
     print_fragmap(fragmap, do_decorate = not args.no_decoration)
 
