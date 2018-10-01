@@ -201,7 +201,7 @@ def update_inherited_bound(line, bound_kind, file_patch):
     else:
       break
   debug.get('update').debug("Update_line: %d %s %s", line, bound_kind, file_patch)
-  debug.get('update').debug("Marker: %d", marker)
+  debug.get('update').debug("Marker: %s", marker)
   # TODO: Fix sorting of node line groups after this.
   if marker is not None:
     if line <= marker._oldrange._end:
