@@ -22,7 +22,7 @@ def open_fragmap_page(fragmap):
     elif cell.kind == Cell.NO_CHANGE:
       classes.append('cell_no_change')
       cell_text = ' '
-    with tag('td', **{'class': ' '.join(classes)}):
+    with tag('td', **{'class': ' '.join(classes), 'onclick': 'javascript:show(this, "%s")' %("TODO" + str(cell.kind))}):
       text(cell_text)
 
 
@@ -58,6 +58,9 @@ def open_fragmap_page(fragmap):
                .cell_between_changes {
                  background-color: red;
                }
+               .matrix_cell#selected_cell {
+                 opacity: 0.5;
+               }
                .cell_no_change {
                  background-color: green;
                }""")
@@ -83,6 +86,20 @@ def open_fragmap_page(fragmap):
                   text(commit_msg)
               for c in matrix[r]:
                 render_cell(c)
+        with tag('div', id='code_window'):
+          text('')
+        with tag('script'):
+          text("""
+               prev_source = null;
+               function show(source, text) {
+                 if (prev_source) {
+                   prev_source.id = "";
+                 }
+                 prev_source = source;
+                 source.id = "selected_cell";
+                 document.getElementById('code_window').innerText = text;
+               }
+               """)
     return doc.getvalue()
   with open('fragmap.html', 'w') as f:
     f.write(get_html())
