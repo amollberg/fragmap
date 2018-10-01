@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from fragmap.generate_matrix import Fragmap
+from fragmap.generate_matrix import Fragmap, Cell
 from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser
 from fragmap.web_ui import open_fragmap_page
@@ -45,24 +45,40 @@ def decorate_matrix(matrix):
   for r in range(n_rows):
     for c in range(n_cols):
       cell = m[r][c]
-      if cell == '#':
+      if cell.kind == Cell.CHANGE:
         if last_patch[c] >= 0:
           # Mark the cells inbetween
           start = last_patch[c]
           end = r
           for i in range(start, end + 1):
             # If not yet decorated
-            if m[i][c] == '.':
-              # Make background red
-              m[i][c] = ANSI_BG_RED + ' ' + ANSI_RESET
+            if m[i][c].kind == Cell.NO_CHANGE:
+              m[i][c].kind = Cell.BETWEEN_CHANGES
         last_patch[c] = r
-  # Turn # into white squares
+  return m
+
+
+def render_matrix_for_console(matrix):
+  n_rows = len(matrix)
+  if n_rows == 0:
+    return []
+  n_cols = len(matrix[0])
+  m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+
+  def render_cell(cell):
+    if cell.kind == Cell.CHANGE:
+      # Make background white
+      return ANSI_BG_WHITE + ' ' + ANSI_RESET
+    if cell.kind == Cell.BETWEEN_CHANGES:
+      # Make background red
+      return ANSI_BG_RED + ' ' + ANSI_RESET
+    if cell.kind == Cell.NO_CHANGE:
+      return '.'
+    assert False, "Unexpected cell kind: %s" %(cell.kind)
+
   for r in range(n_rows):
     for c in range(n_cols):
-      cell = m[r][c]
-      if cell == '#':
-        # Make background white
-        m[r][c] = ANSI_BG_WHITE + ' ' + ANSI_RESET
+      m[r][c] = render_cell(matrix[r][c])
   return m
 
 
@@ -75,7 +91,7 @@ def print_fragmap(fragmap, do_decorate=False):
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
   if do_decorate:
     # Colorize the matrix
-    matrix = decorate_matrix(matrix)
+    matrix = render_matrix_for_console(decorate_matrix(matrix))
   # Draw the text and matrix
   for r in range(len(matrix)):
     cur_patch = fragmap.patches[r]._header

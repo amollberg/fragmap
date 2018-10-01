@@ -17,6 +17,28 @@ def read_diff(filename):
     lines = [line.rstrip() for line in f]
     return lines
 
+
+def render_matrix_for_test(matrix):
+  n_rows = len(matrix)
+  if n_rows == 0:
+    return []
+  n_cols = len(matrix[0])
+  m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+
+  def render_cell(cell):
+    if cell.kind == Cell.CHANGE:
+      return '#'
+    if cell.kind == Cell.BETWEEN_CHANGES:
+      return '.'
+    if cell.kind == Cell.NO_CHANGE:
+      return '.'
+    assert False, "Unexpected cell kind: %s" %(cell.kind)
+
+  for r in range(n_rows):
+    for c in range(n_cols):
+      m[r][c] = render_cell(matrix[r][c])
+  return m
+
 START = 0
 END = 1
 
@@ -401,14 +423,14 @@ class Test(unittest.TestCase):
     pp = PatchParser()
     h = Fragmap.from_ast(pp.parse(diff))
     actual_matrix = h.generate_matrix()
-    self.check_matrix(actual_matrix, matrix)
+    self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
   def check_diff_brief(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
     pp = PatchParser()
     h = Fragmap.from_ast(pp.parse(diff)).group_by_patch_connection()
     actual_matrix = h.generate_matrix()
-    self.check_matrix(actual_matrix, matrix)
+    self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
   def check_diffs(self, diff_filenames, matrix):
     diff = []
@@ -417,7 +439,7 @@ class Test(unittest.TestCase):
     pp = PatchParser()
     h = Fragmap.from_ast(pp.parse(diff))
     actual_matrix = h.generate_matrix()
-    self.check_matrix(actual_matrix, matrix)
+    self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
 
   def check_diffs_brief(self, diff_filenames, matrix):
@@ -427,7 +449,7 @@ class Test(unittest.TestCase):
     pp = PatchParser()
     h = Fragmap.from_ast(pp.parse(diff)).group_by_patch_connection()
     actual_matrix = h.generate_matrix()
-    self.check_matrix(actual_matrix, matrix)
+    self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
   def check_matrix(self, matrix, reference):
     joined_matrix = '\n'.join([''.join(row) for row in matrix])

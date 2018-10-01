@@ -84,6 +84,16 @@ def group_fragment_bound_lines(node_lines):
   return groups
 
 
+class Cell(object):
+
+  NO_CHANGE=100
+  CHANGE=101
+  BETWEEN_CHANGES=102
+
+  def __init__(self, kind):
+    self.kind = kind
+
+
 class Fragmap():
 
   def __init__(self, patches, grouped_node_lines):
@@ -129,11 +139,11 @@ class Fragmap():
     n_rows = self.get_n_patches()
     n_cols = len(connections)
     debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
-    matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
+    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
     for c in range(n_cols):
       key = connections_key_index[c]
       for r in range(n_rows):
-        matrix[r][c] = '#' if key[r] == '1' else '.'
+        matrix[r][c].kind = Cell.CHANGE if key[r] == '1' else Cell.NO_CHANGE
     bh = BriefFragmap(self.patches, connections.values())
     bh._prerendered_matrix = matrix
     return bh
@@ -180,13 +190,13 @@ class Fragmap():
     n_rows = self.get_n_patches()
     n_cols = len(self.grouped_node_lines)
     debug.get('grid').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
-    matrix = [['.' for i in xrange(n_cols)] for j in xrange(n_rows)]
+    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
     prev_col = None
     for c in range(n_cols):
       column = self.generate_column(c, prev_col)
       for r in range(n_rows):
         if column[r]:
-          matrix[r][c] = '#'
+          matrix[r][c].kind = Cell.CHANGE
       prev_col = column
     return matrix
 
