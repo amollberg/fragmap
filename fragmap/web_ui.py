@@ -26,6 +26,7 @@ def open_fragmap_page(fragmap):
       with tag('head'):
         with tag('style', type='text/css'):
           text('th { text-align: left; }')
+          text('.commit_hash { font-family: monospace; }')
           text('.matrix_cell { font-family: monospace; }')
       with tag('body'):
         with tag('table'):
@@ -37,7 +38,8 @@ def open_fragmap_page(fragmap):
               with tag('th'):
                 text(commit_msg)
               with tag('th'):
-                text(hash)
+                with tag('span', **{'class': 'commit_hash'}):
+                  text(hash[0:8])
               for c in matrix[r]:
                 with tag('th'):
                   render_cell(c)
