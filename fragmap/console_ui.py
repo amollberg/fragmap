@@ -33,30 +33,6 @@ ANSI_BG_WHITE = ANSI_ESC + '[47m'
 ANSI_FG_CYAN = ANSI_ESC + '[36m'
 ANSI_RESET = ANSI_ESC + '[0m'
 
-def decorate_matrix(matrix):
-  m = copy.deepcopy(matrix)
-  n_rows = len(m)
-  if n_rows == 0:
-    return m
-  n_cols = len(m[0])
-
-  # Mark dots between conflicts
-  last_patch = [-1] * n_cols
-  for r in range(n_rows):
-    for c in range(n_cols):
-      cell = m[r][c]
-      if cell.kind == Cell.CHANGE:
-        if last_patch[c] >= 0:
-          # Mark the cells inbetween
-          start = last_patch[c]
-          end = r
-          for i in range(start, end + 1):
-            # If not yet decorated
-            if m[i][c].kind == Cell.NO_CHANGE:
-              m[i][c].kind = Cell.BETWEEN_CHANGES
-        last_patch[c] = r
-  return m
-
 
 def render_matrix_for_console(matrix):
   n_rows = len(matrix)
@@ -91,7 +67,7 @@ def print_fragmap(fragmap, do_decorate=False):
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
   if do_decorate:
     # Colorize the matrix
-    matrix = render_matrix_for_console(decorate_matrix(matrix))
+    matrix = render_matrix_for_console(matrix)
   # Draw the text and matrix
   for r in range(len(matrix)):
     cur_patch = fragmap.patches[r]._header

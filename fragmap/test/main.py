@@ -29,7 +29,7 @@ def render_matrix_for_test(matrix):
     if cell.kind == Cell.CHANGE:
       return '#'
     if cell.kind == Cell.BETWEEN_CHANGES:
-      return '.'
+      return '^'
     if cell.kind == Cell.NO_CHANGE:
       return '.'
     assert False, "Unexpected cell kind: %s" %(cell.kind)
@@ -108,7 +108,7 @@ class Test(unittest.TestCase):
                       '002-rename-empty-file.diff',
                       '004-remove-one-line-empty-file.diff'],
                      ['#.',
-                      '..',
+                      '^.',
                       '#.'])
 
   def test_003(self):
@@ -180,7 +180,7 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c.diff',
                       '032-addmod-change-bc-to-xy.diff'],
                      ['##..',
-                      '..#.',
+                      '.^#.',
                       '.##.'])
   def test_030_032_groups(self):
     self.check_node_group_kinds(['030-addmod-create-with-ab.diff',
@@ -195,7 +195,7 @@ class Test(unittest.TestCase):
                       '032-addmod-change-bc-to-xy.diff',
                       '033-addmod-add-z-between-xy.diff'],
                      ['##....',
-                      '..###.',
+                      '.^###.',
                       '.####.',
                       '...#..'])
 
@@ -242,7 +242,7 @@ class Test(unittest.TestCase):
                             '002-rename-empty-file.diff',
                             '004-remove-one-line-empty-file.diff'],
                            ['#',
-                            '.',
+                            '^',
                             '#'])
 
   def test_003_brief(self):
@@ -309,7 +309,7 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c.diff',
                       '032-addmod-change-bc-to-xy.diff'],
                      ['##.',
-                      '..#',
+                      '.^#',
                       '.##'])
 
   def test_030_033_brief(self):
@@ -318,7 +318,7 @@ class Test(unittest.TestCase):
                       '032-addmod-change-bc-to-xy.diff',
                       '033-addmod-add-z-between-xy.diff'],
                      ['##..',
-                      '..##',
+                      '.^##',
                       '.###',
                       '...#'])
 

@@ -52,6 +52,29 @@ def print_node_line_relation_table(node_lines):
   for row in grid:
     print ''.join(row)
 
+def decorate_matrix(m):
+  debug.get('grid').debug("decorate_matrix")
+  n_rows = len(m)
+  if n_rows == 0:
+    return m
+  n_cols = len(m[0])
+  # Mark dots between conflicts
+  last_patch = [-1] * n_cols
+  for r in range(n_rows):
+    for c in range(n_cols):
+      cell = m[r][c]
+      if cell.kind == Cell.CHANGE:
+        debug.get('grid').debug("last_patch %s %s %s", last_patch[c], c, r)
+        if last_patch[c] >= 0:
+          # Mark the cells inbetween
+          start = last_patch[c]
+          end = r
+          for i in range(start, end + 1):
+            # If not yet decorated
+            if m[i][c].kind == Cell.NO_CHANGE:
+              m[i][c].kind = Cell.BETWEEN_CHANGES
+        last_patch[c] = r
+
 
 
 # Group node lines that are equal, i.e. that at the first
@@ -145,6 +168,7 @@ class Fragmap():
       for r in range(n_rows):
         matrix[r][c].kind = Cell.CHANGE if key[r] == '1' else Cell.NO_CHANGE
     bh = BriefFragmap(self.patches, connections.values())
+    decorate_matrix(matrix)
     bh._prerendered_matrix = matrix
     return bh
 
@@ -183,6 +207,7 @@ class Fragmap():
         debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
     return inside_fragment
 
+
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
     debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
@@ -198,6 +223,7 @@ class Fragmap():
         if column[r]:
           matrix[r][c].kind = Cell.CHANGE
       prev_col = column
+    decorate_matrix(matrix)
     return matrix
 
   def str(self):
