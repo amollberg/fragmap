@@ -116,6 +116,9 @@ class Cell(object):
   def __init__(self, kind):
     self.kind = kind
 
+  def __repr__(self):
+    return "<Cell kind=%s>" %(self.kind)
+
 
 class Fragmap():
 
