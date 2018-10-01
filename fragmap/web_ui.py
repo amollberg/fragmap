@@ -2,11 +2,23 @@
 # encoding: utf-8
 
 from yattag import Doc
+from generate_matrix import Cell
+
 import os
 
 
 def open_fragmap_page(fragmap):
   matrix = fragmap.generate_matrix()
+  print(matrix)
+
+  def render_cell(cell):
+    with tag('span', **{'class': 'matrix_cell'}):
+      if cell.kind == Cell.CHANGE:
+        text('#')
+      if cell.kind == Cell.BETWEEN_CHANGES:
+        text('^')
+      if cell.kind == Cell.NO_CHANGE:
+        text('.')
 
   doc, tag, text = Doc().tagtext()
   def get_html():
@@ -14,6 +26,7 @@ def open_fragmap_page(fragmap):
       with tag('head'):
         with tag('style', type='text/css'):
           text('th { text-align: left; }')
+          text('.matrix_cell { font-family: monospace; }')
       with tag('body'):
         with tag('table'):
           for r in range(len(matrix)):
@@ -27,7 +40,7 @@ def open_fragmap_page(fragmap):
                 text(hash)
               for c in matrix[r]:
                 with tag('th'):
-                  text(c)
+                  render_cell(c)
     return doc.getvalue()
   with open('fragmap.html', 'w') as f:
     f.write(get_html())
