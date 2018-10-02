@@ -115,9 +115,19 @@ class Cell(object):
 
   def __init__(self, kind):
     self.kind = kind
+    self.node = None
 
   def __repr__(self):
-    return "<Cell kind=%s>" %(self.kind)
+    return "<Cell kind=%s node=%s>" %(self.kind, self.node)
+
+class ColumnItem(object):
+
+  def __init__(self, node_line, inside):
+    self.node_line = node_line
+    self.inside = inside
+
+  def __repr__(self):
+    return "<Cell inside=%s node_line=%s>" %(self.inside, self.node_line)
 
 
 class Fragmap():
@@ -147,11 +157,12 @@ class Fragmap():
       group = groups[c]
       column = self.generate_column(c, prev_column)
       prev_column = column
-      if column == [False] * self.get_n_patches():
+      # Convert from list of True,False to string of 1,0
+      inside = map(lambda it: it.inside if it is not None else False, column)
+      if inside == [False] * self.get_n_patches():
         # Skip empty columns
         continue
-      # Convert from list of True,False to string of 1,0
-      key = ''.join(map(lambda b: '1' if b else '0', column))
+      key = ''.join(map(lambda b: '1' if b else '0', inside))
       debug.get('matrix').debug('key: %s', key)
       if key in connections.keys():
         # Append to existing dict entry
@@ -189,7 +200,7 @@ class Fragmap():
     inside_fragment = prev_column
     if prev_column is None:
       if col_index <= 0:
-        inside_fragment = [False] * n_rows
+        inside_fragment = [None] * n_rows
       else:
         inside_fragment = self.generate_column(col_index - 1)
     # For each row in the column
@@ -200,10 +211,10 @@ class Fragmap():
         for node_line in node_line_group:
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
-            inside_fragment[r] = (node_line._kind == FragmentBoundNode.START)
+            inside_fragment[r] = ColumnItem(node_line, node_line._kind == FragmentBoundNode.START)
             debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
             # If it was updated to False:
-            if not inside_fragment[r]:
+            if not inside_fragment[r].inside:
               # False overrides True so that if start and end from same diff
               # appear in same group we don't get stuck at True
               break
@@ -223,8 +234,9 @@ class Fragmap():
     for c in range(n_cols):
       column = self.generate_column(c, prev_col)
       for r in range(n_rows):
-        if column[r]:
+        if column[r] is not None and column[r].inside:
           matrix[r][c].kind = Cell.CHANGE
+          matrix[r][c].node = column[r].node_line._nodehistory[r]
       prev_col = column
     decorate_matrix(matrix)
     return matrix

@@ -2,29 +2,35 @@
 # encoding: utf-8
 
 from yattag import Doc
-from generate_matrix import Cell
+from generate_matrix import Cell, BriefFragmap
+
 
 import os
 
 
 def open_fragmap_page(fragmap):
+  is_brief = isinstance(fragmap, BriefFragmap)
   matrix = fragmap.generate_matrix()
   print(matrix)
 
-  def render_cell(cell):
+  def render_cell(cell, r, c):
     classes = ['matrix_cell']
     if cell.kind == Cell.CHANGE:
       classes.append('cell_change')
-      cell_text = ' '
     elif cell.kind == Cell.BETWEEN_CHANGES:
       classes.append('cell_between_changes')
-      cell_text = ' '
     elif cell.kind == Cell.NO_CHANGE:
       classes.append('cell_no_change')
-      cell_text = ' '
-    with tag('td', **{'class': ' '.join(classes), 'onclick': 'javascript:show(this, "%s")' %("TODO" + str(cell.kind))}):
-      text(cell_text)
+    with tag('td', **{'class': ' '.join(classes), 'onclick': "javascript:show(this, %d, %d)" %(r, c)}):
+      text(' ')
 
+  def get_escaped_content(cell):
+    if cell.node is None:
+      return '-'
+    return '\n'.join(cell.node._fragment._content).replace("'", "\\'")
+
+  def generate_content_array(matrix):
+    return str([[get_escaped_content(c) for c in r] for r in matrix])
 
   doc, tag, text = Doc().tagtext()
   def get_html():
@@ -84,22 +90,23 @@ def open_fragmap_page(fragmap):
               with tag('td'):
                 with tag('span', **{'class': 'commit_message'}):
                   text(commit_msg)
-              for c in matrix[r]:
-                render_cell(c)
+              for c in range(len(matrix[r])):
+                render_cell(matrix[r][c], r, c)
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
-          text("""
+          doc.asis("""
+               var content_table = %s;
                prev_source = null;
-               function show(source, text) {
+               function show(source, r, c) {
                  if (prev_source) {
                    prev_source.id = "";
                  }
                  prev_source = source;
                  source.id = "selected_cell";
-                 document.getElementById('code_window').innerText = text;
+                 document.getElementById('code_window').innerText = content_table[r][c];
                }
-               """)
+               """ % (generate_content_array(matrix),))
     return doc.getvalue()
   with open('fragmap.html', 'w') as f:
     f.write(get_html())
