@@ -69,7 +69,11 @@ def open_fragmap_page(fragmap):
                }
                .cell_no_change {
                  background-color: green;
-               }""")
+               }
+               #code_window {
+                 font-family: monospace;
+               }
+               """)
       with tag('body'):
         with tag('table'):
           with tag('tr'):
