@@ -12,7 +12,17 @@ def open_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
   matrix = fragmap.generate_matrix()
 
-  def render_cell(cell, r, c):
+  def colorized_line(line):
+    if line == '':
+      return
+    if line[0] == '-':
+      with tag('pre', klass='codeline codeline_removed'):
+        text(line)
+    if line[0] == '+':
+      with tag('pre', klass='codeline codeline_added'):
+        text(line)
+
+  def render_cell(cell):
     classes = ['matrix_cell']
     if cell.kind == Cell.CHANGE:
       classes.append('cell_change')
@@ -20,16 +30,11 @@ def open_fragmap_page(fragmap):
       classes.append('cell_between_changes')
     elif cell.kind == Cell.NO_CHANGE:
       classes.append('cell_no_change')
-    with tag('td', **{'class': ' '.join(classes), 'onclick': "javascript:show(this, %d, %d)" %(r, c)}):
-      text(' ')
-
-  def get_escaped_content(cell):
-    if cell.node is None:
-      return ''
-    return '\n'.join(cell.node._fragment._content).replace("'", "\\'")
-
-  def generate_content_array(matrix):
-    return str([[get_escaped_content(c) for c in r] for r in matrix])
+    with tag('td', **{'class': ' '.join(classes), 'onclick': "javascript:show(this)"}):
+      with tag('div', klass='code'):
+        if cell.node:
+          for line in cell.node._fragment._content:
+            colorized_line(line)
 
   doc, tag, text = Doc().tagtext()
   def get_html():
@@ -37,42 +42,55 @@ def open_fragmap_page(fragmap):
     with tag('html'):
       with tag('head'):
         with tag('style', type='text/css'):
-          text("""
-               table {
-                 border-collapse: collapse;
-               }
-               td {
-                 text-align: left;
-                 vertical-align: bottom;
-                 padding: 0;
-               }
-               .commit_hash {
-                 font-family: monospace;
-                 margin-right: 10pt;
-               }
-               .commit_message {
-                 margin-right: 10pt;
-               }
-               .matrix_cell {
-                 font-family: monospace;
-                 width: 8pt;
-               }
-               .cell_change {
-                 background-color: yellow;
-               }
-               .cell_between_changes {
-                 background-color: red;
-               }
-               .matrix_cell#selected_cell {
-                 opacity: 0.5;
-               }
-               .cell_no_change {
-                 background-color: green;
-               }
-               #code_window {
-                 font-family: monospace;
-               }
-               """)
+          doc.asis(
+            """
+            table {
+              border-collapse: collapse;
+            }
+            td {
+              text-align: left;
+              vertical-align: bottom;
+              padding: 0;
+            }
+            .commit_hash {
+              font-family: monospace;
+              margin-right: 10pt;
+            }
+            .commit_message {
+              margin-right: 10pt;
+            }
+            .matrix_cell {
+              font-family: monospace;
+              width: 8pt;
+            }
+            .cell_change {
+              background-color: yellow;
+            }
+            .cell_between_changes {
+              background-color: red;
+            }
+            .matrix_cell#selected_cell {
+              opacity: 0.5;
+            }
+            .matrix_cell > .code {
+              display: none;
+            }
+            .cell_no_change {
+              background-color: green;
+            }
+            #code_window {
+              font-family: monospace;
+            }
+            .codeline {
+              margin: 0 auto;
+            }
+            .codeline_added {
+              color: green;
+            }
+            .codeline_removed {
+              color: red;
+            }
+            """)
       with tag('body'):
         with tag('table'):
           with tag('tr'):
@@ -94,22 +112,22 @@ def open_fragmap_page(fragmap):
                 with tag('span', **{'class': 'commit_message'}):
                   text(commit_msg)
               for c in range(len(matrix[r])):
-                render_cell(matrix[r][c], r, c)
+                render_cell(matrix[r][c])
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
           doc.asis("""
-               var content_table = %s;
                prev_source = null;
-               function show(source, r, c) {
+               function show(source) {
                  if (prev_source) {
                    prev_source.id = "";
                  }
                  prev_source = source;
                  source.id = "selected_cell";
-                 document.getElementById('code_window').innerText = content_table[r][c];
+                 document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
+                 console.log(source, source.childNodes[0].innerHTML);
                }
-               """ % (generate_content_array(matrix),))
+               """)
     return doc.getvalue()
   with open('fragmap.html', 'w') as f:
     f.write(get_html())
