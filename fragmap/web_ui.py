@@ -11,7 +11,6 @@ import os
 def open_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
   matrix = fragmap.generate_matrix()
-  print(matrix)
 
   def render_cell(cell, r, c):
     classes = ['matrix_cell']
@@ -26,7 +25,7 @@ def open_fragmap_page(fragmap):
 
   def get_escaped_content(cell):
     if cell.node is None:
-      return '-'
+      return ''
     return '\n'.join(cell.node._fragment._content).replace("'", "\\'")
 
   def generate_content_array(matrix):
