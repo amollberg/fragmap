@@ -14,6 +14,7 @@
 #      _oldfile
 #      _newfile
 #     Fragment
+#      _content
 #      FragmentHeader
 #       Range _oldrange
 #        _start
@@ -40,7 +41,7 @@ def nonnull_file(file_patch_header):
   return None
 
 
-class Range():
+class Range(object):
   _start = 0
   _end = 0
 
@@ -62,7 +63,7 @@ class Range():
     self._end += end_delta
 
 
-class FragmentHeader():
+class FragmentHeader(object):
   _oldrange = None
   _newrange = None
   def __init__(self, oldrange, newrange):
@@ -101,7 +102,7 @@ class FragmentHeader():
     return None, lines
 
 
-class Fragment():
+class Fragment(object):
   _header = None
   _content = None
   def __init__(self, header, content=''):
@@ -132,7 +133,8 @@ class Fragment():
     debug.get('parser').debug("Not fragment")
     return None, lines
 
-class FilePatchHeader():
+
+class FilePatchHeader(object):
   _oldfile = None
   _newfile = None
   def __init__(self, oldfile, newfile):
@@ -222,7 +224,7 @@ class FilePatchHeader():
     return header, lines
 
 
-class FilePatch():
+class FilePatch(object):
   _fragments = None
   _header = None
 
@@ -250,7 +252,8 @@ class FilePatch():
     else:
       return None, lines
 
-class PatchHeader():
+
+class PatchHeader(object):
   _hash = None
   _message = None
 
@@ -288,7 +291,8 @@ class PatchHeader():
       lines = lines[1:]
     return PatchHeader(hash, message), lines
 
-class Patch():
+
+class Patch(object):
   _header = None
   _filepatches = None
 
@@ -323,7 +327,8 @@ class Patch():
         break
     return Patch(filepatches, header), lines
 
-class AST():
+
+class AST(object):
   _patches = None
   def __init__(self, patches):
     self._patches = patches
@@ -359,7 +364,8 @@ class AST():
       patches += [dummy_patch]
     return AST(patches), lines
 
-class PatchParser():
+
+class PatchParser(object):
   _ast = None
 
   @staticmethod
@@ -370,9 +376,6 @@ class PatchParser():
     if len(lines_after) > 0:
       debug.get('parser').debug("Unparsable content left at end of file.")
     return ast
-
-
-
 
 
 def main():

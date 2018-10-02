@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import copy
 from parse_patch import *
+import debug
 
 
 class FragmentBoundNode():
