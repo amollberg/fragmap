@@ -30,7 +30,7 @@ def open_fragmap_page(fragmap):
       classes.append('cell_between_changes')
     elif cell.kind == Cell.NO_CHANGE:
       classes.append('cell_no_change')
-    with tag('td', **{'class': ' '.join(classes), 'onclick': "javascript:show(this)"}):
+    with tag('td', klass=' '.join(classes), onclick="javascript:show(this)"):
       with tag('div', klass='code'):
         if cell.node:
           for line in cell.node._fragment._content:
@@ -106,10 +106,10 @@ def open_fragmap_page(fragmap):
             hash = cur_patch._hash
             with tag('tr'):
               with tag('td'):
-                with tag('span', **{'class': 'commit_hash'}):
+                with tag('span', klass='commit_hash'):
                   text(hash[0:8])
               with tag('td'):
-                with tag('span', **{'class': 'commit_message'}):
+                with tag('span', klass='commit_message'):
                   text(commit_msg)
               for c in range(len(matrix[r])):
                 render_cell(matrix[r][c])
