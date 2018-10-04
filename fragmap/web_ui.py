@@ -44,6 +44,10 @@ def open_fragmap_page(fragmap):
         with tag('style', type='text/css'):
           doc.asis(
             """
+            body {
+              background: black;
+              color: #e5e5e5;
+            }
             table {
               border-collapse: collapse;
             }
@@ -63,8 +67,11 @@ def open_fragmap_page(fragmap):
               font-family: monospace;
               width: 8pt;
             }
+            .cell_no_change {
+              background-color: #121212;
+            }
             .cell_change {
-              background-color: yellow;
+              background-color: white;
             }
             .cell_between_changes {
               background-color: red;
@@ -74,9 +81,6 @@ def open_fragmap_page(fragmap):
             }
             .matrix_cell > .code {
               display: none;
-            }
-            .cell_no_change {
-              background-color: green;
             }
             #code_window {
               font-family: monospace;
