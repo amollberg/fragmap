@@ -42,59 +42,7 @@ def open_fragmap_page(fragmap):
     with tag('html'):
       with tag('head'):
         with tag('style', type='text/css'):
-          doc.asis(
-            """
-            body {
-              background: black;
-              color: #e5e5e5;
-            }
-            table {
-              border-collapse: collapse;
-            }
-            td {
-              text-align: left;
-              vertical-align: bottom;
-              padding: 0;
-            }
-            .commit_hash {
-              font-family: monospace;
-              margin-right: 10pt;
-            }
-            .commit_message {
-              margin-right: 10pt;
-            }
-            .matrix_cell {
-              font-family: monospace;
-              width: 8pt;
-            }
-            .cell_no_change {
-              background-color: #121212;
-            }
-            .cell_change {
-              background-color: white;
-            }
-            .cell_between_changes {
-              background-color: red;
-            }
-            .matrix_cell#selected_cell {
-              opacity: 0.5;
-            }
-            .matrix_cell > .code {
-              display: none;
-            }
-            #code_window {
-              font-family: monospace;
-            }
-            .codeline {
-              margin: 0 auto;
-            }
-            .codeline_added {
-              color: green;
-            }
-            .codeline_removed {
-              color: red;
-            }
-            """)
+          doc.asis(css())
       with tag('body'):
         with tag('table'):
           with tag('tr'):
@@ -120,19 +68,82 @@ def open_fragmap_page(fragmap):
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
-          doc.asis("""
-               prev_source = null;
-               function show(source) {
-                 if (prev_source) {
-                   prev_source.id = "";
-                 }
-                 prev_source = source;
-                 source.id = "selected_cell";
-                 document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
-                 console.log(source, source.childNodes[0].innerHTML);
-               }
-               """)
+          doc.asis(javascript())
     return doc.getvalue()
+
+
+
   with open('fragmap.html', 'w') as f:
     f.write(get_html())
     os.startfile(f.name)
+
+
+def javascript():
+  return \
+    """
+    prev_source = null;
+    function show(source) {
+      if (prev_source) {
+        prev_source.id = "";
+      }
+      prev_source = source;
+      source.id = "selected_cell";
+      document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
+      console.log(source, source.childNodes[0].innerHTML);
+    }
+    """
+
+def css():
+  return \
+    """
+    body {
+      background: black;
+      color: #e5e5e5;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    td {
+      text-align: left;
+      vertical-align: bottom;
+      padding: 0;
+    }
+    .commit_hash {
+      font-family: monospace;
+      margin-right: 10pt;
+    }
+    .commit_message {
+      margin-right: 10pt;
+    }
+    .matrix_cell {
+      font-family: monospace;
+      width: 8pt;
+    }
+    .cell_no_change {
+      background-color: #121212;
+    }
+    .cell_change {
+      background-color: white;
+    }
+    .cell_between_changes {
+      background-color: red;
+    }
+    .matrix_cell#selected_cell {
+      opacity: 0.5;
+    }
+    .matrix_cell > .code {
+      display: none;
+    }
+    #code_window {
+      font-family: monospace;
+    }
+    .codeline {
+      margin: 0 auto;
+    }
+    .codeline_added {
+      color: green;
+    }
+    .codeline_removed {
+      color: red;
+    }
+    """
