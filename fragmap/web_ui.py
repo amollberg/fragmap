@@ -85,9 +85,11 @@ def javascript():
     function show(source) {
       if (prev_source) {
         prev_source.id = "";
+        prev_source.parentElement.id = "";
       }
       prev_source = source;
       source.id = "selected_cell";
+      source.parentElement.id = "selected_row";
       document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
       console.log(source, source.childNodes[0].innerHTML);
     }
@@ -107,7 +109,7 @@ def css():
       background-color: rgba(70, 70, 70, 0.4);
     }
     tr:nth-child(odd) {
-      background-color: rgba(120, 120, 120, 0.4);
+      background-color: rgba(90, 90, 90, 0.4);
     }
     td {
       text-align: left;
@@ -133,6 +135,9 @@ def css():
     }
     .matrix_cell#selected_cell {
       box-shadow: 0px 0px 3px 2px #6F67E0 inset;
+    }
+    tr#selected_row {
+      background-color: rgba(160, 160, 160, 0.4);
     }
     .matrix_cell > .code {
       display: none;
