@@ -132,7 +132,7 @@ def css():
       background-color: red;
     }
     .matrix_cell#selected_cell {
-      opacity: 0.5;
+      box-shadow: 0px 0px 3px 2px #6F67E0 inset;
     }
     .matrix_cell > .code {
       display: none;
