@@ -103,6 +103,12 @@ def css():
     table {
       border-collapse: collapse;
     }
+    tr:nth-child(even) {
+      background-color: rgba(70, 70, 70, 0.4);
+    }
+    tr:nth-child(odd) {
+      background-color: rgba(120, 120, 120, 0.4);
+    }
     td {
       text-align: left;
       vertical-align: bottom;
@@ -118,9 +124,6 @@ def css():
     .matrix_cell {
       font-family: monospace;
       width: 8pt;
-    }
-    .cell_no_change {
-      background-color: #121212;
     }
     .cell_change {
       background-color: white;
