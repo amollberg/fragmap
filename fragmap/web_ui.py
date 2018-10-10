@@ -7,6 +7,21 @@ from generate_matrix import Cell, BriefFragmap
 
 import os
 
+def equal_left_column(matrix, r, c):
+  if c == 0:
+    return False
+  return matrix[r][c-1].node == matrix[r][c].node
+
+def equal_right_column(matrix, r, c):
+  def n_columns(matrix):
+    if len(matrix) == 0:
+      return 0
+    return len(matrix[0])
+  if c + 1 == n_columns:
+    return False
+  return matrix[r][c+1].node == matrix[r][c].node
+
+
 
 def open_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
@@ -22,7 +37,7 @@ def open_fragmap_page(fragmap):
       with tag('pre', klass='codeline codeline_added'):
         text(line)
 
-  def render_cell(cell):
+  def render_cell(cell, r, c):
     classes = ['matrix_cell']
     if cell.kind == Cell.CHANGE:
       classes.append('cell_change')
@@ -33,6 +48,9 @@ def open_fragmap_page(fragmap):
     with tag('td', klass=' '.join(classes), onclick="javascript:show(this)"):
       with tag('div', klass='code'):
         if cell.node:
+          text(str(cell.node))
+          text(equal_left_column(matrix, r, c))
+          text(equal_right_column(matrix, r, c))
           for line in cell.node._fragment._content:
             colorized_line(line)
 
@@ -64,7 +82,7 @@ def open_fragmap_page(fragmap):
                 with tag('span', klass='commit_message'):
                   text(commit_msg)
               for c in range(len(matrix[r])):
-                render_cell(matrix[r][c])
+                render_cell(matrix[r][c], r, c)
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
