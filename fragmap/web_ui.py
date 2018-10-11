@@ -7,20 +7,35 @@ from generate_matrix import Cell, BriefFragmap
 
 import os
 
+
+def n_columns(matrix):
+  if len(matrix) == 0:
+    return 0
+  return len(matrix[0])
+
+
+def n_rows(matrix):
+  return len(matrix)
+
+
 def equal_left_column(matrix, r, c):
   if c == 0:
     return False
   return matrix[r][c-1].node == matrix[r][c].node
 
+
 def equal_right_column(matrix, r, c):
-  def n_columns(matrix):
-    if len(matrix) == 0:
-      return 0
-    return len(matrix[0])
   if c + 1 == n_columns:
     return False
   return matrix[r][c+1].node == matrix[r][c].node
 
+
+def change_at(matrix, r, c):
+  if r < 0 or r >= n_rows(matrix):
+    return False
+  if c < 0 or c >= n_columns(matrix):
+    return False
+  return matrix[r][c].node.kind != Cell.NO_CHANGE
 
 
 def open_fragmap_page(fragmap):
