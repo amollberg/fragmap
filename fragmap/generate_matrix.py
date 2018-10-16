@@ -143,7 +143,7 @@ class Fragmap():
     grouped_lines = group_fragment_bound_lines(node_lines)
     return Fragmap(ast._patches, grouped_lines)
 
-  def group_by_patch_connection(self):
+  def _group_columns_by(self, keyfunc):
     groups = self.grouped_node_lines
     # connections : '01001000..010' -> [node, node, ..]
     # The key strings are formatted such that
@@ -157,12 +157,9 @@ class Fragmap():
       group = groups[c]
       column = self.generate_column(c, prev_column)
       prev_column = column
-      # Convert from list of True,False to string of 1,0
-      inside = map(lambda it: it.inside if it is not None else False, column)
-      if inside == [False] * self.get_n_patches():
-        # Skip empty columns
+      valid, key = keyfunc(column)
+      if not valid:
         continue
-      key = ''.join(map(lambda b: '1' if b else '0', inside))
       debug.get('matrix').debug('key: %s', key)
       if key in connections.keys():
         # Append to existing dict entry
@@ -185,6 +182,21 @@ class Fragmap():
     decorate_matrix(matrix)
     bh._prerendered_matrix = matrix
     return bh
+
+  def group_by_patch_connection(self):
+    def patch_connection_key(column):
+      inside = map(lambda it: it.inside if it is not None else False, column)
+      if inside == [False] * self.get_n_patches():
+        # Skip empty columns
+        return False, None
+      # Convert from list of True,False to string of 1,0
+      return True, ''.join(map(lambda b: '1' if b else '0', inside))
+    return self._group_columns_by(patch_connection_key)
+
+
+  def group_by_fragment_connection(self):
+    ## TODO: group all columns that have the same information, i.e. same diffs as well as same fragments
+    pass
 
   def get_n_patches(self):
     return len(self.patches)
