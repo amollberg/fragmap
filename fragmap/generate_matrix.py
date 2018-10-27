@@ -116,21 +116,56 @@ class Cell(object):
   CHANGE=101
   BETWEEN_CHANGES=102
 
-  def __init__(self, kind):
+  def __init__(self, kind, node=None):
     self.kind = kind
-    self.node = None
+    self.node = node
 
   def __repr__(self):
     return "<Cell kind=%s node=%s>" %(self.kind, self.node)
 
-Bool8Neighborhood = collections.namedtuple('Bool8Neighborhood',
-                                           ['up_left', 'up', 'up_right', 'left', 'right', 'down_left', 'down', 'down_right'])
+  def __eq__(self, other):
+    if other is None:
+      return False
+    if self.kind == other.kind:
+      if self.kind == Cell.NO_CHANGE:
+        return True
+      if self.node == other.node:
+        return True
+    return False
+
+  def __ne__(self, other):
+    return not (self == other)
+
+
+class ConnectionStatus(object):
+  EMPTY = 1
+  INFILL = 2
+  CONNECTION = 3
+
+
+Status9Neighborhood = collections.namedtuple('Status9Neighborhood',
+                                             ['up_left', 'up', 'up_right',
+                                              'left', 'center', 'right',
+                                              'down_left', 'down', 'down_right'])
 
 class ConnectedCell(Cell):
 
   def __init__(self, base_cell, change_neighborhood):
     self.base = base_cell
     self.changes = change_neighborhood
+
+  def __repr__(self):
+    return "<ConnectedCell base=%s changes=%s>" %(self.base, self.changes)
+
+  def __eq__(self, other):
+    if other is None:
+      return False
+    if self.base != other.base:
+      return False
+    return self.changes == other.changes
+
+  def __ne__(self, other):
+    return not (self == other)
 
 
 class ColumnItem(object):
@@ -308,11 +343,15 @@ def equal_right_column(matrix, r, c):
     return False
   return matrix[r][c+1].node == matrix[r][c].node
 
-
 def change_at(matrix, r, c):
   if not in_range(matrix, r, c):
     return False
-  return matrix[r][c].kind != Cell.NO_CHANGE
+  return matrix[r][c].kind == Cell.CHANGE
+
+def no_change_at(matrix, r, c):
+  if not in_range(matrix, r, c):
+    return True
+  return matrix[r][c].kind == Cell.NO_CHANGE
 
 class ConnectedFragmap(object):
 
@@ -320,22 +359,34 @@ class ConnectedFragmap(object):
     self.fragmap = fragmap
 
   def generate_matrix(self):
+    def status(connection=False, infill=False):
+      if connection:
+        return ConnectionStatus.CONNECTION
+      if infill:
+        return ConnectionStatus.INFILL
+      return ConnectionStatus.EMPTY
     def create_cell(matrix, r, c):
       base_cell = matrix[r][c]
-      change_up = change_at(matrix, r-1, c)
-      change_down = change_at(matrix, r+1, c)
+      change_center = not no_change_at(matrix, r, c)
+      change_up = not no_change_at(matrix, r-1, c)
+      change_down = not no_change_at(matrix, r+1, c)
       change_left = change_at(matrix, r, c-1)
       change_right = change_at(matrix, r, c+1)
       equal_left = equal_left_column(matrix, r, c)
       equal_right = equal_right_column(matrix, r, c)
-      change_neigh = Bool8Neighborhood(up_left = change_left and change_up and change_at(matrix, r-1, c-1),
-                                       up = change_up,
-                                       up_right = change_right and change_up and change_at(matrix, r-1, c+1),
-                                       left = equal_left,
-                                       right = equal_right,
-                                       down_left = change_left and change_down and change_at(matrix, r+1, c-1),
-                                       down = change_down,
-                                       down_right = change_right and change_down and change_at(matrix, r+1, c+1),
+      infill_up_left = equal_left and not no_change_at(matrix, r, c-1) and change_up and not no_change_at(matrix, r-1, c-1) and change_center
+      infill_up_right = equal_right and not no_change_at(matrix, r, c+1) and change_up and not no_change_at(matrix, r-1, c+1) and change_center
+      infill_down_left = equal_left and not no_change_at(matrix, r, c-1) and change_down and not no_change_at(matrix, r+1, c-1) and change_center
+      infill_down_right = equal_right and not no_change_at(matrix, r, c+1) and change_down and not no_change_at(matrix, r+1, c+1) and change_center
+      change_neigh = Status9Neighborhood(up_left = status(infill=infill_up_left),
+                                         up = status(connection=change_up and change_center),
+                                         up_right = status(infill=infill_up_right),
+                                         left = status(connection=equal_left and change_center and change_left, infill=infill_up_left),
+                                         center = status(connection=change_at(matrix, r, c), infill=matrix[r][c].kind == Cell.BETWEEN_CHANGES),
+                                         right = status(connection=equal_right and change_center and change_right, infill=infill_up_right),
+                                         down_left = status(infill=infill_down_left),
+                                         down = status(connection=change_down and change_center),
+                                         down_right = status(infill=infill_down_right),
       )
       return ConnectedCell(base_cell, change_neigh)
     base_matrix = self.fragmap.generate_matrix()

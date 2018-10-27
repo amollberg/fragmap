@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from yattag import Doc
-from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, Bool8Neighborhood
+from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
 
 
 import os
@@ -19,28 +19,33 @@ def render_cell_graphics(tag, connected_cell, inner):
   def etag(*args, **kwargs):
     with tag(*args, **kwargs):
       pass
-  def visif(cond):
-    if cond:
-      return ""
-    return "invisible"
+  def hideempty(status):
+    if status == ConnectionStatus.EMPTY:
+      return "invisible"
+    return ""
+  def passinfill(status):
+    if status == ConnectionStatus.INFILL:
+      return "visibility:hidden"
+    return ""
+
   if kind != Cell.NO_CHANGE:
     inner()
     with tag('div', klass="cell"):
-      etag('div', klass="fullquadrant up_left " + visif(changes.up_left))
-      etag('div', klass="fullquadrant up_right " + visif(changes.up_right))
-      etag('div', klass="fullquadrant down_left " + visif(changes.down_left))
-      etag('div', klass="fullquadrant down_right " + visif(changes.down_right))
+      etag('div', klass="fullquadrant up_left " + hideempty(changes.up_left))
+      etag('div', klass="fullquadrant up_right " + hideempty(changes.up_right))
+      etag('div', klass="fullquadrant down_left " + hideempty(changes.down_left))
+      etag('div', klass="fullquadrant down_right " + hideempty(changes.down_right))
 
-      etag('div', klass="top " + visif(changes.up))
-      etag('div', klass="left " + visif(changes.left), style=("visibility:hidden;" if kind != Cell.CHANGE else ""))
-      with tag('div', klass="inner", style=("visibility:hidden;" if kind != Cell.CHANGE else "")):
+      etag('div', klass="top " + hideempty(changes.up))
+      etag('div', klass="left " + hideempty(changes.left), style=passinfill(changes.left))
+      with tag('div', klass="inner", style=(passinfill(changes.center))):
         etag('div', klass="dot")
-      etag('div', klass="right " + visif(changes.right), style=("visibility:hidden;" if kind != Cell.CHANGE else ""))
-      etag('div', klass="bottom " + visif(changes.down))
-      etag('div', klass="quadrant up_left " + visif(changes.up_left))
-      etag('div', klass="quadrant up_right " + visif(changes.up_right))
-      etag('div', klass="quadrant down_left " + visif(changes.down_left))
-      etag('div', klass="quadrant down_right " + visif(changes.down_right))
+      etag('div', klass="right " + hideempty(changes.right), style=passinfill(changes.right))
+      etag('div', klass="bottom " + hideempty(changes.down))
+      etag('div', klass="quadrant up_left " + hideempty(changes.up_left))
+      etag('div', klass="quadrant up_right " + hideempty(changes.up_right))
+      etag('div', klass="quadrant down_left " + hideempty(changes.down_left))
+      etag('div', klass="quadrant down_right " + hideempty(changes.down_right))
 
 
 def open_fragmap_page(fragmap):
@@ -86,7 +91,6 @@ def open_fragmap_page(fragmap):
         with tag('style', type='text/css'):
           doc.asis(css())
       with tag('body'):
-        render_cell_graphics(tag, ConnectedCell(Cell(Cell.CHANGE), Bool8Neighborhood(False, True, False, True, True, True, True, True)), nop)
         with tag('table'):
           with tag('tr'):
             with tag('th'):
