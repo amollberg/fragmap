@@ -3,6 +3,9 @@
 from parse_patch import *
 from update_fragments import *
 import debug
+
+import collections
+
 # Hierarchy:
 # AST
 #  Patch
@@ -120,6 +123,16 @@ class Cell(object):
   def __repr__(self):
     return "<Cell kind=%s node=%s>" %(self.kind, self.node)
 
+Bool8Neighborhood = collections.namedtuple('Bool8Neighborhood',
+                                           ['up_left', 'up', 'up_right', 'left', 'right', 'down_left', 'down', 'down_right'])
+
+class ConnectedCell(Cell):
+
+  def __init__(self, base_cell, change_neighborhood):
+    self.base = base_cell
+    self.changes = change_neighborhood
+
+
 class ColumnItem(object):
 
   def __init__(self, node_line, inside):
@@ -202,7 +215,7 @@ class Fragmap():
     matrix = self.generate_matrix()
     return '\n'.join([''.join(row) for row in matrix])
 
-class BriefFragmap():
+class BriefFragmap(object):
 
   def __init__(self, fragmap, connections, key_index):
     assert isinstance(fragmap, Fragmap)
@@ -268,9 +281,72 @@ class BriefFragmap():
     decorate_matrix(matrix)
     return matrix
 
+def n_columns(matrix):
+  if len(matrix) == 0:
+    return 0
+  return len(matrix[0])
+
+
+def n_rows(matrix):
+  return len(matrix)
+
+def in_range(matrix, r, c):
+  if r < 0 or r >= n_rows(matrix):
+    return False
+  if c < 0 or c >= n_columns(matrix):
+    return False
+  return True
+
+def equal_left_column(matrix, r, c):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c-1):
+    return False
+  return matrix[r][c-1].node == matrix[r][c].node
+
+
+def equal_right_column(matrix, r, c):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c+1):
+    return False
+  return matrix[r][c+1].node == matrix[r][c].node
+
+
+def change_at(matrix, r, c):
+  if not in_range(matrix, r, c):
+    return False
+  return matrix[r][c].kind != Cell.NO_CHANGE
+
+class ConnectedFragmap(object):
+
+  def __init__(self, fragmap):
+    self.fragmap = fragmap
+
+  def generate_matrix(self):
+    def create_cell(matrix, r, c):
+      base_cell = matrix[r][c]
+      change_up = change_at(matrix, r-1, c)
+      change_down = change_at(matrix, r+1, c)
+      change_left = change_at(matrix, r, c-1)
+      change_right = change_at(matrix, r, c+1)
+      equal_left = equal_left_column(matrix, r, c)
+      equal_right = equal_right_column(matrix, r, c)
+      change_neigh = Bool8Neighborhood(up_left = change_left and change_up and change_at(matrix, r-1, c-1),
+                                       up = change_up,
+                                       up_right = change_right and change_up and change_at(matrix, r-1, c+1),
+                                       left = equal_left,
+                                       right = equal_right,
+                                       down_left = change_left and change_down and change_at(matrix, r+1, c-1),
+                                       down = change_down,
+                                       down_right = change_right and change_down and change_at(matrix, r+1, c+1),
+      )
+      return ConnectedCell(base_cell, change_neigh)
+    base_matrix = self.fragmap.generate_matrix()
+    cols = n_columns(base_matrix)
+    rows = n_rows(base_matrix)
+    return [[create_cell(base_matrix, r, c) for c in xrange(cols)] for r in xrange(rows)]
+
 def main():
   pp = PatchParser()
   lines = [line.rstrip() for line in sys.stdin]
+
   ast = pp.parse(lines)
   debug.get('matrix').debug(diff_list)
   h = Fragmap.from_ast(ast)

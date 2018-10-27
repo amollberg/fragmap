@@ -2,10 +2,9 @@
 # encoding: utf-8
 
 from yattag import Doc
-from generate_matrix import Cell, BriefFragmap
+from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, Bool8Neighborhood
 
 
-import collections
 import os
 import re
 
@@ -14,45 +13,9 @@ def nop():
   pass
 
 
-def n_columns(matrix):
-  if len(matrix) == 0:
-    return 0
-  return len(matrix[0])
-
-
-def n_rows(matrix):
-  return len(matrix)
-
-def in_range(matrix, r, c):
-  if r < 0 or r >= n_rows(matrix):
-    return False
-  if c < 0 or c >= n_columns(matrix):
-    return False
-  return True
-
-
-def equal_left_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c-1):
-    return False
-  return matrix[r][c-1].node == matrix[r][c].node
-
-
-def equal_right_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c+1):
-    return False
-  return matrix[r][c+1].node == matrix[r][c].node
-
-
-def change_at(matrix, r, c):
-  if not in_range(matrix, r, c):
-    return False
-  return matrix[r][c].kind != Cell.NO_CHANGE
-
-Bool8Neighborhood = collections.namedtuple('Bool8Beighborhood',
-                                           ['up_left', 'up', 'up_right', 'left', 'right', 'down_left', 'down', 'down_right'])
-
-
-def render_cell_graphics(tag, kind, changes, inner):
+def render_cell_graphics(tag, connected_cell, inner):
+  kind = connected_cell.base.kind
+  changes = connected_cell.changes
   def etag(*args, **kwargs):
     with tag(*args, **kwargs):
       pass
@@ -82,7 +45,7 @@ def render_cell_graphics(tag, kind, changes, inner):
 
 def open_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
-  matrix = fragmap.generate_matrix()
+  matrix = ConnectedFragmap(fragmap).generate_matrix()
 
   doc, tag, text = Doc().tagtext()
 
@@ -103,38 +66,15 @@ def open_fragmap_page(fragmap):
     with tag(*args, **kwargs):
       pass
 
-
-
   def render_cell(cell, r, c):
-    self_is_change = cell.kind == Cell.CHANGE
-    change_up = change_at(matrix, r-1, c)
-    change_down = change_at(matrix, r+1, c)
-    change_left = change_at(matrix, r, c-1)
-    change_right = change_at(matrix, r, c+1)
-    equal_left = equal_left_column(matrix, r, c)
-    equal_right = equal_right_column(matrix, r, c)
-    change_neigh = Bool8Neighborhood(up_left = change_left and change_up and change_at(matrix, r-1, c-1),
-                                     up = change_up,
-                                     up_right = change_right and change_up and change_at(matrix, r-1, c+1),
-                                     left = equal_left,
-                                     right = equal_right,
-                                     down_left = change_left and change_down and change_at(matrix, r+1, c-1),
-                                     down = change_down,
-                                     down_right = change_right and change_down and change_at(matrix, r+1, c+1),
-                                     )
-
-
-
     with tag('td', onclick="javascript:show(this)"):
       def inner():
         with tag('div', klass='code'):
-          if cell.node:
-            text(str(cell.node))
-            text(equal_left_column(matrix, r, c))
-            text(equal_right_column(matrix, r, c))
-            for line in cell.node._fragment._content:
+          if cell.base.node:
+            text(str(cell.base.node))
+            for line in cell.base.node._fragment._content:
               colorized_line(line)
-      render_cell_graphics(tag, cell.kind, change_neigh, inner)
+      render_cell_graphics(tag, cell, inner)
 
 
   def get_html():
@@ -146,7 +86,7 @@ def open_fragmap_page(fragmap):
         with tag('style', type='text/css'):
           doc.asis(css())
       with tag('body'):
-        render_cell_graphics(tag, Cell.CHANGE, Bool8Neighborhood(False, True, False, True, True, True, True, True), nop)
+        render_cell_graphics(tag, ConnectedCell(Cell(Cell.CHANGE), Bool8Neighborhood(False, True, False, True, True, True, True, True)), nop)
         with tag('table'):
           with tag('tr'):
             with tag('th'):
