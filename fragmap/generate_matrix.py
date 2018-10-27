@@ -143,61 +143,6 @@ class Fragmap():
     grouped_lines = group_fragment_bound_lines(node_lines)
     return Fragmap(ast._patches, grouped_lines)
 
-  def _group_columns_by(self, keyfunc):
-    groups = self.grouped_node_lines
-    # connections : '01001000..010' -> [node, node, ..]
-    # The key strings are formatted such that
-    # character i is 1 if the node line group has a node with start from patch i, and
-    #                0 otherwise.
-    connections = {}
-    connections_key_index = []
-    prev_column = None
-    debug.get('matrix').debug("Group by connection: Before: %s", groups)
-    for c in range(len(groups)):
-      group = groups[c]
-      column = self.generate_column(c, prev_column)
-      prev_column = column
-      valid, key = keyfunc(column)
-      if not valid:
-        continue
-      debug.get('matrix').debug('key: %s', key)
-      if key in connections.keys():
-        # Append to existing dict entry
-        connections[key].extend(group)
-      else:
-        # Make a new entry in the dict
-        connections[key] = group
-        connections_key_index.append(key)
-    debug.get('matrix').debug("Group by connection: After: %s", connections)
-    # Generate matrix
-    n_rows = self.get_n_patches()
-    n_cols = len(connections)
-    debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
-    for c in range(n_cols):
-      key = connections_key_index[c]
-      for r in range(n_rows):
-        matrix[r][c].kind = Cell.CHANGE if key[r] == '1' else Cell.NO_CHANGE
-    bh = BriefFragmap(self.patches, connections.values())
-    decorate_matrix(matrix)
-    bh._prerendered_matrix = matrix
-    return bh
-
-  def group_by_patch_connection(self):
-    def patch_connection_key(column):
-      inside = map(lambda it: it.inside if it is not None else False, column)
-      if inside == [False] * self.get_n_patches():
-        # Skip empty columns
-        return False, None
-      # Convert from list of True,False to string of 1,0
-      return True, ''.join(map(lambda b: '1' if b else '0', inside))
-    return self._group_columns_by(patch_connection_key)
-
-
-  def group_by_fragment_connection(self):
-    ## TODO: group all columns that have the same information, i.e. same diffs as well as same fragments
-    pass
-
   def get_n_patches(self):
     return len(self.patches)
 
@@ -257,12 +202,71 @@ class Fragmap():
     matrix = self.generate_matrix()
     return '\n'.join([''.join(row) for row in matrix])
 
-class BriefFragmap(Fragmap):
+class BriefFragmap():
 
-  _prerendered_matrix = None
+  def __init__(self, fragmap, connections, key_index):
+    assert isinstance(fragmap, Fragmap)
+    self.fragmap = fragmap
+    self.connections = connections
+    self.key_index = key_index
+    self.patches = fragmap.patches
+
+  @staticmethod
+  def group_by_patch_connection(fragmap):
+    def patch_connection_key(column):
+      inside = map(lambda it: it.inside if it is not None else False, column)
+      if inside == [False] * fragmap.get_n_patches():
+        # Skip empty columns
+        return False, None
+      # Convert from list of True,False to string of 1,0
+      return True, ''.join(map(lambda b: '1' if b else '0', inside))
+    return BriefFragmap(fragmap, *BriefFragmap._group_columns_by(fragmap, patch_connection_key))
+
+  @staticmethod
+  def group_by_fragment_connection(fragmap):
+    ## TODO: group all columns that have the same information, i.e. same diffs as well as same fragments
+    pass
+
+  @staticmethod
+  def _group_columns_by(fragmap, keyfunc):
+    groups = fragmap.grouped_node_lines
+    # connections : '01001000..010' -> [node, node, ..]
+    # The key strings are formatted such that
+    # character i is 1 if the node line group has a node with start from patch i, and
+    #                0 otherwise.
+    connections = {}
+    connections_key_index = []
+    prev_column = None
+    debug.get('matrix').debug("Group by connection: Before: %s", groups)
+    for c in range(len(groups)):
+      group = groups[c]
+      column = fragmap.generate_column(c, prev_column)
+      prev_column = column
+      valid, key = keyfunc(column)
+      if not valid:
+        continue
+      debug.get('matrix').debug('key: %s', key)
+      if key in connections.keys():
+        # Append to existing dict entry
+        connections[key].extend(group)
+      else:
+        # Make a new entry in the dict
+        connections[key] = group
+        connections_key_index.append(key)
+    debug.get('matrix').debug("Group by connection: After: %s", connections)
+    return connections, connections_key_index
 
   def generate_matrix(self):
-    return self._prerendered_matrix
+    n_rows = self.fragmap.get_n_patches()
+    n_cols = len(self.connections)
+    debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
+    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+    for c in range(n_cols):
+      key = self.key_index[c]
+      for r in range(n_rows):
+        matrix[r][c].kind = Cell.CHANGE if key[r] == '1' else Cell.NO_CHANGE
+    decorate_matrix(matrix)
+    return matrix
 
 def main():
   pp = PatchParser()

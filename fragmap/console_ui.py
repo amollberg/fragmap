@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from fragmap.generate_matrix import Fragmap, Cell
+from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap
 from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser
 from fragmap.web_ui import open_fragmap_page
@@ -23,7 +23,7 @@ CONSOLE_WIDTH = 80
 def make_fragmap(diff_list, brief=False):
   fragmap = Fragmap.from_ast(diff_list)
   if brief:
-    fragmap = fragmap.group_by_patch_connection()
+    fragmap = BriefFragmap.group_by_patch_connection(fragmap)
   return fragmap
 
 ANSI_ESC = '\033'

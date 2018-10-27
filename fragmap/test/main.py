@@ -428,7 +428,7 @@ class Test(unittest.TestCase):
   def check_diff_brief(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
     pp = PatchParser()
-    h = Fragmap.from_ast(pp.parse(diff)).group_by_patch_connection()
+    h = BriefFragmap.group_by_patch_connection(Fragmap.from_ast(pp.parse(diff)))
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
@@ -447,7 +447,7 @@ class Test(unittest.TestCase):
     for fn in diff_filenames:
       diff += read_diff(fn)
     pp = PatchParser()
-    h = Fragmap.from_ast(pp.parse(diff)).group_by_patch_connection()
+    h = BriefFragmap.group_by_patch_connection(Fragmap.from_ast(pp.parse(diff)))
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
