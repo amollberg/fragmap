@@ -45,7 +45,7 @@ def print_fragmap(fragmap, do_color):
       if i % 3 == 1:
         print_text_action(r)
       else:
-        print(''.ljust(hash_width + 1 + max_commit_width + 1), end='')
+        print(''.ljust(hash_width + 1 + max_commit_width), end='')
       print_matrix_action(i)
   def normal_layout(matrix, print_text_action, print_matrix_action):
     for r in xrange(len(matrix)):
