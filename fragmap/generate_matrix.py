@@ -3,6 +3,7 @@
 from parse_patch import *
 from update_fragments import *
 import debug
+from console_color import *
 
 import collections
 
@@ -34,8 +35,6 @@ import collections
 #   _kind
 #   Fragment
 #     (see above)
-
-
 
 def earliest_diff(node_lines):
   return min([nl._startdiff_i for nl in node_lines])
@@ -246,6 +245,38 @@ class Fragmap():
     decorate_matrix(matrix)
     return matrix
 
+  def render_for_console(self, colorize):
+    return self._render_for_console(self.generate_matrix(), colorize)
+
+  def _render_for_console(self, matrix, colorize):
+    n_rows = len(matrix)
+    if n_rows == 0:
+      return []
+    n_cols = len(matrix[0])
+    m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+
+    def render_cell(cell):
+      if cell.kind == Cell.CHANGE:
+        if colorize:
+          # Make background white
+          return ANSI_BG_WHITE + ' ' + ANSI_RESET
+        else:
+          return '#'
+      if cell.kind == Cell.BETWEEN_CHANGES:
+        if colorize:
+          # Make background red
+          return ANSI_BG_RED + ' ' + ANSI_RESET
+        else:
+          return '.'
+      if cell.kind == Cell.NO_CHANGE:
+        return '.'
+      assert False, "Unexpected cell kind: %s" %(cell.kind)
+
+    for r in range(n_rows):
+      for c in range(n_cols):
+        m[r][c] = render_cell(matrix[r][c])
+    return m
+
   def str(self):
     matrix = self.generate_matrix()
     return '\n'.join([''.join(row) for row in matrix])
@@ -316,6 +347,9 @@ class BriefFragmap(object):
     decorate_matrix(matrix)
     return matrix
 
+  def render_for_console(self, colorize):
+    return self.fragmap._render_for_console(self.generate_matrix(), colorize)
+
 def n_columns(matrix):
   if len(matrix) == 0:
     return 0
@@ -353,10 +387,25 @@ def no_change_at(matrix, r, c):
     return True
   return matrix[r][c].kind == Cell.NO_CHANGE
 
+
+def lzip(*args):
+  """
+  zip(...) but returns list of lists instead of list of tuples
+  """
+  return [list(el) for el in zip(*args)]
+
+def flatten(list_of_lists):
+  """
+  Flatten list of lists into a list
+  """
+  return [el for inner in list_of_lists for el in inner]
+
+
 class ConnectedFragmap(object):
 
   def __init__(self, fragmap):
     self.fragmap = fragmap
+    self.patches = fragmap.patches
 
   def generate_matrix(self):
     def status(connection=False, infill=False):
@@ -393,6 +442,48 @@ class ConnectedFragmap(object):
     cols = n_columns(base_matrix)
     rows = n_rows(base_matrix)
     return [[create_cell(base_matrix, r, c) for c in xrange(cols)] for r in xrange(rows)]
+
+  def render_for_console(self, colorize):
+    connection_matrix = self.generate_matrix()
+    def create_cell_description(cell):
+      def character(position, status):
+        if status == ConnectionStatus.EMPTY:
+          return ' '
+        if status == ConnectionStatus.INFILL:
+          return '^'
+        if position in ['up_left', 'up_right', 'down_left', 'down_right']:
+          if status == ConnectionStatus.CONNECTION:
+            # Should not happen
+            #assert False
+            return '!'
+        if position in ['up', 'down']:
+          if status == ConnectionStatus.CONNECTION:
+            return "|"
+        if position in ['left', 'right']:
+          if status == ConnectionStatus.CONNECTION:
+            return "-"
+        if position == 'center':
+          if status == ConnectionStatus.CONNECTION:
+            if isinstance(cell.base.node, str):
+              return cell.base.node
+            else:
+              return '#'
+        #assert False
+        # Should not happen
+        return '!'
+      return [''.join([character('up_left', cell.changes.up_left),
+                       character('up', cell.changes.up),
+                       character('up_right', cell.changes.up_right)]),
+              ''.join([character('left', cell.changes.left),
+                       character('center', cell.changes.center),
+                       character('right', cell.changes.right)]),
+              ''.join([character('down_left', cell.changes.down_left),
+                       character('down', cell.changes.down),
+                       character('down_right', cell.changes.down_right)])]
+    return flatten([lzip(*[create_cell_description(cell) for cell in row])
+                    for row in connection_matrix])
+  # TODO: Color
+
 
 def main():
   pp = PatchParser()

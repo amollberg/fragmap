@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
+from __future__ import print_function
 
-from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap
+from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
 from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser
 from fragmap.web_ui import open_fragmap_page
+from console_color import *
 import debug
 
 import argparse
@@ -20,56 +22,37 @@ except ImportError:
 
 CONSOLE_WIDTH = 80
 
-def make_fragmap(diff_list, brief=False):
+def make_fragmap(diff_list, brief=False, infill=False):
   fragmap = Fragmap.from_ast(diff_list)
   if brief:
     fragmap = BriefFragmap.group_by_patch_connection(fragmap)
+  if infill:
+    fragmap = ConnectedFragmap(fragmap)
   return fragmap
 
-ANSI_ESC = '\033'
-ANSI_FG_RED = ANSI_ESC + '[31m'
-ANSI_BG_RED = ANSI_ESC + '[41m'
-ANSI_BG_WHITE = ANSI_ESC + '[47m'
-ANSI_FG_CYAN = ANSI_ESC + '[36m'
-ANSI_RESET = ANSI_ESC + '[0m'
-
-
-def render_matrix_for_console(matrix):
-  n_rows = len(matrix)
-  if n_rows == 0:
-    return []
-  n_cols = len(matrix[0])
-  m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
-
-  def render_cell(cell):
-    if cell.kind == Cell.CHANGE:
-      # Make background white
-      return ANSI_BG_WHITE + ' ' + ANSI_RESET
-    if cell.kind == Cell.BETWEEN_CHANGES:
-      # Make background red
-      return ANSI_BG_RED + ' ' + ANSI_RESET
-    if cell.kind == Cell.NO_CHANGE:
-      return '.'
-    assert False, "Unexpected cell kind: %s" %(cell.kind)
-
-  for r in range(n_rows):
-    for c in range(n_cols):
-      m[r][c] = render_cell(matrix[r][c])
-  return m
-
-
 # TODO: Change name?
-def print_fragmap(fragmap, do_decorate=False):
+def print_fragmap(fragmap, do_color):
   matrix = fragmap.generate_matrix()
+  matrix = fragmap.render_for_console(do_color)
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
-  if do_decorate:
-    # Colorize the matrix
-    matrix = render_matrix_for_console(matrix)
+  def infill_r(matrix, print_text_action, print_matrix_action):
+    r = 0
+    for i in xrange(len(matrix)):
+      r = i / 3
+      if i % 3 == 1:
+        print_text_action(r)
+      else:
+        print(''.ljust(hash_width + 1 + max_commit_width + 1), end='')
+      print_matrix_action(i)
+  def normal_r(matrix, print_text_action, print_matrix_action):
+    for r in xrange(len(matrix)):
+      print_text_action(r)
+      print_matrix_action(r)
   # Draw the text and matrix
-  for r in range(len(matrix)):
+  def print_line(r):
     cur_patch = fragmap.patches[r]._header
     commit_msg = cur_patch._message[0] # First row of message
     hash = cur_patch._hash
@@ -79,9 +62,18 @@ def print_fragmap(fragmap, do_decorate=False):
     commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
-    if do_decorate:
+    if do_color:
       hash = ANSI_FG_CYAN + hash + ANSI_RESET
-    print hash, commit_msg, ''.join(matrix[r])
+    print(hash, commit_msg, end='')
+
+  def print_matrix(r):
+    print(''.join(matrix[r]))
+
+  if isinstance(fragmap, ConnectedFragmap):
+    infill_r(matrix, print_line, print_matrix)
+  else:
+    normal_r(matrix, print_line, print_matrix)
+
 
 def display_fragmap_screen(fragmap):
   hash_width = 8
@@ -106,15 +98,17 @@ def main():
                          help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
   argparser.add_argument('-s', metavar='START_REV', action='store',
                          help='Which revision to start showing from.')
-  argparser.add_argument('-f', '--full', action='store_true', required=False,
-                         help='Show the full fragmap, disabling deduplication of the columns.')
-  argparser.add_argument('--no-decoration', action='store_true', required=False,
+  argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
   outformatarg = argparser.add_mutually_exclusive_group(required=False)
+  argparser.add_argument('-f', '--full', action='store_true', required=False,
+                         help='Show the full fragmap, disabling deduplication of the columns.')
   outformatarg.add_argument('-w', '--web', action='store_true', required=False,
-                            help='Generate and open an HTML document instead of printing to console')
+                            help='Generate and open an HTML document instead of printing to console. Implies -f')
   outformatarg.add_argument('-c', '--curses-ui', action='store_true', required=False,
                             help='Show an interactive curses-based interface instead of plain text.')
+  outformatarg.add_argument('-l', '--infilled', action='store_true', required=False,
+                            help='Show an infilled version as plain text on console. Looks like the HTML version. Implies -f')
 
   args = argparser.parse_args()
   # Parse diffs
@@ -122,20 +116,21 @@ def main():
   lines = get_diff(max_count=args.n, start=args.s)
   if lines is None:
     exit(1)
+  is_full = args.full or args.web or args.infilled
   debug.get('console').debug(lines)
   diff_list = pp.parse(lines)
   debug.get('console').debug(diff_list)
-  fragmap = make_fragmap(diff_list, not args.full)
+  fragmap = make_fragmap(diff_list, not is_full, args.infilled)
   if args.curses_ui:
     if NPYSCREEN_AVAILABLE:
       display_fragmap_screen(fragmap)
     else:
-      print "Curses unavailable; using plain text."
-      print_fragmap(fragmap, do_decorate = not args.no_decoration)
+      print("Curses unavailable; using plain text.")
+      print_fragmap(fragmap, do_color = not args.no_color)
   elif args.web:
     open_fragmap_page(fragmap)
   else:
-    print_fragmap(fragmap, do_decorate = not args.no_decoration)
+    print_fragmap(fragmap, do_color = not args.no_color)
 
 if __name__ == '__main__':
   main()

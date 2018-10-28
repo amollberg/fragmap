@@ -20,54 +20,6 @@ def create_node_matrix_from_description(desc_matrix):
 assert [[Cell(Cell.CHANGE, '3'), Cell(Cell.NO_CHANGE)]] == \
        create_node_matrix_from_description(['3 '])
 
-def lzip(*args):
-  """
-  zip(...) but returns list of lists instead of list of tuples
-  """
-  return [list(el) for el in zip(*args)]
-
-def flatten(list_of_lists):
-  """
-  Flatten list of lists into a list
-  """
-  return [el for inner in list_of_lists for el in inner]
-
-def create_description_from_connection_matrix(connection_matrix):
-  def create_cell_description(cell):
-    def character(position, status):
-      if status == ConnectionStatus.EMPTY:
-        return ' '
-      if status == ConnectionStatus.INFILL:
-        return '^'
-      if position in ['up_left', 'up_right', 'down_left', 'down_right']:
-        if status == ConnectionStatus.CONNECTION:
-          # Should not happen
-          #assert False
-          return '!'
-      if position in ['up', 'down']:
-        if status == ConnectionStatus.CONNECTION:
-          return "|"
-      if position in ['left', 'right']:
-        if status == ConnectionStatus.CONNECTION:
-          return "-"
-      if position == 'center':
-        if status == ConnectionStatus.CONNECTION:
-          return cell.base.node
-      #assert False
-      # Should not happen
-      return '!'
-    return [''.join([character('up_left', cell.changes.up_left),
-                     character('up', cell.changes.up),
-                     character('up_right', cell.changes.up_right)]),
-            ''.join([character('left', cell.changes.left),
-                     character('center', cell.changes.center),
-                     character('right', cell.changes.right)]),
-            ''.join([character('down_left', cell.changes.down_left),
-                     character('down', cell.changes.down),
-                     character('down_right', cell.changes.down_right)])]
-  return flatten([lzip(*[create_cell_description(cell) for cell in row])
-                  for row in connection_matrix])
-
 
 def create_connection_matrix_from_description(desc_matrix):
   def create_connected_cell(up_row, mid_row, down_row):
@@ -239,8 +191,7 @@ class ConnectionTest(unittest.TestCase):
   def check_matrix(self, expected_connection_matrix, node_matrix):
     matrix = create_node_matrix_from_description(node_matrix)
     connected_fragmap = ConnectedFragmap(FakeFragmap(matrix))
-    actual_matrix = connected_fragmap.generate_matrix()
-    actual_description = create_description_from_connection_matrix(actual_matrix)
+    actual_description = connected_fragmap.render_for_console(False)
     def assert_same_description(actual, expected):
       def join_rows(matrix_description):
         return [''.join(row) for row in matrix_description]
