@@ -38,7 +38,7 @@ def print_fragmap(fragmap, do_color):
   hash_width = 8
   padded_matrix_width = matrix_width
   max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
-  def infill_r(matrix, print_text_action, print_matrix_action):
+  def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in xrange(len(matrix)):
       r = i / 3
@@ -47,7 +47,7 @@ def print_fragmap(fragmap, do_color):
       else:
         print(''.ljust(hash_width + 1 + max_commit_width + 1), end='')
       print_matrix_action(i)
-  def normal_r(matrix, print_text_action, print_matrix_action):
+  def normal_layout(matrix, print_text_action, print_matrix_action):
     for r in xrange(len(matrix)):
       print_text_action(r)
       print_matrix_action(r)
@@ -70,9 +70,9 @@ def print_fragmap(fragmap, do_color):
     print(''.join(matrix[r]))
 
   if isinstance(fragmap, ConnectedFragmap):
-    infill_r(matrix, print_line, print_matrix)
+    infill_layout(matrix, print_line, print_matrix)
   else:
-    normal_r(matrix, print_line, print_matrix)
+    normal_layout(matrix, print_line, print_matrix)
 
 
 def display_fragmap_screen(fragmap):
