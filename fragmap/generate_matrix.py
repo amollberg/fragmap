@@ -471,16 +471,17 @@ class ConnectedFragmap(object):
         #assert False
         # Should not happen
         return '!'
-      return [''.join([character('up_left', cell.changes.up_left),
-                       character('up', cell.changes.up),
-                       character('up_right', cell.changes.up_right)]),
-              ''.join([character('left', cell.changes.left),
-                       character('center', cell.changes.center),
-                       character('right', cell.changes.right)]),
-              ''.join([character('down_left', cell.changes.down_left),
-                       character('down', cell.changes.down),
-                       character('down_right', cell.changes.down_right)])]
-    return flatten([lzip(*[create_cell_description(cell) for cell in row])
+      return [[character('up_left', cell.changes.up_left),
+               character('up', cell.changes.up),
+               character('up_right', cell.changes.up_right)],
+              [character('left', cell.changes.left),
+               character('center', cell.changes.center),
+               character('right', cell.changes.right)],
+              [character('down_left', cell.changes.down_left),
+               character('down', cell.changes.down),
+               character('down_right', cell.changes.down_right)]]
+
+    return flatten([[flatten(v) for v in lzip(*[create_cell_description(cell) for cell in row])]
                     for row in connection_matrix])
   # TODO: Color
 

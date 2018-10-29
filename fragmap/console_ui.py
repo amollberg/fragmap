@@ -13,6 +13,12 @@ import argparse
 import copy
 import os
 
+def lzip(*args):
+  """
+  zip(...) but returns list of lists instead of list of tuples
+  """
+  return [list(el) for el in zip(*args)]
+
 NPYSCREEN_AVAILABLE = False
 try:
   from fragmap.curses_ui import FragmapApp
@@ -30,10 +36,25 @@ def make_fragmap(diff_list, brief=False, infill=False):
     fragmap = ConnectedFragmap(fragmap)
   return fragmap
 
+def filter_consecutive_equal_columns(char_matrix):
+  transposed_matrix = lzip(*char_matrix)
+  filtered_matrix = []
+  for col in transposed_matrix:
+    if filtered_matrix == []:
+      filtered_matrix.append(col)
+    if filtered_matrix[-1] == col:
+      continue
+    if (''.join(col)).strip('. ') == '':
+      continue
+    filtered_matrix.append(col)
+  return lzip(*filtered_matrix)
+
+
 # TODO: Change name?
 def print_fragmap(fragmap, do_color):
   matrix = fragmap.generate_matrix()
   matrix = fragmap.render_for_console(do_color)
+  matrix = filter_consecutive_equal_columns(matrix)
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
