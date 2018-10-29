@@ -57,7 +57,7 @@ def print_fragmap(fragmap, do_color):
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
-  max_commit_width = min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width))
+  max_commit_width = max(0, min(CONSOLE_WIDTH/2, CONSOLE_WIDTH - (hash_width + 1 + 1 + padded_matrix_width)))
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in xrange(len(matrix)):
