@@ -450,6 +450,8 @@ class ConnectedFragmap(object):
         if status == ConnectionStatus.EMPTY:
           return ' '
         if status == ConnectionStatus.INFILL:
+          if colorize:
+            return ANSI_BG_RED + '^' + ANSI_RESET
           return '^'
         if position in ['up_left', 'up_right', 'down_left', 'down_right']:
           if status == ConnectionStatus.CONNECTION:
@@ -458,16 +460,27 @@ class ConnectedFragmap(object):
             return '!'
         if position in ['up', 'down']:
           if status == ConnectionStatus.CONNECTION:
+            if colorize:
+              return ANSI_BG_RED + '|' + ANSI_RESET
             return "|"
         if position in ['left', 'right']:
           if status == ConnectionStatus.CONNECTION:
-            return "-"
+            if colorize:
+              return ANSI_BG_MAGENTA + '-' + ANSI_RESET
+            else:
+              return "-"
         if position == 'center':
           if status == ConnectionStatus.CONNECTION:
             if isinstance(cell.base.node, str):
-              return cell.base.node
+              if colorize:
+                return ANSI_BG_WHITE + ANSI_FG_BLUE + cell.base.node + ANSI_RESET
+              else:
+                return cell.base.node
             else:
-              return '#'
+              if colorize:
+                return ANSI_BG_WHITE + ' ' + ANSI_RESET
+              else:
+                return '#'
         #assert False
         # Should not happen
         return '!'
@@ -483,7 +496,6 @@ class ConnectedFragmap(object):
 
     return flatten([[flatten(v) for v in lzip(*[create_cell_description(cell) for cell in row])]
                     for row in connection_matrix])
-  # TODO: Color
 
 
 def main():
