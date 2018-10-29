@@ -52,7 +52,6 @@ def filter_consecutive_equal_columns(char_matrix):
 
 # TODO: Change name?
 def print_fragmap(fragmap, do_color):
-  matrix = fragmap.generate_matrix()
   matrix = fragmap.render_for_console(do_color)
   matrix = filter_consecutive_equal_columns(matrix)
   matrix_width = len(matrix[0])
