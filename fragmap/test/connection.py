@@ -182,7 +182,7 @@ class ConnectionTest(unittest.TestCase):
                        [' 1 ', ' 2 '],
                        [' | ', ' | '],
 
-                       [' | ', ' | '],
+                       [' |^', '^| '], # TODO: Weird behavior, come up with useful and consistent style
                        [' 1-', '-1 '],
                        ['   ', '   ']],
                       ['12',
