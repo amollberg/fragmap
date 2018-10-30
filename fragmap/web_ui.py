@@ -225,14 +225,14 @@ def raw_css():
         z-index: -3;
     }
     .inner {
-        margin: {{40}}px;
         background: #c0c0c0;
         border-radius: {{70}}px;
-        margin: {{80}}px 0px;
-        float: left;
         height: {{180}}px;
         width: {{180}}px;
         padding: {{10}}px;
+        position: absolute;
+        left: {{80}}px;
+        top: {{80}}px;
     }
     .dot {
         background: #a00080;
@@ -248,12 +248,17 @@ def raw_css():
     .left, .right {
         border-radius: {{20}}px;
         border-radius: 0;
-        float: left;
-        margin: {{80}}px 0px;
         height: {{200}}px;
         width: {{80}}px;
         z-index: -2;
-        position: relative;
+        position: absolute;
+        top: {{80}}px;
+    }
+    .right {
+        right: 0px;
+    }
+    .left {
+        left: 0px;
     }
     .left.invisible, .right.invisible {
        visibility: hidden;
