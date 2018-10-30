@@ -242,6 +242,7 @@ def raw_css():
     }
     #code_window {
       font-family: monospace;
+      position: fixed;
     }
     .codeline {
       margin: 0 auto;
