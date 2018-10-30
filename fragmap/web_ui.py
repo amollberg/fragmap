@@ -130,9 +130,9 @@ def open_fragmap_page(fragmap):
         with tag('table'):
           start_filenames = generate_first_filename_spans(matrix)
           with tag('tr'):
-            with tag('th'):
+            with tag('th', style="font-weight: bold"):
               text('Hash')
-            with tag('th'):
+            with tag('th', style="font-weight: bold"):
               text('Message')
             if len(matrix) > 0:
               render_filename_start_row(start_filenames)
@@ -206,6 +206,10 @@ def raw_css():
     tr:nth-child(odd) {
       background-color: rgba(90, 90, 90, 0.4);
     }
+    th {
+      font-family: sans-serif;
+      font-weight: normal;
+    }
     td {
       text-align: left;
       vertical-align: bottom;
@@ -213,6 +217,7 @@ def raw_css():
     }
     .message_td {
       white-space: nowrap;
+      font-family: sans-serif;
     }
     .commit_hash {
       font-family: monospace;
