@@ -237,7 +237,7 @@ def raw_css():
     .dot {
         background: #a00080;
         border-radius: {{60}}px; /* dot.border_radius = inner.border_radius - inner.padding */
-        box-shadow: {{2}}px {{2}}px {{10}}px {{4}}px rgba(0,0,0,0.3) inset;
+        box-shadow: {{15}}px {{15}}px {{3}}px {{3}}px rgba(0,0,0,0.8) inset;
         display: block;
         width: 100%;
         height: 100%;
