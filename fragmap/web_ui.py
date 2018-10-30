@@ -225,11 +225,11 @@ def raw_css():
         z-index: -3;
     }
     .inner {
+        border-radius: {{20}}px;
         background: #c0c0c0;
-        border-radius: {{70}}px;
-        height: {{180}}px;
-        width: {{180}}px;
-        padding: {{10}}px;
+        height: {{140}}px;
+        width: {{140}}px;
+        padding: {{30}}px;
         position: absolute;
         left: {{80}}px;
         top: {{80}}px;
@@ -246,11 +246,10 @@ def raw_css():
         background: #c0c0c0;
     }
     .left, .right {
-        border-radius: {{20}}px;
         border-radius: 0;
         height: {{200}}px;
-        width: {{80}}px;
-        z-index: -2;
+        width: {{100}}px;
+        z-index: 1;
         position: absolute;
         top: {{80}}px;
     }
@@ -303,45 +302,20 @@ def raw_css():
         width: {{150}}px;
         z-index: -1;
     }
-    .quadrant:before {
-        content: "";
-        display: block;
-        position: absolute;
-        height: {{80}}px;
-        width: {{80}}px;
-    }
     .up_left {
         top: 0px;
         left: 0px;
-    }
-    .up_left:before {
-        border-radius: 0 0 15% 0;
-        bottom: -{{20}}px;
     }
     .up_right {
         top: 0px;
         right: 0px;
     }
-    .up_right:before {
-        border-radius: 0 0 0 15%;
-        right: 0px;
-        bottom: -{{20}}px;
-    }
     .down_left {
         bottom: 0px;
         left: 0px;
     }
-    .down_left:before {
-        border-radius: 0 15% 0 0;
-        top: -{{20}}px; /* bottom pos = before.height + after.height - left.height */
-    }
     .down_right {
         bottom: 0px;
-        right: 0px;
-    }
-    .down_right:before {
-        border-radius: 15% 0 0 0;
-        top: -{{20}}px; /* bottom pos = before.height + after.height - left.height */
         right: 0px;
     }
     """
