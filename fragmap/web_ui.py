@@ -72,14 +72,50 @@ def open_fragmap_page(fragmap):
       pass
 
   def render_cell(cell, r, c):
-    with tag('td', onclick="javascript:show(this)"):
-      def inner():
-        with tag('div', klass='code'):
-          if cell.base.node:
-            text(str(cell.base.node))
-            for line in cell.base.node._fragment._content:
-              colorized_line(line)
-      render_cell_graphics(tag, cell, inner)
+    def inner():
+      with tag('div', klass='code'):
+        if cell.base.node:
+          text(str(cell.base.node))
+          for line in cell.base.node._fragment._content:
+            colorized_line(line)
+    render_cell_graphics(tag, cell, inner)
+
+  def get_first_filename(matrix, c):
+    for r in xrange(len(matrix)):
+      cell = matrix[r][c]
+      if cell.base.kind != Cell.NO_CHANGE:
+        return cell.base.node._filename
+    return None
+
+  def generate_first_filename_spans(matrix):
+    filenames = []
+    if len(matrix) == 0:
+      return filenames
+    for c in xrange(len(matrix[0])):
+      fn = get_first_filename(matrix, c)
+      if len(filenames) == 0:
+        filenames.append({'filename': fn, 'span': 1, 'start': c})
+        continue
+      if filenames[-1]['filename'] == fn or fn is None:
+        filenames[-1]['span'] += 1
+        continue
+      if fn is not None:
+        filenames.append({'filename': fn, 'span': 1, 'start': c})
+    return filenames
+
+  def render_filename_start_row(filenames):
+    for fn in filenames:
+      with tag('th', klass='filename_start', colspan=fn['span'], style='vertical-align: top; overflow: hidden'):
+        with tag('div', style="position: relative; width: inherit"):
+          with tag('div', style="overflow: hidden; position: absolute; right: 10px; width: 10000px; text-align: right"):
+            if fn['filename'] is not None:
+              text(fn['filename'])
+
+  def filename_header_td_class(filenames, c):
+    for fn in filenames:
+      if c == fn['start']:
+        return 'filename_start '
+    return ''
 
 
   def get_html():
@@ -92,13 +128,14 @@ def open_fragmap_page(fragmap):
           doc.asis(css())
       with tag('body'):
         with tag('table'):
+          start_filenames = generate_first_filename_spans(matrix)
           with tag('tr'):
             with tag('th'):
               text('Hash')
             with tag('th'):
               text('Message')
-            with tag('th'):
-              text(' ')
+            if len(matrix) > 0:
+              render_filename_start_row(start_filenames)
           for r in range(len(matrix)):
             cur_patch = fragmap.patches[r]._header
             commit_msg = cur_patch._message[0] # First row of message
@@ -111,7 +148,9 @@ def open_fragmap_page(fragmap):
                 with tag('span', klass='commit_message'):
                   text(commit_msg)
               for c in range(len(matrix[r])):
-                render_cell(matrix[r][c], r, c)
+                with tag('td', klass=filename_header_td_class(start_filenames, c),
+                         onclick="javascript:show(this)"):
+                  render_cell(matrix[r][c], r, c)
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
@@ -212,6 +251,9 @@ def raw_css():
     }
     .codeline_removed {
       color: red;
+    }
+    th.filename_start, td.filename_start {
+      border-left: 4px solid black;
     }
     .invisible, .invisible::before {
         background: inherit;
