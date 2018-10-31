@@ -233,8 +233,9 @@ def raw_css():
     .cell_between_changes {
       background-color: red;
     }
-    #selected_cell {
-      box-shadow: 0px 0px 3px 2px #6F67E0 inset;
+    #selected_cell .dot {
+      background: white;
+      box-shadow: 0px 0px 5px 5px;
     }
     tr#selected_row {
       background-color: rgba(160, 160, 160, 0.4);
@@ -273,7 +274,6 @@ def raw_css():
     }
     .inner {
         border-radius: {{20}}px;
-        background: #c0c0c0;
         height: {{140}}px;
         width: {{140}}px;
         padding: {{30}}px;
@@ -282,15 +282,17 @@ def raw_css():
         top: {{80}}px;
     }
     .dot {
-        background: #a00080;
+        background: #0d76c2;
         border-radius: {{60}}px; /* dot.border_radius = inner.border_radius - inner.padding */
         box-shadow: {{15}}px {{15}}px {{3}}px {{3}}px rgba(0,0,0,0.8) inset;
         display: block;
+        position: relative;
+        z-index: 2;
         width: 100%;
         height: 100%;
     }
-    .left:not(.invisible), .right:not(.invisible) {
-        background: #c0c0c0;
+    .left:not(.invisible), .right:not(.invisible), .inner {
+        background: #35aaff;
     }
     .left, .right {
         border-radius: 0;
@@ -310,7 +312,7 @@ def raw_css():
        visibility: hidden;
     }
     .top:not(.invisible), .bottom:not(.invisible) {
-        background: red;
+        background: #642bff;
     }
     .top, .bottom {
         display: block;
@@ -326,14 +328,11 @@ def raw_css():
     .bottom {
         bottom: 0px;
     }
-    .quadrant:not(.invisible)::before {
-        background: tomato;
-    }
-    .quadrant:not(.invisible) {
-        background: tomato;
+    .quadrant:not(.invisible)::before, .quadrant:not(.invisible) {
+        background: #d7d8ff;
     }
     .fullquadrant:not(.invisible) {
-        background: tomato;
+        background: #d7d8ff;
     }
     .fullquadrant {
         display:block;
