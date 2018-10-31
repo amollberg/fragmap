@@ -227,17 +227,13 @@ def raw_css():
     .commit_message {
       margin-right: 10pt;
     }
-    .matrix_cell {
-      font-family: monospace;
-      width: 8pt;
-    }
     .cell_change {
       background-color: white;
     }
     .cell_between_changes {
       background-color: red;
     }
-    .matrix_cell#selected_cell {
+    #selected_cell {
       box-shadow: 0px 0px 3px 2px #6F67E0 inset;
     }
     tr#selected_row {
