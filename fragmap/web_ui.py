@@ -127,30 +127,31 @@ def open_fragmap_page(fragmap):
         with tag('style', type='text/css'):
           doc.asis(css())
       with tag('body'):
-        with tag('table'):
-          start_filenames = generate_first_filename_spans(matrix)
-          with tag('tr'):
-            with tag('th', style="font-weight: bold"):
-              text('Hash')
-            with tag('th', style="font-weight: bold"):
-              text('Message')
-            if len(matrix) > 0:
-              render_filename_start_row(start_filenames)
-          for r in range(len(matrix)):
-            cur_patch = fragmap.patches[r]._header
-            commit_msg = cur_patch._message[0] # First row of message
-            hash = cur_patch._hash
+        with tag('div', id='map_window'):
+          with tag('table'):
+            start_filenames = generate_first_filename_spans(matrix)
             with tag('tr'):
-              with tag('td'):
-                with tag('span', klass='commit_hash'):
-                  text(hash[0:8])
-              with tag('td', klass="message_td"):
-                with tag('span', klass='commit_message'):
-                  text(commit_msg)
-              for c in range(len(matrix[r])):
-                with tag('td', klass=filename_header_td_class(start_filenames, c),
-                         onclick="javascript:show(this)"):
-                  render_cell(matrix[r][c], r, c)
+              with tag('th', style="font-weight: bold"):
+                text('Hash')
+              with tag('th', style="font-weight: bold"):
+                text('Message')
+              if len(matrix) > 0:
+                render_filename_start_row(start_filenames)
+            for r in range(len(matrix)):
+              cur_patch = fragmap.patches[r]._header
+              commit_msg = cur_patch._message[0] # First row of message
+              hash = cur_patch._hash
+              with tag('tr'):
+                with tag('td'):
+                  with tag('span', klass='commit_hash'):
+                    text(hash[0:8])
+                with tag('td', klass="message_td"):
+                  with tag('span', klass='commit_message'):
+                    text(commit_msg)
+                for c in range(len(matrix[r])):
+                  with tag('td', klass=filename_header_td_class(start_filenames, c),
+                           onclick="javascript:show(this)"):
+                    render_cell(matrix[r][c], r, c)
         with tag('div', id='code_window'):
           text('')
         with tag('script'):
@@ -245,9 +246,11 @@ def raw_css():
     .code {
       display: none;
     }
+    #map_window {
+      overflow-x: auto;
+    }
     #code_window {
       font-family: monospace;
-      position: fixed;
     }
     .codeline {
       margin: 0 auto;
