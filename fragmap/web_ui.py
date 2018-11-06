@@ -220,6 +220,7 @@ def raw_css():
       padding: 0;
     }
     .message_cell {
+      box-shadow: 10px 0px 10px 0px rgba(0,0,0,0.5);
     }
     th:first-child, th:nth-child(2) {
       position: -webkit-sticky;
