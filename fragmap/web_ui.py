@@ -142,10 +142,10 @@ def open_fragmap_page(fragmap):
               commit_msg = cur_patch._message[0] # First row of message
               hash = cur_patch._hash
               with tag('tr'):
-                with tag('td'):
+                with tag('th'):
                   with tag('span', klass='commit_hash'):
                     text(hash[0:8])
-                with tag('td', klass="message_td"):
+                with tag('th', klass="message_cell"):
                   with tag('span', klass='commit_message'):
                     text(commit_msg)
                 for c in range(len(matrix[r])):
@@ -201,22 +201,32 @@ def raw_css():
     table {
       border-collapse: collapse;
     }
-    tr:nth-child(even) {
-      background-color: rgba(70, 70, 70, 0.4);
+    tr:nth-child(even), tr:nth-child(even) th:nth-child(1), tr:nth-child(even) th:nth-child(2) {
+      background-color: rgba(28, 28, 28);
     }
-    tr:nth-child(odd) {
-      background-color: rgba(90, 90, 90, 0.4);
+    tr:nth-child(odd), tr:nth-child(odd) th:nth-child(1), tr:nth-child(odd) th:nth-child(2){
+      background-color: rgba(36, 36, 36);
+    }
+    tr th:nth-child(1), tr th:nth-child(2) {
+      z-index: 2;
     }
     th {
       font-family: sans-serif;
       font-weight: normal;
     }
-    td {
+    td, .message_cell {
       text-align: left;
       vertical-align: bottom;
       padding: 0;
     }
-    .message_td {
+    .message_cell {
+    }
+    th:first-child, th:nth-child(2) {
+      position: -webkit-sticky;
+      position: sticky;
+      left: 0;
+    }
+    .message_cell {
       white-space: nowrap;
       font-family: sans-serif;
     }
@@ -265,12 +275,11 @@ def raw_css():
         background: inherit;
     }
     .cell {
-        background: black;
         position: relative;
         width: {{360}}px;
         height: {{360}}px;
         float: left;
-        z-index: -3;
+        z-index: 1;
     }
     .inner {
         border-radius: {{20}}px;
