@@ -40,6 +40,8 @@ def main():
                          help='Which revision to start showing from.')
   argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
+  argparser.add_argument('-o', '--export', metavar='FILENAME', type=argparse.FileType('w'), action='store', required=False,
+                         help='Export the contents of the current selection of commits to the selected file')
   outformatarg = argparser.add_mutually_exclusive_group(required=False)
   argparser.add_argument('-f', '--full', action='store_true', required=False,
                          help='Show the full fragmap, disabling deduplication of the columns.')
@@ -59,6 +61,8 @@ def main():
   is_full = args.full or args.web or args.infilled
   debug.get('console').debug(lines)
   diff_list = pp.parse(lines)
+  if args.export:
+    args.export.write('\n'.join(lines))
   debug.get('console').debug(diff_list)
   fragmap = make_fragmap(diff_list, not is_full, args.infilled)
   if args.curses_ui:
