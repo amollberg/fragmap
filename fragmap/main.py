@@ -36,10 +36,10 @@ def main():
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=parent_parsers)
   inspecarg = argparser.add_argument_group('input', 'Specify the input commits or patch file')
-  argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store',
-                         help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
-  argparser.add_argument('-s', metavar='START_REV', action='store',
-                         help='Which revision to start showing from.')
+  inspecarg.add_argument('-n', metavar='NUMBER_OF_COMMITS', action='store',
+                         help='How many previous commits to show. Uncommitted changes are shown in addition to these.')
+  inspecarg.add_argument('-s', metavar='START_COMMIT', action='store',
+                         help='Which commit to start showing from, exclusive.')
   inspecarg.add_argument('-i', '--import', metavar='FILENAME', action='store', required=False, dest='import_',
                          help='Import the patch contents from a file or stdin (-)')
   argparser.add_argument('--no-color', action='store_true', required=False,

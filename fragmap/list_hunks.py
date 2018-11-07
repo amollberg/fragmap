@@ -41,7 +41,7 @@ def get_diff(max_count=None, start=None):
   try:
     print '... Retrieving uncommitted changes\r',
     output += get_output_lines([GIT, 'diff', '-U0', '--no-color'])
-    print '... Finding revisions             \r',
+    print '... Finding commits               \r',
     rev_list = get_rev_list(max_count, start)
     if rev_list:
       print '... Retrieving fragments          \r',
