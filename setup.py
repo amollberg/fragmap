@@ -32,6 +32,6 @@ setup(
         "git+https://github.com/amollberg/npyscreen.git@6e219e47c760f060d5dc4209056389c69592ed59#egg=npyscreen-4.9.1.dev99"
     ],
     entry_points={
-        'console_scripts': ['fragmap=fragmap.console_ui:main'],
+        'console_scripts': ['fragmap=fragmap.main:main'],
     },
 )
