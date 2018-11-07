@@ -53,8 +53,5 @@ def get_diff(max_count=None, start=None):
     elif e.output is not None:
       print 'fragmap: Unknown error while executing ', e.cmd, ", git exit code:", e.returncode
     return None
-
-if __name__ == '__main__':
-  def pr(s):
-    print s
-  map(pr, get_diff(get_rev_range_from_args()))
+  finally:
+    print ''
