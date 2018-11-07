@@ -12,6 +12,7 @@ import debug
 import argparse
 import copy
 import os
+import fileinput
 
 def make_fragmap(diff_list, brief=False, infill=False):
   fragmap = Fragmap.from_ast(diff_list)
@@ -34,10 +35,13 @@ def main():
   argparser = argparse.ArgumentParser(prog='fragmap',
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=parent_parsers)
+  inspecarg = argparser.add_argument_group('input', 'Specify the input commits or patch file')
   argparser.add_argument('-n', metavar='NUMBER_OF_REVS', action='store',
                          help='How many previous revisions to show. Uncommitted changes are shown in addition to these.')
   argparser.add_argument('-s', metavar='START_REV', action='store',
                          help='Which revision to start showing from.')
+  inspecarg.add_argument('-i', '--import', metavar='FILENAME', action='store', required=False, dest='import_',
+                         help='Import the patch contents from a file or stdin (-)')
   argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
   argparser.add_argument('-o', '--export', metavar='FILENAME', type=argparse.FileType('w'), action='store', required=False,
@@ -55,7 +59,13 @@ def main():
   args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
-  lines = get_diff(max_count=args.n, start=args.s)
+  if args.import_ and (args.s or args.n):
+    print('Error: --import/-i cannot be used at the same time as other input specifiers')
+    exit(1)
+  if args.import_:
+    lines = [l.rstrip() for l in fileinput.input(args.import_)]
+  else:
+    lines = get_diff(max_count=args.n, start=args.s)
   if lines is None:
     exit(1)
   is_full = args.full or args.web or args.infilled
