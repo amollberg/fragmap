@@ -31,21 +31,12 @@ def render_cell_graphics(tag, connected_cell, inner):
   if kind != Cell.NO_CHANGE:
     inner()
     with tag('div', klass="cell"):
-      etag('div', klass="fullquadrant up_left " + hideempty(changes.up_left))
-      etag('div', klass="fullquadrant up_right " + hideempty(changes.up_right))
-      etag('div', klass="fullquadrant down_left " + hideempty(changes.down_left))
-      etag('div', klass="fullquadrant down_right " + hideempty(changes.down_right))
-
       etag('div', klass="top " + hideempty(changes.up))
       etag('div', klass="left " + hideempty(changes.left), style=passinfill(changes.left))
       with tag('div', klass="inner", style=(passinfill(changes.center))):
         etag('div', klass="dot")
       etag('div', klass="right " + hideempty(changes.right), style=passinfill(changes.right))
       etag('div', klass="bottom " + hideempty(changes.down))
-      etag('div', klass="quadrant up_left " + hideempty(changes.up_left))
-      etag('div', klass="quadrant up_right " + hideempty(changes.up_right))
-      etag('div', klass="quadrant down_left " + hideempty(changes.down_left))
-      etag('div', klass="quadrant down_right " + hideempty(changes.down_right))
 
 
 def open_fragmap_page(fragmap):
@@ -337,41 +328,5 @@ def raw_css():
     }
     .bottom {
         bottom: 0px;
-    }
-    .quadrant:not(.invisible)::before, .quadrant:not(.invisible) {
-        background: #d7d8ff;
-    }
-    .fullquadrant:not(.invisible) {
-        background: #d7d8ff;
-    }
-    .fullquadrant {
-        display:block;
-        position: absolute;
-        height: {{180}}px;
-        width: {{180}}px;
-        z-index: -2;
-    }
-    .quadrant {
-        display: block;
-        position: absolute;
-        height: {{150}}px;
-        width: {{150}}px;
-        z-index: -1;
-    }
-    .up_left {
-        top: 0px;
-        left: 0px;
-    }
-    .up_right {
-        top: 0px;
-        right: 0px;
-    }
-    .down_left {
-        bottom: 0px;
-        left: 0px;
-    }
-    .down_right {
-        bottom: 0px;
-        right: 0px;
     }
     """

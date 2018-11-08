@@ -53,8 +53,6 @@ def main():
                             help='Generate and open an HTML document instead of printing to console. Implies -f')
   outformatarg.add_argument('-c', '--curses-ui', action='store_true', required=False,
                             help='Show an interactive curses-based interface instead of plain text.')
-  outformatarg.add_argument('-l', '--infilled', action='store_true', required=False,
-                            help='Show an infilled version as plain text on console. Looks like the HTML version. Implies -f')
 
   args = argparser.parse_args()
   # Parse diffs
@@ -68,13 +66,13 @@ def main():
     lines = get_diff(max_count=args.n, start=args.s)
   if lines is None:
     exit(1)
-  is_full = args.full or args.web or args.infilled
+  is_full = args.full or args.web
   debug.get('console').debug(lines)
   diff_list = pp.parse(lines)
   if args.export:
     args.export.write('\n'.join(lines))
   debug.get('console').debug(diff_list)
-  fragmap = make_fragmap(diff_list, not is_full, args.infilled)
+  fragmap = make_fragmap(diff_list, not is_full, False)
   if args.curses_ui:
     if NPYSCREEN_AVAILABLE:
       display_fragmap_screen(fragmap)
