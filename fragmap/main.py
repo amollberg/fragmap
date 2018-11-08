@@ -69,7 +69,11 @@ def main():
   if args.import_:
     lines = [l.rstrip() for l in fileinput.input(args.import_)]
   else:
-    lines = get_diff(range_=args.range_, max_count=max_count, start=args.s)
+    lines = get_diff(staged=not args.range_,
+                     unstaged=not args.range_,
+                     range_=args.range_,
+                     max_count=max_count,
+                     start=args.s)
   if lines is None:
     exit(1)
   is_full = args.full or args.web

@@ -32,14 +32,18 @@ def _assemble_revlist_command(range_=None, max_count=None, start=None):
 def get_rev_list(**kwargs):
   return get_output_lines(_assemble_revlist_command(**kwargs))
 
-def get_diff(**kwargs):
+def get_diff(staged, unstaged, **kwargs):
   if not is_git_available():
     print "Error: git cannot be found. Has it been installed?"
     return None
   output = []
   try:
-    print '... Retrieving uncommitted changes\r',
-    output += get_output_lines([GIT, 'diff', '-U0', '--no-color'])
+    if unstaged:
+      print '... Retrieving uncommitted changes\r',
+      output += get_output_lines([GIT, 'diff', '-U0', '--no-color', '--raw'])
+    if staged:
+      print '... Retrieving staged changes     \r',
+      output += get_output_lines([GIT, 'diff', '-U0', '--no-color', '--raw', '--staged'])
     print '... Finding commits               \r',
     rev_list = get_rev_list(**kwargs)
     if rev_list:

@@ -253,6 +253,31 @@ class FilePatch(object):
       return None, lines
 
 
+class RawPatchHeader(object):
+  _content = None
+
+  def __init__(self, content):
+    self._content = content
+
+  def __repr__(self):
+    return "<RawPatchHeader: %s>" %(self._content,)
+
+  @staticmethod
+  def parse(lines):
+    debug.get('parser').debug("RawPatchHeader? %s", lines[0])
+    if lines[0][0] != ':':
+      return None, lines
+    content = []
+    while lines[0] == '' or lines[0][0] == ':':
+      debug.get('parser').debug("in RawPatchHeader: %s", lines[0])
+      if lines[0] != '':
+        # Add line to content list
+        content += [lines[0].strip()]
+      lines = lines[1:]
+    return PatchHeader(hash, content), lines
+
+
+
 class PatchHeader(object):
   _hash = None
   _message = None
@@ -290,6 +315,36 @@ class PatchHeader(object):
         message += [lines[0].strip()]
       lines = lines[1:]
     return PatchHeader(hash, message), lines
+
+
+class RawPatch(object):
+  _header = None
+  _filepatches = None
+
+  def __init__(self, filepatches, header):
+    self._filepatches = filepatches
+    self._header = header
+
+  def __repr__(self):
+    return "\n <RawPatch: %s %s" % (self._header, self._filepatches)
+
+  @staticmethod
+  def parse(lines):
+    debug.get('parser').debug("RawPatch? %s", lines[0])
+    header, lines = RawPatchHeader.parse(lines)
+    debug.get('parser').debug("RawPatchHeader: %s", header)
+    if header is None:
+      return None, lines
+    filepatches = []
+    while len(lines) > 0:
+      filepatch, lines = FilePatch.parse(lines)
+      debug.get('parser').debug("FilePatch: %s", filepatch)
+      if filepatch is not None:
+        filepatches += [filepatch]
+      else:
+        # No more parsable filepatches; return
+        break
+    return Patch(filepatches, header), lines
 
 
 class Patch(object):
@@ -339,7 +394,7 @@ class AST(object):
   @staticmethod
   def parse(lines):
     patches = []
-    unheadered_filepatches = []
+    rawpatches = []
     while len(lines) > 0:
       # Try parsing a Patch
       patch, lines = Patch.parse(lines)
@@ -347,21 +402,28 @@ class AST(object):
       if patch is not None:
         patches += [patch]
       else:
-        # Try parsing a FilePatch
-        filepatch, lines = FilePatch.parse(lines)
-        debug.get('parser').debug("Filepatch without patch header: %s", filepatch)
-        if filepatch is not None:
-          unheadered_filepatches += [filepatch]
+        # Try parsing a RawPatch
+        rawpatch, lines = RawPatch.parse(lines)
+        debug.get('parser').debug("Rawpatch : %s", rawpatch)
+        if rawpatch is not None:
+          rawpatches += [rawpatch]
         else:
           # Remove a line and retry parsing
           lines = lines[1:]
         continue
-    if len(unheadered_filepatches) > 0:
-      dummy_patch = Patch(unheadered_filepatches,
-                          PatchHeader('0000000000000000000000000000000000000000',
-                                      [' (uncommitted changes)']))
-      debug.get('parser').debug("Created dummy Patch: %s", dummy_patch)
-      patches += [dummy_patch]
+    if len(rawpatches) > 1:
+      staged_patch = Patch(rawpatches[1]._filepatches,
+                           PatchHeader('0000000100000000000000000000000000000000',
+                                       [' (staged changes)']))
+      debug.get('parser').debug("Created staged Patch: %s", staged_patch)
+      patches += [staged_patch]
+
+    if len(rawpatches) > 0:
+      uncommitted_patch = Patch(rawpatches[0]._filepatches,
+                                PatchHeader('0000000000000000000000000000000000000000',
+                                            [' (unstaged changes)']))
+      debug.get('parser').debug("Created unstaged Patch: %s", uncommitted_patch)
+      patches += [uncommitted_patch]
     return AST(patches), lines
 
 
