@@ -36,6 +36,8 @@ def main():
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=parent_parsers)
   inspecarg = argparser.add_argument_group('input', 'Specify the input commits or patch file')
+  inspecarg.add_argument('-r', '--range', metavar='COMMITS', action='store', required=False, dest='range_',
+                         help='Any range(s) of commits to show. See documentation for git rev-list.')
   inspecarg.add_argument('-n', metavar='NUMBER_OF_COMMITS', action='store',
                          help='How many previous commits to show. Uncommitted changes are shown in addition to these.')
   inspecarg.add_argument('-s', metavar='START_COMMIT', action='store',
@@ -55,13 +57,16 @@ def main():
   args = argparser.parse_args()
   # Parse diffs
   pp = PatchParser()
-  if args.import_ and (args.s or args.n):
+  if args.import_ and (args.s or args.n or args.range_):
     print('Error: --import/-i cannot be used at the same time as other input specifiers')
+    exit(1)
+  if args.range_ and (args.s or args.n or args.import_):
+    print('Error: --range/-r cannot be used at the same time as other input specifiers')
     exit(1)
   if args.import_:
     lines = [l.rstrip() for l in fileinput.input(args.import_)]
   else:
-    lines = get_diff(max_count=args.n, start=args.s)
+    lines = get_diff(range_=args.range_, max_count=args.n, start=args.s)
   if lines is None:
     exit(1)
   is_full = args.full or args.web
