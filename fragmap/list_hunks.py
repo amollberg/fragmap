@@ -26,9 +26,6 @@ def _assemble_revlist_command(range_=None, max_count=None, start=None):
     rev_spec = start + '..HEAD'
   if max_count is not None:
     args += ['--max-count', max_count]
-  elif start is None:
-    # Default to 3 revs
-    args += ['--max-count', '3']
   args += [rev_spec]
   return args
 

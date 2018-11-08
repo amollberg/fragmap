@@ -358,8 +358,7 @@ class Test(unittest.TestCase):
 
   def test_revlist_neither(self):
     self.assertEqual(list_hunks._assemble_revlist_command(None, None),
-                     [list_hunks.GIT, 'rev-list', '--reverse',
-                      '--max-count', '3', 'HEAD'])
+                     [list_hunks.GIT, 'rev-list', '--reverse', 'HEAD'])
 
 
 

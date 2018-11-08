@@ -63,10 +63,13 @@ def main():
   if args.range_ and (args.s or args.n or args.import_):
     print('Error: --range/-r cannot be used at the same time as other input specifiers')
     exit(1)
+  max_count = args.n
+  if not (args.range_ or args.s or args.n or args.import_):
+    max_count = '3'
   if args.import_:
     lines = [l.rstrip() for l in fileinput.input(args.import_)]
   else:
-    lines = get_diff(range_=args.range_, max_count=args.n, start=args.s)
+    lines = get_diff(range_=args.range_, max_count=max_count, start=args.s)
   if lines is None:
     exit(1)
   is_full = args.full or args.web
