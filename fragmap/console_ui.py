@@ -13,13 +13,6 @@ def lzip(*args):
   """
   return [list(el) for el in zip(*args)]
 
-NPYSCREEN_AVAILABLE = False
-try:
-  from fragmap.curses_ui import FragmapApp
-  NPYSCREEN_AVAILABLE = True
-except ImportError:
-  pass
-
 CONSOLE_WIDTH = 80
 
 def filter_consecutive_equal_columns(char_matrix):
@@ -78,12 +71,3 @@ def print_fragmap(fragmap, do_color):
     infill_layout(matrix, print_line, print_matrix)
   else:
     normal_layout(matrix, print_line, print_matrix)
-
-
-def display_fragmap_screen(fragmap):
-  hash_width = 8
-  App = FragmapApp()
-  App._fragmap = fragmap
-  App._console_width = CONSOLE_WIDTH
-  App._hash_width = hash_width
-  App.run()

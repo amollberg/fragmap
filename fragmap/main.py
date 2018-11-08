@@ -6,7 +6,7 @@ from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragma
 from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser
 from fragmap.web_ui import open_fragmap_page
-from fragmap.console_ui import print_fragmap, display_fragmap_screen, NPYSCREEN_AVAILABLE
+from fragmap.console_ui import print_fragmap
 import debug
 
 import argparse
@@ -51,8 +51,6 @@ def main():
                          help='Show the full fragmap, disabling deduplication of the columns.')
   outformatarg.add_argument('-w', '--web', action='store_true', required=False,
                             help='Generate and open an HTML document instead of printing to console. Implies -f')
-  outformatarg.add_argument('-c', '--curses-ui', action='store_true', required=False,
-                            help='Show an interactive curses-based interface instead of plain text.')
 
   args = argparser.parse_args()
   # Parse diffs
@@ -73,13 +71,7 @@ def main():
     args.export.write('\n'.join(lines))
   debug.get('console').debug(diff_list)
   fragmap = make_fragmap(diff_list, not is_full, False)
-  if args.curses_ui:
-    if NPYSCREEN_AVAILABLE:
-      display_fragmap_screen(fragmap)
-    else:
-      print("Curses unavailable; using plain text.")
-      print_fragmap(fragmap, do_color = not args.no_color)
-  elif args.web:
+  if args.web:
     open_fragmap_page(fragmap)
   else:
     print_fragmap(fragmap, do_color = not args.no_color)
