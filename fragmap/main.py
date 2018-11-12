@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
 from fragmap.list_hunks import get_diff
-from fragmap.parse_patch import PatchParser
+from fragmap.parse_patch import PatchParser, DictCoersionEncoder
 from fragmap.web_ui import open_fragmap_page
 from fragmap.console_ui import print_fragmap
 import debug
@@ -14,8 +14,12 @@ import copy
 import os
 import fileinput
 
+import json
+
 def make_fragmap(diff_list, brief=False, infill=False):
   fragmap = Fragmap.from_ast(diff_list)
+  with open('fragmap_ast.json', 'wb') as f:
+    json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
   if brief:
     fragmap = BriefFragmap.group_by_patch_connection(fragmap)
   if infill:

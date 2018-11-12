@@ -26,6 +26,7 @@
 import sys
 import re
 import debug
+import json
 
 
 def is_nullfile(fn):
@@ -438,6 +439,15 @@ class PatchParser(object):
     if len(lines_after) > 0:
       debug.get('parser').debug("Unparsable content left at end of file.")
     return ast
+
+class DictCoersionEncoder(json.JSONEncoder):
+  def default(self, obj):
+    try:
+      return json.JSONEncoder.default(self, obj)
+    except TypeError:
+      return vars(obj)
+
+
 
 
 def main():
