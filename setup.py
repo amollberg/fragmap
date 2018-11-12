@@ -26,7 +26,8 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
-    install_requires=["yattag==1.10.0"],
+    install_requires=["yattag==1.10.0",
+                      "backports.shutil_get_terminal_size>=1.0.0"],
     entry_points={
         'console_scripts': ['fragmap=fragmap.main:main'],
     },
