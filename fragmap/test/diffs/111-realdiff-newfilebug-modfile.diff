@@ -1,0 +1,12 @@
+commit 337d4b97f3e1e69b0e5484ba0423218690f67bdd
+Author: amollberg <amollberg@users.noreply.github.com>
+Date:   Mon Oct 29 19:57:50 2018 +0100
+
+    SQUASH: Fix accessexception in FakeFragmap
+
+diff --git a/fragmap/test/connection.py b/fragmap/test/connection.py
+index fd8baac..326ddd5 100644
+--- a/fragmap/test/connection.py
++++ b/fragmap/test/connection.py
+@@ -55,0 +56 @@ class FakeFragmap(object):
++    self.patches = []

@@ -338,6 +338,12 @@ class Test(unittest.TestCase):
                       '...#.',
                       '....#'])
 
+  def test_110_111_brief(self):
+    self.check_diffs_brief(['110-realdiff-newfilebug-addfile.diff',
+                            '111-realdiff-newfilebug-modfile.diff'],
+                           ['##',
+                            '.#'])
+
   # === Test rev-list command assembly ===
 
   def test_revlist_n(self):
