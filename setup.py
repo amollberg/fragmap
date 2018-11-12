@@ -28,6 +28,7 @@ setup(
     ],
     install_requires=["yattag==1.10.0",
                       "backports.shutil_get_terminal_size>=1.0.0"],
+    tests_require=read("requirements-dev.txt"),
     entry_points={
         'console_scripts': ['fragmap=fragmap.main:main'],
     },
