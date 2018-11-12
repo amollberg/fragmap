@@ -151,12 +151,13 @@ class FragmentBoundLine():
     Update the node line with no changes. Simply clones
     the latest node, adds it to the history and returns it.
     """
-    # Shallow copy previous
-    if diff_i < 0:
-      diff_i = 0
-    updated_node = copy.copy(self._nodehistory[diff_i-1])
-    self._nodehistory[diff_i] = updated_node
-    return updated_node
+    if diff_i not in self._nodehistory:
+      # Shallow copy previous
+      if diff_i < 0:
+        diff_i = 0
+      updated_node = copy.copy(self._nodehistory[diff_i-1])
+      self._nodehistory[diff_i] = updated_node
+    return self._nodehistory[diff_i]
 
   def update(self, diff_i, filename, line):
     # Copy previous node without changing anything
