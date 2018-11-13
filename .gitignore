@@ -1,4 +1,6 @@
 *~
 *#
 *.pyc
-npyscreen/build/*
+.*
+build/*
+dist/*
