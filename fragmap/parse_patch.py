@@ -168,7 +168,27 @@ class FilePatchHeader(object):
         return None, lines
       newfile = match.group(1)
 
-      return FilePatchHeader(oldfile, newfile), lines[2:]
+      filepatchheader = FilePatchHeader(oldfile, newfile)
+
+      lines = lines[2:]
+      header_lines = lines
+
+      # Try greedily to match optional (and redundant) ---, +++ lines
+
+      lines = skip_index(lines)
+      match = re.match('^--- (?:a/|b/)?(.*)$', lines[0])
+      if match is not None:
+        lines = lines[1:]
+      if match is None or oldfile != match.group(1):
+        return filepatchheader, header_lines
+
+      match = re.match('^\+\+\+ (?:a/|b/)?(.*)$', lines[0])
+      if match is not None:
+        lines = lines[1:]
+      if match is None or newfile != match.group(1):
+        return filepatchheader, header_lines
+
+      return filepatchheader, lines
 
     def parse_diff_header(lines):
       while lines and lines[0] != '' and lines[0][0:4] != '--- ':
@@ -203,22 +223,30 @@ class FilePatchHeader(object):
       # otherwise the FilePatch will have no fragments.
       return FilePatchHeader(oldfile, newfile), lines
 
+    def skip_index(lines):
+      while len(lines) > 0 and lines[0][0:6] == 'index ':
+        lines = lines[1:]
+      return lines
+
     debug.get('parser').debug("FilePatchHeader? %s", lines[0])
     if lines[0][0:11] != 'diff --git ':
       return None, lines
     lines = lines[1:]
     # Try a rename header
     header, rlines = parse_rename_header(lines)
+    rlines = skip_index(rlines)
     if header is not None:
       debug.get('parser').debug("Parsed rename FilePatchHeader: %s", header)
       return header, rlines
     # Try a regular (diff) header
     header, rlines = parse_diff_header(lines)
+    rlines = skip_index(rlines)
     if header is not None:
       debug.get('parser').debug("Parsed diff FilePatchHeader: %s", header)
       return header, rlines
     # Try a binary header
     header, rlines = parse_binary_header(lines)
+    rlines = skip_index(rlines)
     if header is not None:
       debug.get('parser').debug("Parsed binary FilePatchHeader: %s", header)
       return header, rlines
