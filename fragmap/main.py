@@ -80,11 +80,11 @@ def main():
                      start=args.s)
   if lines is None:
     exit(1)
+  if args.export:
+    args.export.write('\n'.join(lines))
   is_full = args.full or args.web
   debug.get('console').debug(lines)
   diff_list = pp.parse(lines)
-  if args.export:
-    args.export.write('\n'.join(lines))
   debug.get('console').debug(diff_list)
   fragmap = make_fragmap(diff_list, not is_full, False)
   if args.web:
