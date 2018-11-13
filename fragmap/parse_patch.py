@@ -172,6 +172,8 @@ class FilePatchHeader(object):
 
       lines = lines[2:]
       header_lines = lines
+      if len(lines) == 0:
+        return filepatchheader, header_lines
 
       # Try greedily to match optional (and redundant) ---, +++ lines
 
