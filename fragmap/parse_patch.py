@@ -395,6 +395,8 @@ class Patch(object):
 
   @staticmethod
   def parse(lines):
+    while lines[0] == '':
+      lines = lines[1:]
     debug.get('parser').debug("Patch? %s", lines[0])
     header, lines = PatchHeader.parse(lines)
     debug.get('parser').debug("PatchHeader: %s", header)
