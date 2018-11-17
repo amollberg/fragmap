@@ -22,3 +22,9 @@ After installing the requirements (see below), simply run:
 - Run `python setup.py develop`
 
 - (Optional) Define the environment variable `FRAGMAP_DEBUG` to get access to the `--log` argument.
+
+# Autocompletion
+
+- Clone this repo
+
+- Source `bash_completion.sh` in the cloned directory
