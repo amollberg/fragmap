@@ -95,20 +95,24 @@ def main():
     debug.get('console').debug(lines)
     diff_list = pp.parse(lines)
     debug.get('console').debug(diff_list)
-    fragmap = make_fragmap(diff_list, not is_full, False)
-    if args.web:
-      open_fragmap_page(fragmap)
-    else:
-      lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
-  serve()
-  if args.live:
-    while True:
-      print('Press Enter to refresh', end='')
-      import sys
-      key = getch()
-      if ord(key) != 0xd:
-        break
-      serve()
+    return make_fragmap(diff_list, not is_full, False)
+  fragmap = serve()
+  if args.web:
+    open_fragmap_page(fragmap, args.live)
+  else:
+    lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+    if args.live:
+      while True:
+        print('Press Enter to refresh', end='')
+        import sys
+        key = getch()
+        if ord(key) != 0xd:
+          break
+        fragmap = serve()
+        lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+      print('')
+
+
 
 
 if __name__ == '__main__':

@@ -39,7 +39,7 @@ def render_cell_graphics(tag, connected_cell, inner):
       etag('div', klass="bottom " + hideempty(changes.down))
 
 
-def open_fragmap_page(fragmap):
+def make_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
   matrix = ConnectedFragmap(fragmap).generate_matrix()
 
@@ -149,11 +149,16 @@ def open_fragmap_page(fragmap):
           doc.asis(javascript())
     return doc.getvalue()
 
+  return get_html()
 
-
-  with open('fragmap.html', 'w') as f:
-    f.write(get_html())
-    os.startfile(f.name)
+def open_fragmap_page(fragmap, live):
+  if live:
+    # TODO
+    pass
+  else:
+    with open('fragmap.html', 'w') as f:
+      f.write(make_fragmap_page(fragmap))
+      os.startfile(f.name)
 
 
 def javascript():
