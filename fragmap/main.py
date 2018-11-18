@@ -5,7 +5,7 @@ from __future__ import print_function
 from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
 from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser, DictCoersionEncoder
-from fragmap.web_ui import open_fragmap_page
+from fragmap.web_ui import open_fragmap_page, start_fragmap_server
 from fragmap.console_ui import print_fragmap
 from fragmap.console_color import ANSI_UP
 import debug
@@ -98,7 +98,10 @@ def main():
     return make_fragmap(diff_list, not is_full, False)
   fragmap = serve()
   if args.web:
-    open_fragmap_page(fragmap, args.live)
+    if args.live:
+      start_fragmap_server(serve)
+    else:
+      open_fragmap_page(fragmap, args.live)
   else:
     lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
     if args.live:

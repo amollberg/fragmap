@@ -3,7 +3,7 @@
 
 from yattag import Doc
 from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
-
+from http import start_server
 
 import os
 import re
@@ -151,14 +151,21 @@ def make_fragmap_page(fragmap):
 
   return get_html()
 
+def start_fragmap_server(fragmap_callback):
+  def html_callback():
+    return make_fragmap_page(fragmap_callback())
+  server = start_server(html_callback)
+  os.startfile('http://%s:%s' % server.server_address)
+  print 'Press any key to terminate'
+  from getch.getch import getch
+  getch()
+  server.shutdown()
+
+
 def open_fragmap_page(fragmap, live):
-  if live:
-    # TODO
-    pass
-  else:
-    with open('fragmap.html', 'w') as f:
-      f.write(make_fragmap_page(fragmap))
-      os.startfile(f.name)
+  with open('fragmap.html', 'w') as f:
+    f.write(make_fragmap_page(fragmap))
+    os.startfile(f.name)
 
 
 def javascript():
