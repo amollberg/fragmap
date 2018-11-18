@@ -7,6 +7,7 @@ from fragmap.list_hunks import get_diff
 from fragmap.parse_patch import PatchParser, DictCoersionEncoder
 from fragmap.web_ui import open_fragmap_page
 from fragmap.console_ui import print_fragmap
+from fragmap.console_color import ANSI_UP
 import debug
 
 import argparse
@@ -73,7 +74,11 @@ def main():
   max_count = args.n
   if not (args.range_ or args.s or args.n or args.import_):
     max_count = '3'
+  lines_printed = [0]
   def serve():
+    # Move cursor up to overwrite previous fragmap
+    print('\r' + ANSI_UP * lines_printed[0], end='')
+
     if args.import_:
       lines = [l.rstrip() for l in fileinput.input(args.import_)]
     else:
@@ -94,10 +99,11 @@ def main():
     if args.web:
       open_fragmap_page(fragmap)
     else:
-      print_fragmap(fragmap, do_color = not args.no_color)
+      lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
   serve()
   if args.live:
     while True:
+      print('Press Enter to refresh', end='')
       import sys
       key = getch()
       if ord(key) != 0xd:

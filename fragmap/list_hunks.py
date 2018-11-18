@@ -57,4 +57,4 @@ def get_diff(staged, unstaged, **kwargs):
       print 'fragmap: Unknown error while executing ', e.cmd, ", git exit code:", e.returncode
     return None
   finally:
-    print ''
+    print '                                  \r',
