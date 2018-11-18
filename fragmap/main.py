@@ -13,6 +13,7 @@ import argparse
 import copy
 import os
 import fileinput
+from getch.getch import getch
 
 import json
 
@@ -52,6 +53,8 @@ def main():
                          help='Disable color coding of the output.')
   argparser.add_argument('-o', '--export', metavar='FILENAME', type=argparse.FileType('w'), action='store', required=False,
                          help='Export the contents of the current selection of commits to the selected file')
+  argparser.add_argument('-l', '--live', action='store_true', required=False,
+                         help='Keep running and enable refreshing of the displayed fragmap')
   outformatarg = argparser.add_mutually_exclusive_group(required=False)
   argparser.add_argument('-f', '--full', action='store_true', required=False,
                          help='Show the full fragmap, disabling deduplication of the columns.')
@@ -70,27 +73,37 @@ def main():
   max_count = args.n
   if not (args.range_ or args.s or args.n or args.import_):
     max_count = '3'
-  if args.import_:
-    lines = [l.rstrip() for l in fileinput.input(args.import_)]
-  else:
-    lines = get_diff(staged=not args.range_,
-                     unstaged=not args.range_,
-                     range_=args.range_,
-                     max_count=max_count,
-                     start=args.s)
-  if lines is None:
-    exit(1)
-  if args.export:
-    args.export.write('\n'.join(lines))
-  is_full = args.full or args.web
-  debug.get('console').debug(lines)
-  diff_list = pp.parse(lines)
-  debug.get('console').debug(diff_list)
-  fragmap = make_fragmap(diff_list, not is_full, False)
-  if args.web:
-    open_fragmap_page(fragmap)
-  else:
-    print_fragmap(fragmap, do_color = not args.no_color)
+  def serve():
+    if args.import_:
+      lines = [l.rstrip() for l in fileinput.input(args.import_)]
+    else:
+      lines = get_diff(staged=not args.range_,
+                       unstaged=not args.range_,
+                       range_=args.range_,
+                       max_count=max_count,
+                       start=args.s)
+    if lines is None:
+      exit(1)
+    if args.export:
+      args.export.write('\n'.join(lines))
+    is_full = args.full or args.web
+    debug.get('console').debug(lines)
+    diff_list = pp.parse(lines)
+    debug.get('console').debug(diff_list)
+    fragmap = make_fragmap(diff_list, not is_full, False)
+    if args.web:
+      open_fragmap_page(fragmap)
+    else:
+      print_fragmap(fragmap, do_color = not args.no_color)
+  serve()
+  if args.live:
+    while True:
+      import sys
+      key = getch()
+      if ord(key) != 0xd:
+        break
+      serve()
+
 
 if __name__ == '__main__':
   main()
