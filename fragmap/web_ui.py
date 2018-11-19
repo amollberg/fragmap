@@ -27,10 +27,14 @@ def render_cell_graphics(tag, connected_cell, inner):
     if status == ConnectionStatus.INFILL:
       return "visibility:hidden"
     return ""
+  def activitymarker(status):
+    if status == ConnectionStatus.CONNECTION:
+      return "active"
+    return ""
 
   if kind != Cell.NO_CHANGE:
     inner()
-    with tag('div', klass="cell"):
+    with tag('div', klass="cell " + activitymarker(changes.center)):
       etag('div', klass="top " + hideempty(changes.up))
       etag('div', klass="left " + hideempty(changes.left), style=passinfill(changes.left))
       with tag('div', klass="inner", style=(passinfill(changes.center))):
@@ -185,8 +189,116 @@ def javascript():
       source.id = "selected_cell";
       source.parentElement.id = "selected_row";
       document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
-      console.log(source, source.childNodes[0].innerHTML);
     }
+    function within(lower, x, upper) {
+      return lower <= x && x <= upper;
+    }
+    function inside(table, row, col) {
+      var nRows = table.getElementsByTagName('tr').length;
+      var nCols = table.getElementsByTagName('tr')[1].getElementsByTagName('td').length || 0;
+      // Note: row minimum is 1 since the first row is the header
+      return within(1, row, nRows - 1) && within(0, col, nCols - 1);
+    }
+    function indexByTagName(haystack, tagName, needleChild) {
+      var children = haystack.getElementsByTagName(tagName);
+      for (var i = 0;; i++) {
+        if (children[i] == needleChild) {
+          return i;
+        }
+      }
+      return -1;
+    }
+    function neighbor(source, rowOffset, colOffset) {
+      var row = source.parentElement;
+      var colNumber = indexByTagName(row, 'td', source);
+      var table = row.parentElement;
+      var rowNumber = indexByTagName(table, 'tr', row);
+      if (!inside(table, rowNumber + rowOffset, colNumber + colOffset)) {
+        return null;
+      }
+      return table
+        .getElementsByTagName('tr')[rowNumber + rowOffset]
+        .getElementsByTagName('td')[colNumber + colOffset];
+    }
+    function neighborWhere(source, rowDirection, colDirection, pred) {
+      var cell = source;
+      var i = 0;
+      for (cell = neighbor(cell, rowDirection, colDirection);
+           cell !== null && !pred(cell);
+           i++, cell = neighbor(cell, rowDirection, colDirection)) {
+        // Empty
+      }
+      return [cell, i];
+    }
+    function active_cell(cell) {
+      return cell !== null && cell.getElementsByClassName('active').length > 0;
+    }
+    function handleKeyDown(e) {
+      e = e || window.event;
+      var rowOffset = 0;
+      var colOffset = 0;
+      if (e.key == 'ArrowUp') {
+        // up arrow
+        rowOffset = -1;
+      }
+      else if (e.key == 'ArrowDown') {
+        // down arrow
+        rowOffset = 1;
+      }
+      else if (e.key == 'ArrowLeft') {
+        // left arrow
+        colOffset = -1;
+      }
+      else if (e.key == 'ArrowRight') {
+        // right arrow
+        colOffset = 1;
+      }
+      else {
+        return true;
+      }
+      var divertable = !e.ctrlKey;
+      var source = prev_source;
+      var next = source;
+      if (!divertable) {
+        [next, _] = neighborWhere(source, rowOffset, colOffset, active_cell);
+      }
+      else {
+        neigh = next;
+        while(neigh !== null) {
+          // Take one step in the desired direction
+          neigh = neighbor(neigh, rowOffset, colOffset);
+          if (neigh === null) {
+            break;
+          }
+          if (active_cell(neigh)) {
+            next = neigh;
+            break;
+          }
+          // Look to both sides
+          [nextPos, distPos] = neighborWhere(neigh, colOffset, rowOffset, active_cell);
+          [nextNeg, distNeg] = neighborWhere(neigh, -colOffset, -rowOffset, active_cell);
+          // Pick whichever was closest and valid
+          if (nextPos !== null) {
+            next = nextPos;
+            if (nextNeg !== null) {
+              next = distNeg < distPos ? nextNeg : nextPos;
+            }
+          }
+          else {
+            next = nextNeg;
+          }
+          if (next !== null) {
+            break;
+          }
+        }
+      }
+      if (next === null) {
+        next = source;
+      }
+      show(next);
+      return false;
+    }
+    document.body.onkeydown = handleKeyDown;
     """
 
 
