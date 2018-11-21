@@ -429,6 +429,9 @@ class AST(object):
     patches = []
     rawpatches = []
     while len(lines) > 0:
+      if lines[0] == '':
+        lines = lines[1:]
+        continue
       # Try parsing a Patch
       patch, lines = Patch.parse(lines)
       debug.get('parser').debug("Patch: %s", patch)
