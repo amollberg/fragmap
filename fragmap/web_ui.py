@@ -3,7 +3,7 @@
 
 from yattag import Doc
 from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
-
+from http import start_server
 
 import os
 import re
@@ -39,7 +39,7 @@ def render_cell_graphics(tag, connected_cell, inner):
       etag('div', klass="bottom " + hideempty(changes.down))
 
 
-def open_fragmap_page(fragmap):
+def make_fragmap_page(fragmap):
   is_brief = isinstance(fragmap, BriefFragmap)
   matrix = ConnectedFragmap(fragmap).generate_matrix()
 
@@ -149,10 +149,26 @@ def open_fragmap_page(fragmap):
           doc.asis(javascript())
     return doc.getvalue()
 
+  return get_html()
+
+def start_fragmap_server(fragmap_callback):
+  def html_callback():
+    return make_fragmap_page(fragmap_callback())
+  server = start_server(html_callback)
+  address = 'http://%s:%s' % server.server_address
+  os.startfile(address)
+  print 'Serving fragmap at %s' %(address,)
+  print "Press 'r' to re-launch the page"
+  print 'Press any other key to terminate'
+  from getch.getch import getch
+  while(ord(getch()) == ord('r')):
+      os.startfile(address)
+  server.shutdown()
 
 
+def open_fragmap_page(fragmap, live):
   with open('fragmap.html', 'w') as f:
-    f.write(get_html())
+    f.write(make_fragmap_page(fragmap))
     os.startfile(f.name)
 
 

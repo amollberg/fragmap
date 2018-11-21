@@ -71,9 +71,11 @@ def print_fragmap(fragmap, do_color):
     print(hash, commit_msg, end='')
 
   def print_matrix(r):
-    print(''.join(matrix[r]))
+    print(''.join(matrix[r]), ' ')
 
   if isinstance(fragmap, ConnectedFragmap):
     infill_layout(matrix, print_line, print_matrix)
   else:
     normal_layout(matrix, print_line, print_matrix)
+  lines_printed = len(matrix)
+  return lines_printed
