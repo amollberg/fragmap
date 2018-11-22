@@ -18,7 +18,7 @@ setup(
     license = "BSD",
     keywords = "git visualization console terminal",
     url = "https://github.com/amollberg/fragmap",
-    packages=['fragmap', 'tests'],
+    packages=['fragmap', 'tests', 'getch'],
     long_description=read('README.md'),
     classifiers=[
         "Topic :: Software Development :: Version Control",
