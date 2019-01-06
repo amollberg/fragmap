@@ -37,11 +37,14 @@ def print_fragmap(fragmap, do_color):
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
-  terminal_size = get_terminal_size()
+  terminal_column_size = get_terminal_size().columns
+  if terminal_column_size == 0:
+    # Fall back to a default value
+    terminal_column_size = 80
   max_actual_commit_width = max([len(p._header._message[0]) for p in fragmap.patches])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
-                                terminal_size.columns/2,
-                                terminal_size.columns - (hash_width + 1 + 1 + padded_matrix_width)))
+                                terminal_column_size/2,
+                                terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in xrange(len(matrix)):
