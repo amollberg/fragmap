@@ -75,10 +75,12 @@ def main():
   if not (args.range_ or args.s or args.n or args.import_):
     max_count = '3'
   lines_printed = [0]
+  columns_printed = [0]
   def serve():
-    # Move cursor up to overwrite previous fragmap
-    print('\r' + ANSI_UP * lines_printed[0], end='')
-
+    def erase_current_line():
+      print('\r' + ' ' * columns_printed[0] + '\r', end='')
+    # Make way for status updates from below operations
+    erase_current_line()
     if args.import_:
       lines = [l.rstrip() for l in fileinput.input(args.import_)]
     else:
@@ -95,6 +97,11 @@ def main():
     debug.get('console').debug(lines)
     diff_list = pp.parse(lines)
     debug.get('console').debug(diff_list)
+    # Erase each line and move cursor up to overwrite previous fragmap
+    erase_current_line()
+    for i in range(lines_printed[0]):
+      print(ANSI_UP, end='')
+      erase_current_line()
     return make_fragmap(diff_list, not is_full, False)
   fragmap = serve()
   if args.web:
@@ -103,7 +110,7 @@ def main():
     else:
       open_fragmap_page(fragmap, args.live)
   else:
-    lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+    lines_printed[0], columns_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
     if args.live:
       while True:
         print('Press Enter to refresh', end='')
@@ -112,7 +119,7 @@ def main():
         if ord(key) != 0xd:
           break
         fragmap = serve()
-        lines_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+        lines_printed[0], columns_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
       print('')
 
 

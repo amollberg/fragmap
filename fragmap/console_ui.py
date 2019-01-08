@@ -33,7 +33,7 @@ def print_fragmap(fragmap, do_color):
   matrix = fragmap.render_for_console(do_color)
   matrix = filter_consecutive_equal_columns(matrix)
   if len(matrix) == 0:
-    return
+    return 0, 0
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
@@ -45,6 +45,7 @@ def print_fragmap(fragmap, do_color):
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 terminal_column_size/2,
                                 terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
+  actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in xrange(len(matrix)):
@@ -81,4 +82,4 @@ def print_fragmap(fragmap, do_color):
   else:
     normal_layout(matrix, print_line, print_matrix)
   lines_printed = len(matrix)
-  return lines_printed
+  return lines_printed, actual_total_width
