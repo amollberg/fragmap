@@ -17,6 +17,8 @@ After installing the requirements (see below), simply run:
 
 - Clone this repo
 
+- Run `pip install -r requirements.txt` to install all requirements
+
 - Run `pip install -r requirements-dev.txt` to be able to run the test suite
 
 - Run `python setup.py develop`
