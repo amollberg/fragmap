@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from common import *
-from parse_patch import *
+from load_commits import *
 from generate_matrix import *
 import list_hunks
 import debug
@@ -91,7 +91,7 @@ class Test(unittest.TestCase):
     patch = Patch([filepatch],
                   PatchHeader("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
                               "dummy message"))
-    node_lines = [FragmentBoundLine(FragmentBoundNode(0, filepatch, 0, Range(4,2), FragmentBoundNode.END))]
+    node_lines = [FragmentBoundLine(FragmentBoundNode(0, filepatch, 0, 2, FragmentBoundNode.END))]
     update_positions(node_lines, patch, 0)
     self.assertEqual(node_lines[0].last()._filename, "dummy")
     self.assertEqual(node_lines[0].last()._line, 7)
@@ -420,7 +420,7 @@ class Test(unittest.TestCase):
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
-    pp = PatchParser()
+    pp = CommitLoader()
     h = Fragmap.from_ast(pp.parse(diff))
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)

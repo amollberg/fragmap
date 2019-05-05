@@ -4,10 +4,10 @@ from __future__ import print_function
 
 from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
 from fragmap.list_hunks import get_diff
-from fragmap.parse_patch import PatchParser, DictCoersionEncoder
 from fragmap.web_ui import open_fragmap_page, start_fragmap_server
 from fragmap.console_ui import print_fragmap
 from fragmap.console_color import ANSI_UP
+from fragmap.load_commits import CommitSelection, CommitLoader
 import debug
 
 import argparse
@@ -19,16 +19,14 @@ from getch.getch import getch
 import json
 
 def make_fragmap(diff_list, brief=False, infill=False):
-  fragmap = Fragmap.from_ast(diff_list)
-  with open('fragmap_ast.json', 'wb') as f:
-    json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
+  fragmap = Fragmap.from_diffs(diff_list)
+  # with open('fragmap_ast.json', 'wb') as f:
+  #   json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
   if brief:
     fragmap = BriefFragmap.group_by_patch_connection(fragmap)
   if infill:
     fragmap = ConnectedFragmap(fragmap)
   return fragmap
-
-
 
 def main():
   if 'FRAGMAP_DEBUG' in os.environ:
@@ -42,18 +40,14 @@ def main():
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=parent_parsers)
   inspecarg = argparser.add_argument_group('input', 'Specify the input commits or patch file')
-  inspecarg.add_argument('-r', '--range', metavar='COMMITS', action='store', required=False, dest='range_',
-                         help='Any range(s) of commits to show. See documentation for git rev-list.')
+  inspecarg.add_argument('-u', '--until', metavar='END_COMMIT', action='store', required=False, dest='until',
+                         help='Which commit to show until, inclusive.')
   inspecarg.add_argument('-n', metavar='NUMBER_OF_COMMITS', action='store',
                          help='How many previous commits to show. Uncommitted changes are shown in addition to these.')
-  inspecarg.add_argument('-s', metavar='START_COMMIT', action='store',
+  inspecarg.add_argument('-s', '--since', metavar='START_COMMIT', action='store',
                          help='Which commit to start showing from, exclusive.')
-  inspecarg.add_argument('-i', '--import', metavar='FILENAME', action='store', required=False, dest='import_',
-                         help='Import the patch contents from a file or stdin (-)')
   argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
-  argparser.add_argument('-o', '--export', metavar='FILENAME', type=argparse.FileType('w'), action='store', required=False,
-                         help='Export the contents of the current selection of commits to the selected file')
   argparser.add_argument('-l', '--live', action='store_true', required=False,
                          help='Keep running and enable refreshing of the displayed fragmap')
   outformatarg = argparser.add_mutually_exclusive_group(required=False)
@@ -63,17 +57,16 @@ def main():
                             help='Generate and open an HTML document instead of printing to console. Implies -f')
 
   args = argparser.parse_args()
-  # Parse diffs
-  pp = PatchParser()
-  if args.import_ and (args.s or args.n or args.range_):
-    print('Error: --import/-i cannot be used at the same time as other input specifiers')
+  # Load commits
+  cl = CommitLoader()
+  if args.until and not args.since:
+    print('Error: --since/-s must be used if --until/-u is used')
     exit(1)
-  if args.range_ and (args.s or args.n or args.import_):
-    print('Error: --range/-r cannot be used at the same time as other input specifiers')
-    exit(1)
-  max_count = args.n
-  if not (args.range_ or args.s or args.n or args.import_):
-    max_count = '3'
+  max_count = None
+  if args.n:
+    max_count = int(args.n)
+  if not (args.until or args.since or args.n):
+    max_count = 3
   lines_printed = [0]
   columns_printed = [0]
   def serve():
@@ -81,21 +74,14 @@ def main():
       print('\r' + ' ' * columns_printed[0] + '\r', end='')
     # Make way for status updates from below operations
     erase_current_line()
-    if args.import_:
-      lines = [l.rstrip() for l in fileinput.input(args.import_)]
-    else:
-      lines = get_diff(staged=not args.range_,
-                       unstaged=not args.range_,
-                       range_=args.range_,
-                       max_count=max_count,
-                       start=args.s)
-    if lines is None:
-      exit(1)
-    if args.export:
-      args.export.write('\n'.join(lines))
+    selection = CommitSelection(since_ref=args.since,
+                                until_ref=args.until,
+                                max_count=max_count,
+                                include_staged=not args.until,
+                                include_unstaged=not args.until)
     is_full = args.full or args.web
-    debug.get('console').debug(lines)
-    diff_list = pp.parse(lines)
+    debug.get('console').debug(selection)
+    diff_list = cl.load(os.getcwd(), selection)
     debug.get('console').debug(diff_list)
     # Erase each line and move cursor up to overwrite previous fragmap
     erase_current_line()
