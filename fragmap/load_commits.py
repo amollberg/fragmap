@@ -25,7 +25,8 @@ import pygit2
 import json
 import os
 
-import debug
+import fragmap.debug as debug
+from fragmap.commitdiff import CommitDiff
 
 def is_nullfile(fn):
   return fn == '/dev/null'
@@ -94,14 +95,6 @@ class Staged(FakeCommit):
     # This does NOT compare staged to HEAD
     # repo.diff(None, None, cached=True)
     return repo.index.diff_to_tree(repo.head.peel().tree, **kwargs)
-
-class CommitDiff(object):
-  def __init__(self, pygit_commit, pygit_diff):
-    self.header = pygit_commit
-    self.filepatches = [patch for patch in pygit_diff]
-
-  def __repr__(self):
-    return "<CommitDiff: %s %s>" %(self.header, self.filepatches)
 
 class CommitSelection(object):
   def __init__(self, since_ref, until_ref, max_count, include_staged, include_unstaged):
