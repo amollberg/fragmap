@@ -17,7 +17,8 @@ def bundle(repo_path, bundle_abspath):
 
 def clone(url, repo_path, *clone_args):
   subprocess.check_call(['git'] + DEFAULT_GIT_CONFIG_STRING +
-                        ['clone'] + list(clone_args) + ['--', url, repo_path])
+                        ['clone'] + DEFAULT_GIT_CONFIG_STRING +
+                        list(clone_args) + ['--', url, repo_path])
 
 def add_remote(repo_path, remote):
   subprocess.call(['git'] + DEFAULT_GIT_CONFIG_STRING +

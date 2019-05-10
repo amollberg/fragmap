@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 import native_git
+from fragmap.common_ui import first_line
 
 import os
 import pygit2
@@ -54,7 +55,7 @@ def unbundle_development_test_repos(test_dir, skip_existing=False):
                   filename.endswith('.bundle')]
   for bundle in test_bundles:
     test_name = basename(bundle.replace('.bundle', ''))
-    dir_name = os.path.join(test_dir, "build", test_name)
+    dir_name = os.path.join(test_dir,  test_name)
     if not skip_existing or not os.path.exists(dir_name):
       native_git.clone(bundle, dir_name)
 
@@ -72,10 +73,10 @@ def update_repos(test_dir):
 
 def find_commit_with_message(repo_path, message):
   def all_commits(repo):
-    branches = repo.references
+    ref_names = [ref for ref in repo.references]
     known_commit_hexes = set([])
-    for branch in branches:
-      tip_commit = repo[branch.target]
+    for ref_name in ref_names:
+      tip_commit = repo.references[ref_name].target
       for commit in repo.walk(tip_commit, pygit2.GIT_SORT_TOPOLOGICAL):
         if commit.hex in known_commit_hexes:
           break
@@ -83,6 +84,6 @@ def find_commit_with_message(repo_path, message):
         yield commit
   repo = pygit2.Repository(repo_path)
   for commit in all_commits(repo):
-    if commit.message == message:
+    if first_line(commit.message) == message:
       return commit.hex
-  return None
+  raise RuntimeError("No commit with message '%s' in repo %s" %(message, repo_path))
