@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
 from common import *
+from commitdiff import CommitDiff
 from load_commits import Range
-from update_fragments import update_inherited_bound, FragmentBoundNode
+from update_fragments import update_inherited_bound, update_new_bound, update_positions
+from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell
 import list_hunks
 import debug
+
+from mock import Mock
 
 def read_diff(filename):
   filepath = os.path.join(TEST_DIR, 'diffs', filename)
@@ -38,14 +42,43 @@ def render_matrix_for_test(matrix):
 START = 0
 END = 1
 
+def MockDiffFile(path):
+  return Mock(path=path)
+
+def MockDiffDelta(old_file_path, new_file_path):
+  return Mock(old_file=MockDiffFile(old_file_path),
+              new_file=MockDiffFile(new_file_path))
+
+def MockDiffLine(content):
+  return Mock(content=content)
+
+def MockDiffHunk(old_start_and_lines, new_start_and_lines, mocklines):
+  old_start, old_lines = old_start_and_lines
+  new_start, new_lines = new_start_and_lines
+  return Mock(lines=mocklines,
+              old_start=old_start,
+              old_lines=old_lines,
+              new_start=new_start,
+              new_lines=new_lines)
+
+def MockPatch(mockdelta, mockhunks):
+  return Mock(delta=mockdelta, hunks=mockhunks)
+
+def MockCommit(hex, message):
+  return Mock(hex=hex, message=message)
+
 class Test(unittest.TestCase):
 
   # Append instead of replace default assertion failure message
   longMessage = True
 
   def test_update_inherited_bound_create_at_beginning(self):
-    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
+
+    #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+    #    Fragment(FragmentHeader(Range(0,0), Range(1,1)))])
+
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+      MockDiffHunk((0,0), (1,1), [])])
 
     # Subsequent lines shifted
     self.assertEqual(update_inherited_bound(1, FragmentBoundNode.START, filepatch), 2)
@@ -53,8 +86,11 @@ class Test(unittest.TestCase):
 
 
   def test_update_inherited_bound_create_at_middle(self):
-    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(3,0), Range(4,1)))])
+    #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+    #    Fragment(FragmentHeader(Range(3,0), Range(4,1)))])
+
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+      MockDiffHunk((3,0), (4,1), [])])
 
     # Previous lines unaffected
     self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
@@ -64,8 +100,11 @@ class Test(unittest.TestCase):
     self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 14)
 
   def test_update_inherited_bound_expand_at_middle(self):
-    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+    #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+    #    Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+      MockDiffHunk((4,2), (4,4), [])])
 
     # Previous lines unaffected
     self.assertEqual(update_inherited_bound(3, FragmentBoundNode.START, filepatch), 3)
@@ -78,21 +117,31 @@ class Test(unittest.TestCase):
     self.assertEqual(update_inherited_bound(13, FragmentBoundNode.END, filepatch), 15)
 
   def test_update_new_bound(self):
-    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
-    fragment = Fragment(FragmentHeader(Range(4,2), Range(4,4)))
+    #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+    #    Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+    #fragment = Fragment(FragmentHeader(Range(4,2), Range(4,4)))
+
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+      MockDiffHunk((4,2), (4,4), [])])
+    fragment = MockDiffHunk((4,2), (4,4), [])
 
     # Related bounds updated
     self.assertEqual(update_new_bound(fragment, FragmentBoundNode.START), 4)
     self.assertEqual(update_new_bound(fragment, FragmentBoundNode.END), 7)
 
   def test_update_positions(self):
-    filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
-        Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
-    patch = Patch([filepatch],
-                  PatchHeader("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
-                              "dummy message"))
+    #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
+    #    Fragment(FragmentHeader(Range(4,2), Range(4,4)))])
+    #patch = Patch([filepatch],
+    #              PatchHeader("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
+    #                          "dummy message"))
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+      MockDiffHunk((4,2), (4,4), [])])
+    patch = CommitDiff(MockCommit("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
+                                  "dummy message"),
+                       [filepatch])
     node_lines = [FragmentBoundLine(FragmentBoundNode(0, filepatch, 0, 2, FragmentBoundNode.END))]
+
     update_positions(node_lines, patch, 0)
     self.assertEqual(node_lines[0].last()._filename, "dummy")
     self.assertEqual(node_lines[0].last()._line, 7)
