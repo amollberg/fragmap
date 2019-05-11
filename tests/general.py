@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 from common import *
 from parse_patch import *
 from generate_matrix import *
