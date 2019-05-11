@@ -6,11 +6,15 @@ from load_commits import CommitLoader, ExplicitCommitSelection
 from update_fragments import update_inherited_bound, update_new_bound, update_positions
 from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell
-from infrastructure import find_commit_with_message, to_repo_path
+from infrastructure import find_commit_with_message, to_repo_name
 import list_hunks
 import debug
 
 from mock import Mock
+import os
+
+TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+DIFF_DIR = os.path.join(TEST_DIR, 'diffs')
 
 def read_diff(filename):
   filepath = os.path.join(TEST_DIR, 'diffs', filename)
@@ -473,7 +477,8 @@ class Test(unittest.TestCase):
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
     cl = CommitLoader()
-    repo_path = to_repo_path(self.id())
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, to_repo_name(test_name))
     commit_hex = find_commit_with_message(repo_path, diff_filename)
     cl.load(repo_path, ExplicitCommitSelection([commit_hex]))
     h = Fragmap.from_diffs(pp.parse(diff))
