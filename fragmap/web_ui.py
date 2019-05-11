@@ -4,6 +4,7 @@
 from yattag import Doc
 from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
 from http import start_server
+from common_ui import first_line
 
 import os
 import re
@@ -133,8 +134,8 @@ def make_fragmap_page(fragmap):
               if len(matrix) > 0:
                 render_filename_start_row(start_filenames)
             for r in range(len(matrix)):
-              cur_patch = fragmap.patches[r]._header
-              commit_msg = cur_patch._message[0] # First row of message
+              cur_patch = fragmap.patches[r].header
+              commit_msg = first_line(cur_patch.message)
               hash = cur_patch._hash
               with tag('tr'):
                 with tag('th'):
