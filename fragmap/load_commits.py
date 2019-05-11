@@ -67,6 +67,19 @@ def oldrange(fragment):
 def newrange(fragment):
   return Range(fragment.new_start, fragment.new_lines)
 
+def binary_range_length(file_path):
+  if is_nullfile(file_path):
+    return 0
+  return 1
+
+def binary_oldrange(patch):
+  assert(patch.delta.is_binary)
+  return Range(0, binary_range_length(patch.delta.old_file))
+
+def binary_newrange(patch):
+  assert(patch.delta.is_binary)
+  return Range(0, binary_range_length(patch.delta.new_file))
+
 def get_diff(repo, commit, find_similar=True):
   if isinstance(commit, pygit2.Commit):
     diff = repo.diff(commit.parents[0], commit, context_lines=0, interhunk_lines=0)
@@ -75,6 +88,15 @@ def get_diff(repo, commit, find_similar=True):
   if find_similar:
     diff.find_similar()
   return diff
+
+class BinaryHunk(object):
+  def __init__(self, patch_that_is_binary):
+    assert(patch_that_is_binary.delta.is_binary)
+    delta = patch_that_is_binary.delta
+    self.old_start = 0
+    self.old_lines = binary_range_length(delta.old_file)
+    self.new_start = 0
+    self.new_lines = binary_range_length(delta.new_file)
 
 class FakeCommit(object):
   def __init__(self, hex):

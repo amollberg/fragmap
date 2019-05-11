@@ -48,7 +48,8 @@ def MockDiffFile(path):
 
 def MockDiffDelta(old_file_path, new_file_path):
   return Mock(old_file=MockDiffFile(old_file_path),
-              new_file=MockDiffFile(new_file_path))
+              new_file=MockDiffFile(new_file_path),
+              is_binary=False)
 
 def MockDiffLine(content):
   return Mock(content=content)

@@ -26,7 +26,10 @@ class FragmentBoundNode():
 
   def __init__(self, diff_i, file_patch, fragment_i, line, kind):
     self._diff_i = diff_i
-    self._fragment = file_patch.hunks[fragment_i]
+    if file_patch.delta.is_binary:
+      self._fragment = BinaryHunk(file_patch)
+    else:
+      self._fragment = file_patch.hunks[fragment_i]
     self._fragment_i = fragment_i
     self._filename = nonnull_file(file_patch.delta)
     self._line = line
@@ -199,6 +202,8 @@ def update_inherited_bound(line, bound_kind, file_patch):
       marker = patch_fragment
     else:
       break
+  if marker is None and file_patch.delta.is_binary:
+    marker = BinaryHunk(file_patch)
   debug.get('update').debug("Update_line: %d %s %s", line, bound_kind, file_patch)
   debug.get('update').debug("Marker: %s", marker)
   # TODO: Fix sorting of node line groups after this.
@@ -288,6 +293,14 @@ def extract_nodes(diff, diff_i):
         FragmentBoundNode(diff_i, file_patch, fragment_i, oldrange(fragment)._start,
                           FragmentBoundNode.START),
         FragmentBoundNode(diff_i, file_patch, fragment_i, oldrange(fragment)._end,
+                          FragmentBoundNode.END),
+        ]
+    if file_patch.delta.is_binary:
+      binary_fragment = BinaryHunk(file_patch)
+      node_list += [
+        FragmentBoundNode(diff_i, file_patch, -1, oldrange(binary_fragment)._start,
+                          FragmentBoundNode.START),
+        FragmentBoundNode(diff_i, file_patch, -1, oldrange(binary_fragment)._end,
                           FragmentBoundNode.END),
         ]
   return node_list
