@@ -125,6 +125,13 @@ class CommitSelection(object):
       commits.append(Unstaged())
     return commits
 
+class ExplicitCommitSelection(object):
+  def __init__(self, commit_hex_list):
+    self.commit_hexes = commit_hex_list
+
+  def get_items(self, repo):
+    return [repo[hex] for hex in self.commit_hexes]
+
 class CommitLoader(object):
   @staticmethod
   def load(repo_dir, commit_selection):

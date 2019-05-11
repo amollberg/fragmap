@@ -2,10 +2,11 @@
 
 from common import *
 from commitdiff import CommitDiff
-from load_commits import Range
+from load_commits import CommitLoader, ExplicitCommitSelection
 from update_fragments import update_inherited_bound, update_new_bound, update_positions
 from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell
+from infrastructure import find_commit_with_message, to_repo_path
 import list_hunks
 import debug
 
@@ -470,8 +471,11 @@ class Test(unittest.TestCase):
 
   def check_diff(self, diff_filename, matrix):
     diff = read_diff(diff_filename)
-    pp = CommitLoader()
-    h = Fragmap.from_ast(pp.parse(diff))
+    cl = CommitLoader()
+    repo_path = to_repo_path(self.id())
+    commit_hex = find_commit_with_message(repo_path, diff_filename)
+    cl.load(repo_path, ExplicitCommitSelection([commit_hex]))
+    h = Fragmap.from_diffs(pp.parse(diff))
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
