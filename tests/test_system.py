@@ -22,7 +22,7 @@ def test_arg_n():
   run(['-n', '2'])
 
 def test_arg_s():
-  run(['-s', 'master'])
+  run(['-s', 'HEAD~4'])
 
 def test_r15():
   run(['-s', 'HEAD~15','-u', 'HEAD~13'])
