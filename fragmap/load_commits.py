@@ -67,10 +67,14 @@ def oldrange(fragment):
 def newrange(fragment):
   return Range(fragment.new_start, fragment.new_lines)
 
-def get_diff(repo, commit):
+def get_diff(repo, commit, find_similar=True):
   if isinstance(commit, pygit2.Commit):
-    return repo.diff(commit.parents[0], commit, context_lines=0, interhunk_lines=0)
-  return commit.get_diff(repo)
+    diff = repo.diff(commit.parents[0], commit, context_lines=0, interhunk_lines=0)
+  else:
+    diff = commit.get_diff(repo, context_lines=0, interhunk_lines=0)
+  if find_similar:
+    diff.find_similar()
+  return diff
 
 class FakeCommit(object):
   def __init__(self, hex):
