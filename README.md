@@ -23,6 +23,8 @@ After installing the requirements (see below), simply run:
 
 - Run `python setup.py develop`
 
+- Run `python update_tests.py`. This also needs to be run if you make changes to any repo under `tests/diffs/`
+
 - (Optional) Define the environment variable `FRAGMAP_DEBUG` to get access to the `--log` argument.
 
 # Autocompletion
