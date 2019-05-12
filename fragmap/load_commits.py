@@ -178,7 +178,10 @@ class ExplicitCommitSelection(object):
 class CommitLoader(object):
   @staticmethod
   def load(repo_dir, commit_selection):
-    repo = pygit2.Repository(pygit2.discover_repository(repo_dir))
+    repo_root = pygit2.discover_repository(repo_dir)
+    if repo_root is None:
+      raise RuntimeError('Error: Working directory is not a git repository.')
+    repo = pygit2.Repository(repo_root)
     commits = commit_selection.get_items(repo)
     print '... Retrieving fragments       \r',
     commitdiffs = [CommitDiff(commit, get_diff(repo, commit)) for commit in commits]
