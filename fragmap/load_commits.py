@@ -155,10 +155,13 @@ class CommitSelection(object):
       # Limit the number of commits
       commits = commits[0:(self.max_count + 1)]
 
+    def add_if_nonempty(commit):
+      if len(commit.get_diff(repo)) > 0:
+        commits.append(commit)
     if self.include_staged:
-      commits.append(Staged())
+      add_if_nonempty(Staged())
     if self.include_unstaged:
-      commits.append(Unstaged())
+      add_if_nonempty(Unstaged())
     return commits
 
 class ExplicitCommitSelection(object):
