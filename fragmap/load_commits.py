@@ -114,7 +114,7 @@ class Unstaged(FakeCommit):
 
 class Staged(FakeCommit):
   def __init__(self):
-    super(Staged, self).__init__('0000000000000000000000000000000000000001')
+    super(Staged, self).__init__('0000000100000000000000000000000000000000')
     self.message = ' (staged changes)'
 
   def get_diff(self, repo, **kwargs):
