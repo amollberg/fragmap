@@ -88,7 +88,10 @@ def main():
     for i in range(lines_printed[0]):
       print(ANSI_UP, end='')
       erase_current_line()
-    return make_fragmap(diff_list, not is_full, False)
+    print('... Generating fragmap\r', end='')
+    fm = make_fragmap(diff_list, not is_full, False)
+    print('                      \r', end='')
+    return fm
   fragmap = serve()
   if args.web:
     if args.live:

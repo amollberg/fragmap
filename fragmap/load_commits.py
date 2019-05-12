@@ -141,6 +141,7 @@ class CommitSelection(object):
     self.max_count = max_count
 
   def get_items(self, repo):
+    print '... Finding commits            \r',
     walker = repo.walk(repo.head.target,
                        pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_REVERSE)
     if self.end:
@@ -158,9 +159,12 @@ class CommitSelection(object):
     def add_if_nonempty(commit):
       if len(commit.get_diff(repo)) > 0:
         commits.append(commit)
+
     if self.include_staged:
+      print '... Retrieving staged changes  \r',
       add_if_nonempty(Staged())
     if self.include_unstaged:
+      print '... Retrieving unstaged changes\r',
       add_if_nonempty(Unstaged())
     return commits
 
@@ -176,7 +180,9 @@ class CommitLoader(object):
   def load(repo_dir, commit_selection):
     repo = pygit2.Repository(pygit2.discover_repository(repo_dir))
     commits = commit_selection.get_items(repo)
+    print '... Retrieving fragments       \r',
     commitdiffs = [CommitDiff(commit, get_diff(repo, commit)) for commit in commits]
+    print '                               \r',
     return commitdiffs
 
 class DictCoersionEncoder(json.JSONEncoder):
