@@ -28,6 +28,9 @@ import os
 import fragmap.debug as debug
 from fragmap.commitdiff import CommitDiff
 
+UNSTAGED_HEX = '0000000000000000000000000000000000000000'
+STAGED_HEX = '0000000100000000000000000000000000000000'
+
 def is_nullfile(fn):
   return fn == '/dev/null'
 
@@ -89,6 +92,13 @@ def get_diff(repo, commit, find_similar=True):
     diff.find_similar()
   return diff
 
+def hex_to_commit(repo, hex):
+  if hex == STAGED_HEX:
+    return Staged()
+  if hex == UNSTAGED_HEX:
+    return Unstaged()
+  return repo[hex]
+
 class BinaryHunk(object):
   def __init__(self, patch_that_is_binary):
     assert(patch_that_is_binary.delta.is_binary)
@@ -106,7 +116,7 @@ class FakeCommit(object):
 
 class Unstaged(FakeCommit):
   def __init__(self):
-    super(Unstaged, self).__init__('0000000000000000000000000000000000000000')
+    super(Unstaged, self).__init__(UNSTAGED_HEX)
     self.message = ' (unstaged changes)'
 
   def get_diff(self, repo, **kwargs):
@@ -114,7 +124,7 @@ class Unstaged(FakeCommit):
 
 class Staged(FakeCommit):
   def __init__(self):
-    super(Staged, self).__init__('0000000100000000000000000000000000000000')
+    super(Staged, self).__init__(STAGED_HEX)
     self.message = ' (staged changes)'
 
   def get_diff(self, repo, **kwargs):
@@ -156,7 +166,7 @@ class ExplicitCommitSelection(object):
     self.commit_hexes = commit_hex_list
 
   def get_items(self, repo):
-    return [repo[hex] for hex in self.commit_hexes]
+    return [hex_to_commit(repo, hex) for hex in self.commit_hexes]
 
 class CommitLoader(object):
   @staticmethod

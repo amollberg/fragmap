@@ -3,6 +3,7 @@
 
 import native_git
 from fragmap.common_ui import first_line
+from fragmap.load_commits import UNSTAGED_HEX, STAGED_HEX
 
 import os
 import pygit2
@@ -82,6 +83,10 @@ def find_commit_with_message(repo_path, message):
           break
         known_commit_hexes.add(commit.hex)
         yield commit
+  if message == 'STAGED':
+    return STAGED_HEX
+  if message == 'UNSTAGED':
+    return UNSTAGED_HEX
   repo = pygit2.Repository(repo_path)
   for commit in all_commits(repo):
     if first_line(commit.message) == message:
