@@ -50,13 +50,16 @@ def make_fragmap_page(fragmap):
 
   doc, tag, text = Doc().tagtext()
 
-  def colorized_line(line):
+  def colorized_line(line_object):
+    origin = line_object.origin
+    line = origin + line_object.content
+
     if line == '':
       return
-    if line[0] == '-':
+    if origin == '-':
       with tag('pre', klass='codeline codeline_removed'):
         text(line)
-    if line[0] == '+':
+    if origin == '+':
       with tag('pre', klass='codeline codeline_added'):
         text(line)
 
@@ -72,7 +75,7 @@ def make_fragmap_page(fragmap):
       with tag('div', klass='code'):
         if cell.base.node:
           text(str(cell.base.node))
-          for line in cell.base.node._fragment._content:
+          for line in cell.base.node._fragment.lines:
             colorized_line(line)
     render_cell_graphics(tag, cell, inner)
 
@@ -136,7 +139,7 @@ def make_fragmap_page(fragmap):
             for r in range(len(matrix)):
               cur_patch = fragmap.patches[r].header
               commit_msg = first_line(cur_patch.message)
-              hash = cur_patch._hash
+              hash = cur_patch.hex
               with tag('tr'):
                 with tag('th'):
                   with tag('span', klass='commit_hash'):
