@@ -6,7 +6,7 @@ from load_commits import CommitLoader, ExplicitCommitSelection
 from update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines
-from infrastructure import find_commit_with_message
+from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import list_hunks
 import debug
 
@@ -398,6 +398,44 @@ class Test(unittest.TestCase):
                            ['##',
                             '.#'])
 
+  def test_staged(self):
+    self.reset_hard()
+    self.staged_change('file.txt', ['hello', 'world', 'new line'])
+    self.check_diffs_brief(['Setup',
+                            'STAGED',
+                            'UNSTAGED'],
+                           ['#.',
+                            '.#',
+                            '..'])
+
+  def test_unstaged(self):
+    self.reset_hard()
+    self.unstaged_change('file.txt', ['hello', 'world', 'unstaged'])
+    self.check_diffs_brief(['Setup',
+                            'STAGED',
+                            'UNSTAGED'],
+                           ['#.',
+                            '..',
+                            '.#'])
+
+  def test_staged_and_unstaged(self):
+    self.reset_hard()
+    self.staged_change('file.txt', ['hello', 'world', 'new line'])
+    self.unstaged_change('file.txt', ['hello', 'new line'])
+    self.check_diffs_brief(['Setup',
+                            'STAGED',
+                            'UNSTAGED'],
+                           ['##.',
+                            '.^#',
+                            '.#.'])
+    self.unstaged_change('file.txt', [''])
+    self.check_diffs_brief(['Setup',
+                            'STAGED',
+                            'UNSTAGED'],
+                           ['#.',
+                            '^#',
+                            '##'])
+
   # === Test rev-list command assembly ===
 
   def test_revlist_n(self):
@@ -424,6 +462,25 @@ class Test(unittest.TestCase):
 
   # === Helper functions ===
 
+  def unstaged_change(self, filename, lines):
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, "build", test_name)
+    file_path = os.path.join(repo_path, filename)
+    with open(file_path, 'wb') as f:
+      for line in lines:
+        print ("to file", file_path, "writing '", lines, "'")
+        f.write(line + '\n')
+
+  def staged_change(self, filename, lines):
+    self.unstaged_change(filename, lines)
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, "build", test_name)
+    stage_all_changes(repo_path)
+
+  def reset_hard(self):
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, "build", test_name)
+    reset_hard(repo_path)
 
   def get_node_lines(self, diff_filenames):
     test_name = self.id().split('.')[-1]

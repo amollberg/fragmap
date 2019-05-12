@@ -92,3 +92,12 @@ def find_commit_with_message(repo_path, message):
     if first_line(commit.message) == message:
       return commit.hex
   raise RuntimeError("No commit with message '%s' in repo %s" %(message, repo_path))
+
+def stage_all_changes(repo_path):
+  repo = pygit2.Repository(repo_path)
+  repo.index.add_all()
+  repo.index.write()
+
+def reset_hard(repo_path):
+  repo = pygit2.Repository(repo_path)
+  repo.reset(repo.head.target, pygit2.GIT_RESET_HARD)
