@@ -195,6 +195,7 @@ def javascript():
       prev_source = source;
       source.id = "selected_cell";
       source.parentElement.id = "selected_row";
+      source.scrollIntoView();
       document.getElementById('code_window').innerHTML = source.childNodes[0].innerHTML;
     }
     function within(lower, x, upper) {
