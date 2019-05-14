@@ -99,6 +99,11 @@ def hex_to_commit(repo, hex):
     return Unstaged()
   return repo[hex]
 
+class BinaryLine(object):
+  def __init__(self, content):
+    self.origin = ''
+    self.content = content
+
 class BinaryHunk(object):
   def __init__(self, patch_that_is_binary):
     assert(patch_that_is_binary.delta.is_binary)
@@ -107,6 +112,7 @@ class BinaryHunk(object):
     self.old_lines = binary_range_length(delta.old_file)
     self.new_start = 0
     self.new_lines = binary_range_length(delta.new_file)
+    self.lines = [BinaryLine(line) for line in patch_that_is_binary.text.splitlines()]
 
 class FakeCommit(object):
   def __init__(self, hex):

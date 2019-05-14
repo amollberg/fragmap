@@ -62,6 +62,9 @@ def make_fragmap_page(fragmap):
     if origin == '+':
       with tag('pre', klass='codeline codeline_added'):
         text(line)
+    if origin == '':
+      with tag('pre', klass='codeline'):
+        text(line)
 
   def etag(*args, **kwargs):
     """
