@@ -40,7 +40,11 @@ class FragmentBoundNode():
     line = self._line
     if self._kind == FragmentBoundNode.END:
       line += 1
-    return FragmentBoundNode(self._diff_i, self._file_patch, self._fragment_i, line, self._kind)
+    node = FragmentBoundNode(self._diff_i, self._file_patch, self._fragment_i, line, self._kind)
+    # Some fields not in the constructor get updated afterwards
+    node._fragment = self._fragment
+    node._filename = self._filename
+    return node
 
   def __repr__(self):
     kind_str = "START"
@@ -104,13 +108,11 @@ class FragmentBoundLine():
       a_line += 1
     if b._kind == FragmentBoundNode.END:
       b_line += 1
-    if a_file != b_file:
-      debug.get('grouping').debug("file %s != %s at diff %d", a_file, b_file, diff_i)
-      return False
-    if a_line != b_line:
-      debug.get('grouping').debug("line %d != %d at diff %d", a_line, b_line, diff_i)
-      return False
-    return True
+    b_node = b._nodehistory[diff_i].with_incremented_end()
+    print b_file, b_node._filename
+
+    return (a_file, a_line) == (b_node._filename, b_node._line)
+    #return True
 
   def __eq__(a, b):
     # If a start and an end share a startdiff then it is not safe to
