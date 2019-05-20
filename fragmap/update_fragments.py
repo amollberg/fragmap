@@ -26,6 +26,7 @@ class FragmentBoundNode():
 
   def __init__(self, diff_i, file_patch, fragment_i, line, kind):
     self._diff_i = diff_i
+    self._file_patch = file_patch
     if file_patch.delta.is_binary:
       self._fragment = BinaryHunk(file_patch)
     else:
@@ -35,11 +36,33 @@ class FragmentBoundNode():
     self._line = line
     self._kind = kind
 
+  def with_incremented_end(self):
+    line = self._line
+    if self._kind == FragmentBoundNode.END:
+      line += 1
+    return FragmentBoundNode(self._diff_i, self._file_patch, self._fragment_i, line, self._kind)
+
   def __repr__(self):
     kind_str = "START"
     if self._kind == FragmentBoundNode.END:
       kind_str = "END"
     return "<Node: (%s, %d), (%s, %d), %s>" %(self._diff_i, self._fragment_i, self._filename, self._line, kind_str)
+
+class FragmentDualBoundNode():
+  # FragmentBoundNodes
+  start = None
+  end = None
+
+  def __lt__(a, b):
+    return a.start < b.start or (
+      a.start == b.start and a.end < b.line)
+
+  def __init__(self, start, end):
+    self.start = start
+    self.end = end
+
+  def __repr__(self):
+    return "<DualNode: %s, %s>" %(self.start, self.end)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -49,21 +72,8 @@ class FragmentBoundLine():
   # Note: This ordering is not transitive so bound line sorting may be inconsistent
   def __lt__(a, b):
     def lt_at_diff(a, b, diff_i):
-      a_file = a._nodehistory[diff_i]._filename
-      b_file = b._nodehistory[diff_i]._filename
-      a_line = a._nodehistory[diff_i]._line
-      b_line = b._nodehistory[diff_i]._line
-      if a._kind == FragmentBoundNode.END:
-        a_line += 1
-      if b._kind == FragmentBoundNode.END:
-        b_line += 1
-      if a_file < b_file:
-        debug.get('sorting').debug("file %s < %s at diff %d", a_file, b_file, diff_i)
-        return True
-      if a_file == b_file and a_line < b_line:
-        debug.get('sorting').debug("line %d < %d at diff %d", a_line, b_line, diff_i)
-        return True
-      return False
+      return a._nodehistory[diff_i].with_incremented_end() < b._nodehistory[diff_i].with_incremented_end()
+
     debug.get('sorting').debug("<<<<< Comparing %s and %s", a,b)
     common_diffs = set(a._nodehistory.keys()) & set(b._nodehistory.keys())
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
