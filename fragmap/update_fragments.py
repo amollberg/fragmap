@@ -100,19 +100,11 @@ class FragmentBoundLine():
 
   # Helper function for __eq__
   def eq_at_diff(a, b, diff_i):
-    a_file = a._nodehistory[diff_i]._filename
-    b_file = b._nodehistory[diff_i]._filename
-    a_line = a._nodehistory[diff_i]._line
-    b_line = b._nodehistory[diff_i]._line
-    if a._kind == FragmentBoundNode.END:
-      a_line += 1
-    if b._kind == FragmentBoundNode.END:
-      b_line += 1
-    b_node = b._nodehistory[diff_i].with_incremented_end()
-    print b_file, b_node._filename
+    def comparison_element(node):
+      return (node._filename, node._line)
+    return (comparison_element(a._nodehistory[diff_i].with_incremented_end()) ==
+            comparison_element(b._nodehistory[diff_i].with_incremented_end()))
 
-    return (a_file, a_line) == (b_node._filename, b_node._line)
-    #return True
 
   def __eq__(a, b):
     # If a start and an end share a startdiff then it is not safe to
