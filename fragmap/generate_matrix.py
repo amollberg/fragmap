@@ -85,7 +85,7 @@ def group_fragment_bound_lines(node_lines):
   node_lines = sorted(node_lines)
   if debug.is_logging('grouping'):
     print_node_line_relation_table(node_lines)
-  debug.get('sorting').debug("Sorted lines: %s", node_lines)
+  debug.get('dco').debug("Sorted lines: %s", node_lines)
   groups = []
   for node_line in node_lines:
     added = False
@@ -95,15 +95,18 @@ def group_fragment_bound_lines(node_lines):
         for member in group:
           if member._startdiff_i == node_line._startdiff_i \
           and member._kind != node_line._kind:
+            print("Collision with", member)
             inter_diff_collision = True
             break
         if not inter_diff_collision:
           # Append to group
+          debug.get('dco').debug("Adding %s to %s", node_line, group)
           group += [node_line]
           added = True
           break
     if not added:
       # Create new group
+      debug.get('dco').debug("Adding new group with %s", node_line)
       groups += [[node_line]]
   return groups
 
@@ -199,6 +202,7 @@ class Fragmap():
     c = col_index
     n_rows = self.get_n_patches()
     node_line_group = self.grouped_node_lines[c]
+    debug.get('dco').debug("grouped_node_lines at col %d: %s", c, node_line_group)
     # Initialize inside_fragment
     inside_fragment = prev_column
     if prev_column is None:
@@ -227,11 +231,11 @@ class Fragmap():
 
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
-    debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
+    #debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
 
     n_rows = self.get_n_patches()
     n_cols = len(self.grouped_node_lines)
-    debug.get('grid').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
+    debug.get('dco').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
     matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
     prev_col = None
     for c in range(n_cols):

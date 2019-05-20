@@ -4,7 +4,7 @@ import argparse
 import sys
 import logging
 
-_logging_categories = ["grid", "sorting", "grouping", "parser", "update", "console", "test", "matrix"]
+_logging_categories = ["grid", "sorting", "grouping", "parser", "update", "console", "test", "matrix", "dco"]
 # Fill out map of flags
 _enable_logging = {category: False for category in _logging_categories}
 logging.basicConfig()

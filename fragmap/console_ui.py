@@ -32,7 +32,7 @@ def filter_consecutive_equal_columns(char_matrix):
 
 def print_fragmap(fragmap, do_color):
   matrix = fragmap.render_for_console(do_color)
-  matrix = filter_consecutive_equal_columns(matrix)
+  #matrix = filter_consecutive_equal_columns(matrix)
   if len(matrix) == 0:
     return 0, 0
   matrix_width = len(matrix[0])
