@@ -195,7 +195,7 @@ def update_new_bound(fragment):
   debug.get('update').debug("Setting new end line to %d", end_line)
   return start_line, end_line
 
-def update_normal_line(line, bound_kind, fragment):
+def update_normal_line(line, bound_kind, fragment): # 4, START, (4,3) -> (4,8)
   if line <= oldrange(fragment)._end:
     if line >= oldrange(fragment)._start:
       print line, "inside", oldrange(fragment)
@@ -237,11 +237,12 @@ def update_inherited_bound(start_line, end_line, file_patch):
   debug.get('update').debug("Marker: %s", marker)
   # TODO: Fix sorting of node line groups after this.
   if marker is not None:
-    start_line = update_normal_line(end_line, FragmentBoundNode.START, marker)
     if end_line < start_line and oldrange(marker)._start == start_line:
+      start_line = start_line
       # Note that we pass start_line to make sure that end_line is updated as if it was inside the marker range
-      end_line = update_normal_line(start_line, FragmentBoundNode.END, marker)
+      end_line = newrange(marker)._end #update_normal_line(start_line, FragmentBoundNode.END, marker)
     else:
+      start_line = update_normal_line(start_line, FragmentBoundNode.START, marker)
       end_line = update_normal_line(end_line, FragmentBoundNode.END, marker)
   else:
     # line is before any fragment; no update required

@@ -109,20 +109,24 @@ class Test(unittest.TestCase):
     self.assertEqual(update_normal_line(13, FragmentBoundNode.END, fragment), 15)
 
   # TODO: test_update_inherited_bound_....
-  def test_update_inherited_bound_at_beginning(self):
+  def test_update_inherited_bound_addition(self):
     # Adds 5 lines, pushing the content on line 4 to line 9 etc.
     filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
       MockDiffHunk((3,0), (4,5), [])])
     # nonempty, end +1 < start
     self.assertEqual(update_inherited_bound(1, 2, filepatch), (1, 2))
     # empty, end +1 < start
+    self.assertEqual(update_inherited_bound(1, 0, filepatch), (1, 0))
     # nonempty, end +1 = start
+    self.assertEqual(update_inherited_bound(1, 3, filepatch), (1, 3))
     # empty bound, start = start
+    self.assertEqual(update_inherited_bound(4, 3, filepatch), (4, 8))
     # nonempty, start = start
-    # empty , end = end
-    # nonempty, end = end
+    self.assertEqual(update_inherited_bound(4, 4, filepatch), (9, 9))
     # nonempty, start > end
+    self.assertEqual(update_inherited_bound(5, 6, filepatch), (10, 11))
     # empty, start > end
+    self.assertEqual(update_inherited_bound(5, 4, filepatch), (10, 9))
 
   def test_update_new_bound(self):
     #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
