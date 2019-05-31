@@ -4,7 +4,7 @@ from fragmap.commitdiff import CommitDiff
 from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
-from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines
+from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
 from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import fragmap.debug as debug
 
@@ -138,8 +138,7 @@ class Test(unittest.TestCase):
     fragment = MockDiffHunk((4,2), (4,4), [])
 
     # Related bounds updated
-    self.assertEqual(update_new_bound(fragment, FragmentBoundNode.START), 4)
-    self.assertEqual(update_new_bound(fragment, FragmentBoundNode.END), 7)
+    self.assertEqual(update_new_bound(fragment), (4, 7))
 
   def test_update_positions(self):
     #filepatch = FilePatch(FilePatchHeader("dummy", "dummy"), [
@@ -152,7 +151,9 @@ class Test(unittest.TestCase):
     patch = CommitDiff(MockCommit("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
                                   "dummy message"),
                        [filepatch])
-    node_lines = [FragmentBoundLine(FragmentBoundNode(0, filepatch, 0, 2, FragmentBoundNode.END))]
+    node_lines = [FragmentBoundLine(FragmentDualBoundNode(0, filepatch, 0,
+                                                          FragmentBoundNode("dummy", 0, FragmentBoundNode.START),
+                                                          FragmentBoundNode("dummy", 2, FragmentBoundNode.END)))]
 
     update_positions(node_lines, patch, 0)
     self.assertEqual(node_lines[0].last()._filename, "dummy")

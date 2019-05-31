@@ -21,7 +21,7 @@ class FragmentBoundNode():
     return a._filename < b._filename or (
       a._filename == b._filename and a._line < b._line)
 
-  def __init__(filename, line, kind):
+  def __init__(self, filename, line, kind):
     self._filename = filename
     self._line = line
     self._kind = kind
@@ -57,8 +57,8 @@ class FragmentDualBoundNode():
       self._fragment = file_patch.hunks[fragment_i]
     self._fragment_i = fragment_i
     self._filename = nonnull_file(file_patch.delta)
-    self.start = FragmentBoundNode(start_line, FragmentBoundNode.START)
-    self.end = FragmentBoundNode(end_line, FragmentBoundNode.END)
+    self.start = FragmentBoundNode(self._filename, start_line, FragmentBoundNode.START)
+    self.end = FragmentBoundNode(self._filename, end_line, FragmentBoundNode.END)
 
   def set_filename(self, new_filename):
     self._filename = new_filename
@@ -144,12 +144,12 @@ class FragmentBoundLine():
       return False
 
 
-  def __init__(self, node):
-    self._startdiff_i = node._diff_i
+  def __init__(self, dual_node):
+    self._startdiff_i = dual_node._diff_i
     # Initialize history with a base node that was created
     # by some previous diff (startdiff - 1) so that
     # when this node gets updated with startdiff it will be in sync.
-    self._nodehistory = {self._startdiff_i-1 : node}
+    self._nodehistory = {self._startdiff_i-1 : dual_node}
 
   def __repr__(self):
     return " \n<FragmentBoundLine: %d, %s>" % (
