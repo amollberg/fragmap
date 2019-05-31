@@ -38,10 +38,12 @@ def print_fragmap(fragmap, do_color):
   matrix_width = len(matrix[0])
   hash_width = 8
   padded_matrix_width = matrix_width
-  terminal_column_size = get_terminal_size().columns
-  if terminal_column_size == 0:
+  reported_terminal_column_size = get_terminal_size().columns
+  if reported_terminal_column_size == 0:
     # Fall back to a default value
-    terminal_column_size = 80
+    reported_terminal_column_size = 80
+  # Note: Subtracting two because ConEmu/Cmder line wraps two columns before
+  terminal_column_size = reported_terminal_column_size - 2
   max_actual_commit_width = max([len(first_line(p.header.message)) for p in fragmap.patches])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 terminal_column_size/2,
