@@ -26,7 +26,8 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: BSD License",
     ],
-    install_requires=["yattag==1.10.0",
+    install_requires=["pygit2>=0.28.1",
+                      "yattag==1.10.0",
                       "backports.shutil_get_terminal_size>=1.0.0"],
     tests_require=read("requirements-dev.txt"),
     entry_points={

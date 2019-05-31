@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from parse_patch import *
 from update_fragments import *
 import debug
 from console_color import *
@@ -185,10 +184,10 @@ class Fragmap():
     debug.get('matrix').debug("Patches: %s", patches)
 
   @staticmethod
-  def from_ast(ast):
-    node_lines = update_all_positions_to_latest(ast._patches)
+  def from_diffs(diffs):
+    node_lines = update_all_positions_to_latest(diffs)
     grouped_lines = group_fragment_bound_lines(node_lines)
-    return Fragmap(ast._patches, grouped_lines)
+    return Fragmap(diffs, grouped_lines)
 
   def get_n_patches(self):
     return len(self.patches)
@@ -496,18 +495,3 @@ class ConnectedFragmap(object):
 
     return flatten([[flatten(v) for v in lzip(*[create_cell_description(cell) for cell in row])]
                     for row in connection_matrix])
-
-
-def main():
-  pp = PatchParser()
-  lines = [line.rstrip() for line in sys.stdin]
-
-  ast = pp.parse(lines)
-  debug.get('matrix').debug(diff_list)
-  h = Fragmap.from_ast(ast)
-  print h.str()
-
-
-if __name__ == '__main__':
-  debug.parse_args()
-  main()

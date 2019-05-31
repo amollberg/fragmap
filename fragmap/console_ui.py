@@ -3,6 +3,7 @@
 from __future__ import print_function
 from backports.shutil_get_terminal_size import get_terminal_size
 
+from fragmap.common_ui import first_line
 from fragmap.generate_matrix import ConnectedFragmap
 from console_color import *
 
@@ -41,7 +42,7 @@ def print_fragmap(fragmap, do_color):
   if terminal_column_size == 0:
     # Fall back to a default value
     terminal_column_size = 80
-  max_actual_commit_width = max([len(p._header._message[0]) for p in fragmap.patches])
+  max_actual_commit_width = max([len(first_line(p.header.message)) for p in fragmap.patches])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 terminal_column_size/2,
                                 terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
@@ -61,9 +62,9 @@ def print_fragmap(fragmap, do_color):
       print_matrix_action(r)
   # Draw the text and matrix
   def print_line(r):
-    cur_patch = fragmap.patches[r]._header
-    commit_msg = cur_patch._message[0] # First row of message
-    hash = cur_patch._hash
+    cur_patch = fragmap.patches[r].header
+    commit_msg = first_line(cur_patch.message)
+    hash = cur_patch.hex
     # Pad short commit messages
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages

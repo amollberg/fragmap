@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import copy
-from parse_patch import *
+from fragmap.load_commits import *
 import debug
 
 
@@ -24,15 +24,15 @@ class FragmentBoundNode():
     return a._filename < b._filename or (
            a._filename == b._filename and a._line < b._line)
 
-  def __init__(self, diff_i, file_patch, fragment_i, fragment_range, kind):
+  def __init__(self, diff_i, file_patch, fragment_i, line, kind):
     self._diff_i = diff_i
-    self._fragment = file_patch._fragments[fragment_i]
+    if file_patch.delta.is_binary:
+      self._fragment = BinaryHunk(file_patch)
+    else:
+      self._fragment = file_patch.hunks[fragment_i]
     self._fragment_i = fragment_i
-    self._filename = nonnull_file(file_patch._header)
-    if kind == FragmentBoundNode.START:
-      self._line = fragment_range._start
-    elif kind == FragmentBoundNode.END:
-      self._line = fragment_range._end
+    self._filename = nonnull_file(file_patch.delta)
+    self._line = line
     self._kind = kind
 
   def __repr__(self):
@@ -175,12 +175,12 @@ def update_new_bound(fragment, bound_kind):
   fragment it belongs to.
   """
   line = 0
-  marker = fragment._header
+  marker = newrange(fragment)
   if bound_kind == FragmentBoundNode.START:
-    line = marker._newrange._start
+    line = marker._start
     debug.get('update').debug("Setting new start line to %d", line)
   elif bound_kind == FragmentBoundNode.END:
-    line = marker._newrange._end
+    line = marker._end
     debug.get('update').debug("Setting new end line to %d", line)
   return line
 
@@ -197,29 +197,31 @@ def update_inherited_bound(line, bound_kind, file_patch):
   # end lines inside fragment map e -> d
   # subsequent lines map as e -> e-b+d
   marker = None
-  for patch_fragment in file_patch._fragments:
-    if patch_fragment._header._oldrange._start <= line:
-      marker = patch_fragment._header
+  for patch_fragment in file_patch.hunks:
+    if oldrange(patch_fragment)._start <= line:
+      marker = patch_fragment
     else:
       break
+  if marker is None and file_patch.delta.is_binary:
+    marker = BinaryHunk(file_patch)
   debug.get('update').debug("Update_line: %d %s %s", line, bound_kind, file_patch)
   debug.get('update').debug("Marker: %s", marker)
   # TODO: Fix sorting of node line groups after this.
   if marker is not None:
-    if line <= marker._oldrange._end:
+    if line <= oldrange(marker)._end:
       # line is inside the range
-      debug.get('update').debug("Line %d is inside range %s", line, marker._oldrange)
+      debug.get('update').debug("Line %d is inside range %s", line, oldrange(marker))
       if bound_kind == FragmentBoundNode.START:
-        line = marker._newrange._start
+        line = newrange(marker)._start
         debug.get('update').debug("Setting start line to %d", line)
       elif bound_kind == FragmentBoundNode.END:
-        line = marker._newrange._end
+        line = newrange(marker)._end
         debug.get('update').debug("Setting end line to %d", line)
     else:
       # line is after the range
       debug.get('update').debug("Line %d is after range %s; shifting %d" % (
-        line, marker._oldrange, marker._newrange._end - marker._oldrange._end))
-      line += marker._newrange._end - marker._oldrange._end
+        line, oldrange(marker), newrange(marker)._end - oldrange(marker)._end))
+      line += newrange(marker)._end - oldrange(marker)._end
   else:
     # line is before any fragment; no update required
     pass
@@ -245,7 +247,7 @@ def update_file_positions(file_node_lines, file_patch, diff_i):
   # TODO Ensure sorted fragments
   for node_line in file_node_lines:
     debug.get('update').debug("Node before: %s", node_line.last())
-    node_line.update(diff_i, file_patch._header._newfile,
+    node_line.update(diff_i, file_patch.delta.new_file.path,
                      update_line(node_line.last()._line,
                                  node_line.last()._kind,
                                  node_line.last()._fragment,
@@ -259,9 +261,9 @@ def update_positions(node_lines, patch, diff_i):
   """
   Update all node lines with a multi-file patch.
   """
-  if len(patch._filepatches) > 0:
-    for file_patch in patch._filepatches:
-      oldfile = file_patch._header._oldfile
+  if len(patch.filepatches) > 0:
+    for file_patch in patch.filepatches:
+      oldfile = file_patch.delta.old_file.path
       file_node_lines = []
       for nl in node_lines:
         debug.get('update').debug("last: %s", nl.last()._filename)
@@ -284,13 +286,21 @@ def update_positions(node_lines, patch, diff_i):
 
 def extract_nodes(diff, diff_i):
   node_list = []
-  for file_patch in diff._filepatches:
-    for fragment_i in range(len(file_patch._fragments)):
-      fragment = file_patch._fragments[fragment_i]
+  for file_patch in diff.filepatches:
+    for fragment_i in range(len(file_patch.hunks)):
+      fragment = file_patch.hunks[fragment_i]
       node_list += [
-        FragmentBoundNode(diff_i, file_patch, fragment_i, fragment._header._oldrange,
+        FragmentBoundNode(diff_i, file_patch, fragment_i, oldrange(fragment)._start,
                           FragmentBoundNode.START),
-        FragmentBoundNode(diff_i, file_patch, fragment_i, fragment._header._oldrange,
+        FragmentBoundNode(diff_i, file_patch, fragment_i, oldrange(fragment)._end,
+                          FragmentBoundNode.END),
+        ]
+    if file_patch.delta.is_binary:
+      binary_fragment = BinaryHunk(file_patch)
+      node_list += [
+        FragmentBoundNode(diff_i, file_patch, -1, oldrange(binary_fragment)._start,
+                          FragmentBoundNode.START),
+        FragmentBoundNode(diff_i, file_patch, -1, oldrange(binary_fragment)._end,
                           FragmentBoundNode.END),
         ]
   return node_list

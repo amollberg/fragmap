@@ -1,9 +1,0 @@
-commit 216c594dcf6e2a341f4aaa08ff31554962f46453
-Author: amollberg <amollberg@users.noreply.github.com>
-Date:   Sat Oct 28 13:36:27 2017 +0200
-
-    Changed and resized binary file file.bin
-
-diff --git a/file.bin b/file.bin
-index 0901453..dd6def9 100644
-Binary files a/file.bin and b/file.bin differ

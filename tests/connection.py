@@ -2,7 +2,6 @@
 
 from common import *
 
-from parse_patch import *
 from generate_matrix import *
 
 # Test helpers
