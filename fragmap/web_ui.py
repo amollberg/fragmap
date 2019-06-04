@@ -8,6 +8,7 @@ from common_ui import first_line
 
 import os
 import re
+import io
 
 
 def nop():
@@ -178,7 +179,7 @@ def start_fragmap_server(fragmap_callback):
 
 
 def open_fragmap_page(fragmap, live):
-  with open('fragmap.html', 'w') as f:
+  with io.open('fragmap.html', 'w', encoding="utf-8") as f:
     f.write(make_fragmap_page(fragmap))
     os.startfile(f.name)
 
