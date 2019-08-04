@@ -7,7 +7,6 @@ from update_fragments import update_inherited_bound, update_new_bound, update_po
 from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines
 from .infrastructure import find_commit_with_message, stage_all_changes, reset_hard
-import list_hunks
 import debug
 
 from mock import Mock
@@ -435,30 +434,6 @@ class Test(unittest.TestCase):
                            ['#.',
                             '^#',
                             '##'])
-
-  # === Test rev-list command assembly ===
-
-  def test_revlist_n(self):
-    self.assertEqual(list_hunks._assemble_revlist_command(max_count='4'),
-                     [list_hunks.GIT, 'rev-list', '--reverse',
-                      '--max-count', '4', 'HEAD'])
-
-  def test_revlist_s(self):
-    self.assertEqual(list_hunks._assemble_revlist_command(start='somebranch'),
-                     [list_hunks.GIT, 'rev-list', '--reverse',
-                      'somebranch..HEAD'])
-
-  def test_revlist_s_n(self):
-    self.assertEqual(list_hunks._assemble_revlist_command(max_count='5',
-                                                          start='abcd0123'),
-                     [list_hunks.GIT, 'rev-list', '--reverse',
-                      '--max-count', '5', 'abcd0123..HEAD'])
-
-  def test_revlist_neither(self):
-    self.assertEqual(list_hunks._assemble_revlist_command(None, None),
-                     [list_hunks.GIT, 'rev-list', '--reverse', 'HEAD'])
-
-
 
   # === Helper functions ===
 
