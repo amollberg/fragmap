@@ -25,8 +25,8 @@ import pygit2
 import json
 import os
 
-import fragmap.debug as debug
-from fragmap.commitdiff import CommitDiff
+from .debug import *
+from .commitdiff import CommitDiff
 
 UNSTAGED_HEX = '0000000000000000000000000000000000000000'
 STAGED_HEX = '0000000100000000000000000000000000000000'

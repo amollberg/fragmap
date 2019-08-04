@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import copy
-from fragmap.load_commits import *
+from .load_commits import BinaryHunk, nonnull_file, oldrange, newrange
 from . import debug
 
 
@@ -65,7 +65,7 @@ class FragmentBoundLine():
         return True
       return False
     debug.get('sorting').debug("<<<<< Comparing %s and %s", a,b)
-    common_diffs = list(a._nodehistory.keys()) & list(b._nodehistory.keys())
+    common_diffs = set(a._nodehistory.keys()) & set(b._nodehistory.keys())
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1
@@ -111,7 +111,7 @@ class FragmentBoundLine():
       return False
 
     debug.get('grouping').debug("===== Comparing %s and %s", a, b)
-    common_diffs = list(a._nodehistory.keys()) & list(b._nodehistory.keys())
+    common_diffs = set(a._nodehistory.keys()) & set(b._nodehistory.keys())
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1

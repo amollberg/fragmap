@@ -7,7 +7,6 @@ import mock
 def run(args):
   with mock.patch('sys.argv',
                   ['dummypath/main.py'] + args):
-    from . import common
     import fragmap.main
     fragmap.main.main()
 

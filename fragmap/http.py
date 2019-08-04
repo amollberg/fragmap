@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from .http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 class HtmlHandler(BaseHTTPRequestHandler):
   def do_GET(self):
