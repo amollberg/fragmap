@@ -10,7 +10,7 @@ DEFAULT_GIT_ENV={'GIT_COMMITTER_NAME': 'Foo Bar',
                  'GIT_CONFIG_NOSYSTEM': '1'}
 
 def bundle(repo_path, bundle_abspath):
-  print "Bundling", repo_path, "to", bundle_abspath
+  print("Bundling", repo_path, "to", bundle_abspath)
   subprocess.check_call(['git'] + DEFAULT_GIT_CONFIG_STRING +
                         ['bundle', 'create', bundle_abspath, '--all'],
                         cwd=repo_path, env=DEFAULT_GIT_ENV)

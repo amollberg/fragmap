@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from update_fragments import *
-import debug
-from console_color import *
+from .update_fragments import *
+from . import debug
+from .console_color import *
 
 import collections
 
@@ -45,7 +45,7 @@ def print_node_line_relation_table(node_lines):
   is equal to which.
   """
   N = len(node_lines)
-  grid = [['.' for i in xrange(N)] for j in xrange(N)]
+  grid = [['.' for i in range(N)] for j in range(N)]
   for r in range(N):
     for c in range(N):
       if node_lines[r] == node_lines[c]:
@@ -232,7 +232,7 @@ class Fragmap():
     n_rows = self.get_n_patches()
     n_cols = len(self.grouped_node_lines)
     debug.get('grid').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+    matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
     prev_col = None
     for c in range(n_cols):
       column = self.generate_column(c, prev_col)
@@ -252,7 +252,7 @@ class Fragmap():
     if n_rows == 0:
       return []
     n_cols = len(matrix[0])
-    m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+    m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
 
     def render_cell(cell):
       if cell.kind == Cell.CHANGE:
@@ -292,12 +292,12 @@ class BriefFragmap(object):
   @staticmethod
   def group_by_patch_connection(fragmap):
     def patch_connection_key(column):
-      inside = map(lambda it: it.inside if it is not None else False, column)
+      inside = [it.inside if it is not None else False for it in column]
       if inside == [False] * fragmap.get_n_patches():
         # Skip empty columns
         return False, None
       # Convert from list of True,False to string of 1,0
-      return True, ''.join(map(lambda b: '1' if b else '0', inside))
+      return True, ''.join(['1' if b else '0' for b in inside])
     return BriefFragmap(fragmap, *BriefFragmap._group_columns_by(fragmap, patch_connection_key))
 
   @staticmethod
@@ -324,7 +324,7 @@ class BriefFragmap(object):
       if not valid:
         continue
       debug.get('matrix').debug('key: %s', key)
-      if key in connections.keys():
+      if key in list(connections.keys()):
         # Append to existing dict entry
         connections[key].extend(group)
       else:
@@ -338,7 +338,7 @@ class BriefFragmap(object):
     n_rows = self.fragmap.get_n_patches()
     n_cols = len(self.connections)
     debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+    matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
     for c in range(n_cols):
       key = self.key_index[c]
       for r in range(n_rows):
@@ -440,7 +440,7 @@ class ConnectedFragmap(object):
     base_matrix = self.fragmap.generate_matrix()
     cols = n_columns(base_matrix)
     rows = n_rows(base_matrix)
-    return [[create_cell(base_matrix, r, c) for c in xrange(cols)] for r in xrange(rows)]
+    return [[create_cell(base_matrix, r, c) for c in range(cols)] for r in range(rows)]
 
   def render_for_console(self, colorize):
     connection_matrix = self.generate_matrix()

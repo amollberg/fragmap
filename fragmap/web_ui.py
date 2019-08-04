@@ -2,9 +2,9 @@
 # encoding: utf-8
 
 from yattag import Doc
-from generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
-from http import start_server
-from common_ui import first_line
+from .generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
+from .http import start_server
+from .common_ui import first_line
 
 import os
 import re
@@ -84,7 +84,7 @@ def make_fragmap_page(fragmap):
     render_cell_graphics(tag, cell, inner)
 
   def get_first_filename(matrix, c):
-    for r in xrange(len(matrix)):
+    for r in range(len(matrix)):
       cell = matrix[r][c]
       if cell.base.kind != Cell.NO_CHANGE:
         return cell.base.node._filename
@@ -94,7 +94,7 @@ def make_fragmap_page(fragmap):
     filenames = []
     if len(matrix) == 0:
       return filenames
-    for c in xrange(len(matrix[0])):
+    for c in range(len(matrix[0])):
       fn = get_first_filename(matrix, c)
       if len(filenames) == 0:
         filenames.append({'filename': fn, 'span': 1, 'start': c})
@@ -169,9 +169,9 @@ def start_fragmap_server(fragmap_callback):
   server = start_server(html_callback)
   address = 'http://%s:%s' % server.server_address
   os.startfile(address)
-  print 'Serving fragmap at %s' %(address,)
-  print "Press 'r' to re-launch the page"
-  print 'Press any other key to terminate'
+  print('Serving fragmap at', address)
+  print("Press 'r' to re-launch the page")
+  print('Press any other key to terminate')
   from getch.getch import getch
   while(ord(getch()) == ord('r')):
       os.startfile(address)

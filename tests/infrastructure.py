@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import native_git
+from . import native_git
 from fragmap.common_ui import first_line
 from fragmap.load_commits import UNSTAGED_HEX, STAGED_HEX
 
@@ -26,7 +26,7 @@ def create_dir(dir_path):
     os.makedirs(dir_path)
 
 def rmtree_readonly(*args, **kwargs):
-  print "Removing", args[0]
+  print("Removing", args[0])
   def on_readonly(action, name, exc):
     os.chmod(name, stat.S_IWRITE)
     os.remove(name)
@@ -37,7 +37,7 @@ def create_bundles(test_dir):
   # run git bundle create test_*.bundle --all in test_dir
   test_subdirs = [subdir for subdir in subdirs(test_dir)
                   if basename(subdir).startswith('test_')]
-  print test_subdirs
+  print(test_subdirs)
   for test_subdir in test_subdirs:
     native_git.bundle(test_subdir, os.path.abspath(test_subdir + '.bundle'))
 
