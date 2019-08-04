@@ -51,7 +51,7 @@ def print_node_line_relation_table(node_lines):
       if node_lines[r] == node_lines[c]:
         grid[r][c] = '='
   for row in grid:
-    print ''.join(row)
+    print(''.join(row))
 
 def decorate_matrix(m):
   debug.get('grid').debug("decorate_matrix")

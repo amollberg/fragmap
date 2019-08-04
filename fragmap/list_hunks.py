@@ -34,7 +34,7 @@ def get_rev_list(**kwargs):
 
 def get_diff(staged, unstaged, **kwargs):
   if not is_git_available():
-    print "Error: git cannot be found. Has it been installed?"
+    print("Error: git cannot be found. Has it been installed?")
     return None
   output = []
   try:

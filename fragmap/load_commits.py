@@ -147,7 +147,7 @@ class CommitSelection(object):
     self.max_count = max_count
 
   def get_items(self, repo):
-    print '... Finding commits            \r',
+    print('... Finding commits            \r', end='')
     walker = repo.walk(repo.head.target,
                        pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_REVERSE)
     if self.end:
@@ -167,10 +167,10 @@ class CommitSelection(object):
         commits.append(commit)
 
     if self.include_staged:
-      print '... Retrieving staged changes  \r',
+      print('... Retrieving staged changes  \r', end='')
       add_if_nonempty(Staged())
     if self.include_unstaged:
-      print '... Retrieving unstaged changes\r',
+      print('... Retrieving unstaged changes\r', end='')
       add_if_nonempty(Unstaged())
     return commits
 
@@ -189,9 +189,9 @@ class CommitLoader(object):
       raise RuntimeError('Error: Working directory is not a git repository.')
     repo = pygit2.Repository(repo_root)
     commits = commit_selection.get_items(repo)
-    print '... Retrieving fragments       \r',
+    print('... Retrieving fragments       \r', end='')
     commitdiffs = [CommitDiff(commit, get_diff(repo, commit)) for commit in commits]
-    print '                               \r',
+    print('                               \r', end='')
     return commitdiffs
 
 class DictCoersionEncoder(json.JSONEncoder):
@@ -203,7 +203,7 @@ class DictCoersionEncoder(json.JSONEncoder):
 
 def main():
   cl = CommitLoader()
-  print CommitLoader.load(os.getcwd(), CommitSelection('HEAD~4', None, 4, True, True))
+  print(CommitLoader.load(os.getcwd(), CommitSelection('HEAD~4', None, 4, True, True)))
 
 if __name__ == '__main__':
   debug.parse_args()

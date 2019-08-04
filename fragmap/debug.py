@@ -21,7 +21,7 @@ def enable_logging(category):
     get(category).setLevel(logging.DEBUG)
     _enable_logging[category] = True
   else:
-    print "WARNING: Unknown logging category '%s'" %(category,)
+    print("WARNING: Unknown logging category '{}'".format(category))
 
 def get(category):
   return logging.getLogger(category)
