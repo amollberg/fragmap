@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 
 import pytest
 import mock
@@ -7,7 +7,7 @@ import mock
 def run(args):
   with mock.patch('sys.argv',
                   ['dummypath/main.py'] + args):
-    import common
+    from . import common
     import fragmap.main
     fragmap.main.main()
 

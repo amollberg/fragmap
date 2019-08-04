@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from common import *
+from .common import *
 
 from generate_matrix import *
 
@@ -46,7 +46,7 @@ def create_connection_matrix_from_description(desc_matrix):
   return [[create_connected_cell(desc_matrix[3*r][c],
                                  desc_matrix[3*r + 1][c],
                                  desc_matrix[3*r + 2][c])
-           for c in xrange(n_cols)] for r in xrange(n_rows)]
+           for c in range(n_cols)] for r in range(n_rows)]
 
 class FakeFragmap(object):
 
@@ -210,9 +210,9 @@ class ConnectionTest(unittest.TestCase):
         return '\n'.join(s)
       def check_description(actual, expected):
         self.assertEqual(len(actual), len(expected))
-        for r in xrange(len(actual)):
+        for r in range(len(actual)):
           self.assertEqual(len(actual[r]), len(expected[r]))
-          for c in xrange(len(actual[r])):
+          for c in range(len(actual[r])):
             if actual[r][c] != expected[r][c]:
               self.fail(match_fail_string(actual, expected, r, c))
       check_description(join_rows(actual), join_rows(expected))

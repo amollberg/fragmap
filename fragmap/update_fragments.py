@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import copy
 from fragmap.load_commits import *
-import debug
+from . import debug
 
 
 class FragmentBoundNode():
@@ -65,7 +65,7 @@ class FragmentBoundLine():
         return True
       return False
     debug.get('sorting').debug("<<<<< Comparing %s and %s", a,b)
-    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    common_diffs = a._nodehistory.keys() & b._nodehistory.keys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1
@@ -111,7 +111,7 @@ class FragmentBoundLine():
       return False
 
     debug.get('grouping').debug("===== Comparing %s and %s", a, b)
-    common_diffs = a._nodehistory.viewkeys() & b._nodehistory.viewkeys()
+    common_diffs = a._nodehistory.keys() & b._nodehistory.keys()
     common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
     first_common_diff_i = min(common_diffs)
     prev_diff_i = first_common_diff_i - 1
@@ -141,10 +141,10 @@ class FragmentBoundLine():
     return " \n<FragmentBoundLine: %d, %s>" % (
       self._startdiff_i,
       ''.join(["\n %d: %s" %(key, val)
-              for key,val in sorted(self._nodehistory.iteritems())]))
+              for key,val in sorted(self._nodehistory.items())]))
 
   def last(self):
-    return self._nodehistory[max(self._nodehistory.viewkeys())]
+    return self._nodehistory[max(self._nodehistory.keys())]
 
   def update_unchanged(self, diff_i):
     """
@@ -307,7 +307,7 @@ def extract_nodes(diff, diff_i):
 
 
 def extract_node_lines(diff, diff_i):
-  return map(FragmentBoundLine, extract_nodes(diff, diff_i))
+  return list(map(FragmentBoundLine, extract_nodes(diff, diff_i)))
 
 
 # For each commit: project fragment positions iteratively up past the latest commit

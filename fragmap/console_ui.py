@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from __future__ import print_function
+
 from backports.shutil_get_terminal_size import get_terminal_size
 
 from fragmap.common_ui import first_line
 from fragmap.generate_matrix import ConnectedFragmap
-from console_color import *
+from .console_color import *
 
 
 
@@ -51,7 +51,7 @@ def print_fragmap(fragmap, do_color):
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
-    for i in xrange(len(matrix)):
+    for i in range(len(matrix)):
       r = i / 3
       if i % 3 == 1:
         print_text_action(r)
@@ -59,7 +59,7 @@ def print_fragmap(fragmap, do_color):
         print(''.ljust(hash_width + 1 + max_commit_width), end='')
       print_matrix_action(i)
   def normal_layout(matrix, print_text_action, print_matrix_action):
-    for r in xrange(len(matrix)):
+    for r in range(len(matrix)):
       print_text_action(r)
       print_matrix_action(r)
   # Draw the text and matrix

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from common import *
+from .common import *
 from commitdiff import CommitDiff
 from load_commits import CommitLoader, ExplicitCommitSelection
 from update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from update_fragments import FragmentBoundNode, FragmentBoundLine
 from generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines
-from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
+from .infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import list_hunks
 import debug
 
@@ -28,7 +28,7 @@ def render_matrix_for_test(matrix):
   if n_rows == 0:
     return []
   n_cols = len(matrix[0])
-  m = [['.' for _ in xrange(n_cols)] for _ in xrange(n_rows)]
+  m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
 
   def render_cell(cell):
     if cell.kind == Cell.CHANGE:
@@ -503,9 +503,9 @@ class Test(unittest.TestCase):
       return hist
 
     def stringify_kinds_list(l):
-      return map(lambda e: {START:'start', END:'end'}[e], l)
+      return [{START:'start', END:'end'}[e] for e in l]
     kinds_hist = histogram_kinds(kinds)
-    kinds = map(stringify_kinds_list, kinds)
+    kinds = list(map(stringify_kinds_list, kinds))
     node_lines = self.get_node_lines(diff_filenames)
     if debug.is_logging('test'):
       print_node_line_relation_table(node_lines)

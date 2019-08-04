@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from __future__ import print_function
+
 
 from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
 from fragmap.list_hunks import get_diff
@@ -8,7 +8,7 @@ from fragmap.web_ui import open_fragmap_page, start_fragmap_server
 from fragmap.console_ui import print_fragmap
 from fragmap.console_color import ANSI_UP
 from fragmap.load_commits import CommitSelection, CommitLoader
-import debug
+from . import debug
 
 import argparse
 import copy
