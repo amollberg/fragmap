@@ -125,6 +125,8 @@ def make_fragmap_page(fragmap):
     doc.asis('<!DOCTYPE html>')
     with tag('html'):
       with tag('head'):
+        with tag('meta', charset='utf-8'):
+          pass
         with tag('title'):
           text('Fragmap - ' + os.getcwd())
         with tag('style', type='text/css'):
@@ -179,8 +181,8 @@ def start_fragmap_server(fragmap_callback):
 
 
 def open_fragmap_page(fragmap, live):
-  with io.open('fragmap.html', 'w', encoding="utf-8") as f:
-    f.write(make_fragmap_page(fragmap))
+  with open('fragmap.html', 'wb') as f:
+    f.write(make_fragmap_page(fragmap).encode())
     os.startfile(f.name)
 
 
