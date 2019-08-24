@@ -441,9 +441,9 @@ class Test(unittest.TestCase):
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
     file_path = os.path.join(repo_path, filename)
-    with open(file_path, 'wb') as f:
+    with open(file_path, 'w', newline='\n') as f:
       for line in lines:
-        print ("to file", file_path, "writing '", lines, "'")
+        print ("to file", file_path, "writing '", line, "'")
         f.write(line + '\n')
 
   def staged_change(self, filename, lines):
