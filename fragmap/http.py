@@ -11,7 +11,7 @@ class HtmlHandler(BaseHTTPRequestHandler):
     self.send_response(200)
     self.send_header('Content-type', 'text/html')
     self.end_headers()
-    self.wfile.write(html)
+    self.wfile.write(str.encode(html))
 
 def start_server(html_callback):
   # Port 0 means select an arbitrary unused port
