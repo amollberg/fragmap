@@ -20,6 +20,7 @@ setup(
     url = "https://github.com/amollberg/fragmap",
     packages=['fragmap', 'tests', 'getch'],
     long_description=read('README.md'),
+    python_requires='>=3.4',
     classifiers=[
         "Topic :: Software Development :: Version Control",
         "Environment :: Console",
