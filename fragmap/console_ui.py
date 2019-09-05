@@ -46,7 +46,7 @@ def print_fragmap(fragmap, do_color):
   terminal_column_size = reported_terminal_column_size - 2
   max_actual_commit_width = max([len(first_line(p.header.message)) for p in fragmap.patches])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
-                                terminal_column_size/2,
+                                int(terminal_column_size/2),
                                 terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
   def infill_layout(matrix, print_text_action, print_matrix_action):
