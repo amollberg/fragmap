@@ -9,7 +9,7 @@ After installing the requirements (see below), simply run:
 
 - Git
 
-- Python 2.7
+- Python 3.4 or later
 
 # Develop fragmap
 
