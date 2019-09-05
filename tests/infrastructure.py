@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from . import native_git
+import native_git
 from fragmap.common_ui import first_line
 from fragmap.load_commits import UNSTAGED_HEX, STAGED_HEX
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from .common import *
+from fragmap.generate_matrix import *
 
-from generate_matrix import *
+import unittest
 
 # Test helpers
 
