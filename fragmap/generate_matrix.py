@@ -266,7 +266,7 @@ class Fragmap():
           # Make background red
           return ANSI_BG_RED + ' ' + ANSI_RESET
         else:
-          return '.'
+          return '|'
       if cell.kind == Cell.NO_CHANGE:
         return '.'
       assert False, "Unexpected cell kind: %s" %(cell.kind)
