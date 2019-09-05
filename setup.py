@@ -2,7 +2,9 @@
 # encoding: utf-8
 
 import os
-from setuptools import setup
+
+from setuptools import setup, find_packages
+
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -20,10 +22,11 @@ setup(
     license = "BSD",
     keywords = "git visualization console terminal",
     url = "https://github.com/amollberg/fragmap",
-    packages=['fragmap', 'tests', 'getch'],
+    packages=find_packages(),
     long_description=read('README.md'),
     python_requires='>=3.6',
     classifiers=[
+        "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Version Control",
         "Environment :: Console",
         "Topic :: Utilities",
