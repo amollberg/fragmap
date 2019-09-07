@@ -147,7 +147,7 @@ class Test(unittest.TestCase):
     #patch = Patch([filepatch],
     #              PatchHeader("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
     #                          "dummy message"))
-    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [
+    filepatch = MockPatch(MockDiffDelta("dummy", "dummy"), [ # TODO: set to newdummy
       MockDiffHunk((4,2), (4,4), [])])
     patch = CommitDiff(MockCommit("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
                                   "dummy message"),

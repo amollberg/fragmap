@@ -6,7 +6,7 @@ from . import debug
 
 class FragmentBoundNode():
   # Info to sort on
-  _filename = None
+  _filename = None # TODO: redundant here, updated in FragmentDualBoundNode
   _line = None
 
   # Other attributes
