@@ -152,13 +152,16 @@ class Test(unittest.TestCase):
     patch = CommitDiff(MockCommit("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
                                   "dummy message"),
                        [filepatch])
-    node_lines = [FragmentBoundLine(FragmentDualBoundNode(0, filepatch, 0,
-                                                          FragmentBoundNode("dummy", 0, FragmentBoundNode.START),
-                                                          FragmentBoundNode("dummy", 2, FragmentBoundNode.END)))]
+    node_line = FragmentBoundLine(FragmentDualBoundNode(-1, filepatch, 0,
+                                                          FragmentBoundNode("dummy", 2, FragmentBoundNode.START),
+                                                          FragmentBoundNode("dummy", 4, FragmentBoundNode.END)))
 
-    update_positions(node_lines, patch, 0)
-    self.assertEqual(node_lines[0].last()._filename, "dummy")
-    self.assertEqual(node_lines[0].last()._line, 7)
+    update_positions([node_line], patch, 0)
+    self.assertEqual(node_line.last()._filename, "dummy")
+    self.assertEqual(node_line.last().start._filename, "dummy")
+    self.assertEqual(node_line.last().start._line, 2)
+    self.assertEqual(node_line.last().end._filename, "dummy")
+    self.assertEqual(node_line.last().end._line, 7)
 
 
   def test_016_004(self):
