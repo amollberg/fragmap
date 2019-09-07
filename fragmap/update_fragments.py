@@ -198,7 +198,7 @@ def update_new_bound(fragment):
 def update_normal_line(line, bound_kind, fragment): # 4, START, (4,3) -> (4,8)
   if line <= oldrange(fragment)._end:
     if line >= oldrange(fragment)._start:
-      print line, "inside", oldrange(fragment)
+      print(line, "inside", oldrange(fragment))
       # line is inside the range
       debug.get('update').debug("Line %d is inside range %s", line, oldrange(fragment))
       if bound_kind == FragmentBoundNode.START:
