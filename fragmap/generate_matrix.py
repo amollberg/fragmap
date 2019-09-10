@@ -77,6 +77,18 @@ def decorate_matrix(m):
         last_patch[c] = r
 
 
+# Divide up by file (across history)
+# order node lines (separate start and end) by their line enumber in the latest diff
+#   end  >= start
+#   ones that are on the same line, recursively order by line number in previous diff, or stop
+def new_group_fragment_bound_lines(node_lines):
+  def group_fragment_bound_lines_one_file(lines):
+    pass
+  def group_by_file(lines):
+    pass
+  return [line
+          for line in group_fragment_bound_lines_one_file(lines)
+          for file, lines in group_by_file(node_lines).items()]
 
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
