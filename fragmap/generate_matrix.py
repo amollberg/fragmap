@@ -218,7 +218,7 @@ class Fragmap():
         for node_line in node_line_group:
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
-            inside_fragment[r] = ColumnItem(node_line, node_line._kind == FragmentBoundNode.START)
+            inside_fragment[r] = ColumnItem(node_line, True) #node_line._kind == FragmentBoundNode.START)
             debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
             # If it was updated to False:
             if not inside_fragment[r].inside:

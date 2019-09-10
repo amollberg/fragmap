@@ -152,14 +152,15 @@ class Test(unittest.TestCase):
     patch = CommitDiff(MockCommit("aaabbaaabbaaabbaaabbaaabbaaabbaaabbaaabb",
                                   "dummy message"),
                        [filepatch])
-    node_line = FragmentBoundLine(FragmentDualBoundNode(-1, filepatch, 0,
-                                                          FragmentBoundNode("dummy", 2, FragmentBoundNode.START),
-                                                          FragmentBoundNode("dummy", 4, FragmentBoundNode.END)))
+    node_line = FragmentBoundLine(FragmentDualBoundNode(0, filepatch, 0,
+                                                        FragmentBoundNode("dummy", 2, FragmentBoundNode.START),
+                                                        FragmentBoundNode("dummy", 4, FragmentBoundNode.END)))
 
     update_positions([node_line], patch, 0)
+    # Since both the node line and the diff is from the same index, the bound is overwritten by the diff
     self.assertEqual(node_line.last()._filename, "dummy")
     self.assertEqual(node_line.last().start._filename, "dummy")
-    self.assertEqual(node_line.last().start._line, 2)
+    self.assertEqual(node_line.last().start._line, 4)
     self.assertEqual(node_line.last().end._filename, "dummy")
     self.assertEqual(node_line.last().end._line, 7)
 
@@ -173,58 +174,58 @@ class Test(unittest.TestCase):
                       '#.'])
 
   def test_003(self):
-    self.check_diff('003-add-one-line-to-empty-file', ['#.'])
+    self.check_diff('003-add-one-line-to-empty-file', ['#'])
 
   def test_004(self):
-    self.check_diff('004-remove-one-line-empty-file', ['#.'])
+    self.check_diff('004-remove-one-line-empty-file', ['#'])
 
   def test_003_004(self):
     files = ['003-add-one-line-to-empty-file',
              '004-remove-one-line-empty-file']
     self.check_diffs(files,
-                     ['#.',
-                      '#.'])
+                     ['#',
+                      '#'])
 
   def test_003_004_groups(self):
     files = ['003-add-one-line-to-empty-file',
              '004-remove-one-line-empty-file']
-    self.check_node_group_kinds(files, [[START,START], [END,END]]) # ((h))
+    self.check_node_group_kinds(files, [[START,START]]) # ((h))
 
 
   def test_011(self):
-    self.check_diff('011-add-x-to-A-and-N', ['#.#.'])
+    self.check_diff('011-add-x-to-A-and-N', ['#.#'])
 
   def test_012(self):
-    self.check_diff('012-add-x-to-A-C', ['#.'])
+    self.check_diff('012-add-x-to-A-C', ['#'])
 
   def test_011_012(self):
     self.check_diffs(['011-add-x-to-A-and-N',
                       '012-add-x-to-A-C'],
-                     ['#..#.',
-                      '##...'])
+                     ['#..#',
+                      '##..'])
   def test_011_012_groups(self):
     self.check_node_group_kinds(['011-add-x-to-A-and-N',
                                  '012-add-x-to-A-C'],
-                                [[START, START],[END],[END],[START],[END]]) # ((a)bc)..(n)
+                                [[START, START],[END],[END],[START]]) # ((a)bc)..(n)
 
 
   def test_020(self):
-    self.check_diff('020-modfile-create', ['#.'])
+    self.check_diff('020-modfile-create', ['#'])
 
   def test_021(self):
-    self.check_diff('021-modfile-remove-first-line', ['#.'])
+    self.check_diff('021-modfile-remove-first-line', ['#'])
 
   def test_020_021(self):
     self.check_diffs(['020-modfile-create',
                       '021-modfile-remove-first-line'],
-                     ['##.',
-                      '#..'])
+                     ['##',
+                      '#.'])
 
   def test_022_023(self):
     self.check_diffs(['022-modfile-mod-second-line',
                       '023-modfile-readd-first-line'],
-                     ['.#.',
-                      '#..'])
+                     ['.#',
+                      '#.'])
 
 
   def test_030(self):
@@ -247,7 +248,7 @@ class Test(unittest.TestCase):
     self.check_node_group_kinds(['030-addmod-create-with-ab',
                                  '031-addmod-add-c',
                                  '032-addmod-change-bc-to-xy'],
-                                [[START],[START],[END,START],[END,END]]) # (a((xy)))
+                                [[START],[START],[END,START]]) # (a((xy)))
 
 
   def test_030_033(self):

@@ -4,6 +4,13 @@ from .load_commits import BinaryHunk, nonnull_file, oldrange, newrange
 from . import debug
 
 
+# FragmentBoundLine
+#   _history : FragmentDualBoundNode[]
+#     .start : FragmentBoundNode
+#       _line : int
+#     .end : FragmentBoundNode
+
+
 class FragmentBoundNode():
   # Info to sort on
   _filename = None # TODO: redundant here, updated in FragmentDualBoundNode
@@ -258,7 +265,7 @@ def update_bound(dual_node, fragment, startdiff_i, diff_i, file_patch):
     return update_new_bound(fragment)
   else:
     # The bound is inherited
-    return update_inherited_bound(dual_node.start._line._line, dual_node.end._line._line, file_patch)
+    return update_inherited_bound(dual_node.start._line, dual_node.end._line, file_patch)
 
 
 def update_file_positions(file_node_lines, file_patch, diff_i):
