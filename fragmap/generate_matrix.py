@@ -76,6 +76,12 @@ def decorate_matrix(m):
               m[i][c].kind = Cell.BETWEEN_CHANGES
         last_patch[c] = r
 
+# Properties:
+#   Each node line is present in every diff from its introduction to the latest diff
+#   If node line a <= b on diff i then a <= b on diff i+n with equality implying equality
+#   If node line a, b are in the same file on diff i then they are in the same file on all diffs
+# Establish a partitioning over equivalence ~ such that a ~ b <=> they belong on the same column
+# <=> a == b on every diff on which they both occur
 
 # Divide up by file (across history)
 # order node lines (separate start and end) by their line enumber in the latest diff
