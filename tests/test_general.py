@@ -199,6 +199,18 @@ class Test(unittest.TestCase):
        (2, 'f0'): [line_x_f0_f0]},
       group_by_file([line_f0_x_x, line_x_f0_f0]))
 
+    line_x_f0_f0 = FakeLine(FakeNode(1, 'f0'),
+                            FakeNode(2, 'f0'))
+    line_x_f1_f1 = FakeLine(FakeNode(1, 'f1'),
+                            FakeNode(2, 'f1'))
+    self.assertEqual(
+    {(2, 'f0'): [line_x_f0_f0],
+     (2, 'f1'): [line_f0_f1_f1, line_x_f1_f1]},
+      group_by_file([line_f0_f1_f1,
+                     line_x_f0_f0,
+                     line_x_f1_f1]))
+
+
 
   def test_016_004(self):
     self.check_diffs(['016-add-one-line-to-empty.txt',
