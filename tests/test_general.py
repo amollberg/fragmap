@@ -5,7 +5,7 @@ from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
-from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines
+from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines, group_by_file
 from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import fragmap.debug as debug
 
@@ -163,6 +163,31 @@ class Test(unittest.TestCase):
     self.assertEqual(node_line.last().start._line, 4)
     self.assertEqual(node_line.last().end._filename, "dummy")
     self.assertEqual(node_line.last().end._line, 7)
+
+  def test_group_by_file(self):
+    class FakeNode():
+      def __init__(self, diff_i, filename):
+        self._diff_i = diff_i
+        self._filename = filename
+      def __repr__(self):
+        return str((self._diff_i, self._filename))
+    class FakeLine():
+      def __init__(self, *nodes):
+        self._nodehistory = {node._diff_i : node for node in nodes}
+      def __repr__(self):
+        return str(self._nodehistory)
+    line_f0_f1 = FakeLine(FakeNode(0, 'f0'),
+                          FakeNode(1, 'f1'))
+    self.assertEqual(
+      {(1, 'f1'): [line_f0_f1]},
+      group_by_file([line_f0_f1]))
+
+    line_x_f0 = FakeLine(FakeNode(1, 'f0'))
+    self.assertEqual(
+      {(1, 'f1'): [line_f0_f1],
+       (1, 'f0'): [line_x_f0]},
+      group_by_file([line_f0_f1, line_x_f0]))
+
 
 
   def test_016_004(self):

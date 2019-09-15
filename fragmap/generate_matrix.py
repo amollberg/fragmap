@@ -95,20 +95,67 @@ def new_group_fragment_bound_lines(node_lines):
           for line in group_fragment_bound_lines_one_file(lines)
           for file, lines in group_by_file(node_lines).items()]
 
+# Each line
+#  check all previously grouped lines:
+#    get first common diff
+#    same filename there?
+# == OR
+# Each diff index
+#   get lines that are present there
+#   put into groups by the (first diff index, filename)
+#     if the filename has not group, create it, otherwise add to it
+#   evolve the filenames to the next diff i by taking any line from each group and looking at the new filename(if nonnull)
+#     (i, oldname) => (i+1, newname if nonnull otherwise oldname)
+# Experiment results:
+#   Today, renames do not create nodes, they are encoded in the filenames of the affected nodes
+#   Moving a modifying commit back before a renaming commit does not cause conflict. The new filename gets the modification, the latter file with the old name does not.
+#   => the later modification must NOT be on the same column as the renaming
+#   Moving a modifying commit back before a deleting commit causes modify/delete conflict, cannot apply the deleting commit
+#   => the later modification must be on the same column as the removing
+#   => if the modify commit applied cleanly (i.e. was made for the same filename after restoration) then it must be as the SAME file (not just same name on a later commit, but the identically same) as the deleted file
+#   ! diffs before and after a rename must ALSO share column
+#     More important than matching restored files
+#     Conflicting?
+#       1. Create A,
+#       2. Rename A to B,
+#       3. Remove B
+#       4. Create A
+#       5. Modify A
+#     5 MIGHT apply cleanly between 1 and 2 but that will cause conflict in 3 (modify/delete)
+#       3 and 5 must be in the same column (modify/delete)
+#       3 and 2 must not be in the same column (renames are transparent) -> Done already
+# 1. old/new renamed file in the same column
+# 2. same filename as before rename in the same column
+# 3. commits applying cleanly iff non colliding in presence of modify/delete
+# 1+2: If we move the later commit in between the commits when renamed. Conflict? If so, forget about handling modify/delete
+#  the later commit is in the same column as what?!
+# => Do NOT treat files with same filename as some previous file that was renamed/deleted. Line numbers cannot find correspondance
+# => Map files by (earliest start index of containing node lines, filename)
 def group_by_file(lines):
-  pass
-  # Each line
-  #  check all previously grouped lines:
-  #    get first common diff
-  #    same filename there?
-  # == OR
-  # Each diff index
-  #   get lines that are present there
-  #   put into groups by the (diff index, filename)
-  #     if the filename has not group, create it, otherwise add to it
-  #   evolve the filenames to the next diff i by taking any line from each group and looking at the new filename(if nonnull)
-  #     (i, oldname) => (i+1, newname if nonnull otherwise oldname)
+  def add_or_create(filemap, line, diff_i):
+    filekey = (diff_i, line._nodehistory[diff_i]._filename)
+    if filekey not in filemap:
+      files[filekey] = []
+    if line not in filemap[filekey]:
+      files[filekey].append(line)
+  files = {}
+  for diff_i in range(n_patches(lines)):
+    # Update filenames in keys to current diff
+    for fk, filelines in list(files.items()):
+      oldfilekey = fk
+      newfilename = filelines[0]._nodehistory[diff_i]._filename
+      newfilekey = (diff_i, newfilename)
+      # Move keys
+      files[newfilekey] = files[oldfilekey]
+      del files[oldfilekey]
+    for line in lines:
+      if diff_i in line._nodehistory:
+        add_or_create(files, line, diff_i)
+  return files
 
+
+def n_patches(lines):
+  return max([max(line._nodehistory.keys()) + 1 for line in lines])
 
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
