@@ -132,26 +132,22 @@ def new_group_fragment_bound_lines(node_lines):
 # => Do NOT treat files with same filename as some previous file that was renamed/deleted. Line numbers cannot find correspondance
 # => Map files by (earliest start index of containing node lines, filename)
 def group_by_file(lines):
-  def add_or_create(filemap, line, diff_i):
-    filekey = (diff_i, line._nodehistory[diff_i]._filename)
+  def add_or_create(filemap, line, filekey):
     if filekey not in filemap:
       files[filekey] = []
     if line not in filemap[filekey]:
       files[filekey].append(line)
+  def last_nonnull(line):
+    for diff_i in reversed(sorted(line._nodehistory.keys())):
+      filename = line._nodehistory[diff_i]._filename
+      if filename in ['/dev/null', None]:
+        continue
+      return diff_i, filename
+    return None, filename
   files = {}
-  for diff_i in range(n_patches(lines)):
-    # Update filenames in keys to current diff
-    for fk, filelines in list(files.items()):
-      old_filekey = fk
-      new_filename = filelines[0]._nodehistory[diff_i]._filename
-      new_filekey = (diff_i, new_filename)
-      if new_filename not in ['/dev/null', None]: # TODO: Decide one special value, not 2
-        # Move keys
-        files[new_filekey] = files[old_filekey]
-        del files[old_filekey]
-    for line in lines:
-      if diff_i in line._nodehistory and line._nodehistory[diff_i]._filename not in ['/dev/null', None]:
-        add_or_create(files, line, diff_i)
+  for line in lines:
+    filekey = last_nonnull(line)
+    add_or_create(files, line, filekey)
   return files
 
 
