@@ -397,6 +397,18 @@ class Test(unittest.TestCase):
                            ['##',
                             '.#'])
 
+  def test_dco1_brief(self):
+    self.check_diffs_brief(['3c707a3d921 WIP: Failing test of diverting',
+                            'e330243c1b544 WIP: Refactor cursormove',
+                            '59718d27a WIP: Prepare for divertable',
+                            '76c3fa0690213 WIP: divertable failing',
+                            '2872a758eb7 WIP: Fix: Copy input table'],
+                           ['.........##.',
+                            '.#.###....^.',
+                            '..#^##.##.#.',
+                            '...^.####..#',
+                            '#..#........'])
+
   def test_staged(self):
     self.reset_hard()
     self.staged_change('file.txt', ['hello', 'world', 'new line'])
