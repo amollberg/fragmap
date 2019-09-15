@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from tests.infrastructure import unbundle_development_test_repos, update_repos
+from infrastructure import unbundle_development_test_repos, update_repos
 
 import os
 
-DIFF_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests', 'diffs')
+DIFF_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'diffs')
 
 def main():
   print ("Test dir:", DIFF_DIR)
