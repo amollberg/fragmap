@@ -90,11 +90,25 @@ def decorate_matrix(m):
 def new_group_fragment_bound_lines(node_lines):
   def group_fragment_bound_lines_one_file(lines):
     pass
-  def group_by_file(lines):
-    pass
+  #
   return [line
           for line in group_fragment_bound_lines_one_file(lines)
           for file, lines in group_by_file(node_lines).items()]
+
+def group_by_file(lines):
+  pass
+  # Each line
+  #  check all previously grouped lines:
+  #    get first common diff
+  #    same filename there?
+  # == OR
+  # Each diff index
+  #   get lines that are present there
+  #   put into groups by the (diff index, filename)
+  #     if the filename has not group, create it, otherwise add to it
+  #   evolve the filenames to the next diff i by taking any line from each group and looking at the new filename(if nonnull)
+  #     (i, oldname) => (i+1, newname if nonnull otherwise oldname)
+
 
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
