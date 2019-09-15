@@ -63,6 +63,7 @@ class FragmentDualBoundNode():
     else:
       self._fragment = file_patch.hunks[fragment_i]
     self._fragment_i = fragment_i
+    # TODO: Use the new filename even if /dev/null or None, because group_by_file needs to know if a file was removed, in order not to collide
     self._filename = nonnull_file(file_patch.delta)
     self.start = FragmentBoundNode(self._filename, start_line, FragmentBoundNode.START)
     self.end = FragmentBoundNode(self._filename, end_line, FragmentBoundNode.END)

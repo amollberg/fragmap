@@ -142,14 +142,15 @@ def group_by_file(lines):
   for diff_i in range(n_patches(lines)):
     # Update filenames in keys to current diff
     for fk, filelines in list(files.items()):
-      oldfilekey = fk
-      newfilename = filelines[0]._nodehistory[diff_i]._filename
-      newfilekey = (diff_i, newfilename)
-      # Move keys
-      files[newfilekey] = files[oldfilekey]
-      del files[oldfilekey]
+      old_filekey = fk
+      new_filename = filelines[0]._nodehistory[diff_i]._filename
+      new_filekey = (diff_i, new_filename)
+      if new_filename not in ['/dev/null', None]: # TODO: Decide one special value, not 2
+        # Move keys
+        files[new_filekey] = files[old_filekey]
+        del files[old_filekey]
     for line in lines:
-      if diff_i in line._nodehistory:
+      if diff_i in line._nodehistory and line._nodehistory[diff_i]._filename not in ['/dev/null', None]:
         add_or_create(files, line, diff_i)
   return files
 

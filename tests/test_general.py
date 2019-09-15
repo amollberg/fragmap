@@ -176,18 +176,28 @@ class Test(unittest.TestCase):
         self._nodehistory = {node._diff_i : node for node in nodes}
       def __repr__(self):
         return str(self._nodehistory)
-    line_f0_f1 = FakeLine(FakeNode(0, 'f0'),
-                          FakeNode(1, 'f1'))
+    line_f0_f1_f1 = FakeLine(FakeNode(0, 'f0'),
+                             FakeNode(1, 'f1'),
+                             FakeNode(2, 'f1'))
     self.assertEqual(
-      {(1, 'f1'): [line_f0_f1]},
-      group_by_file([line_f0_f1]))
+      {(2, 'f1'): [line_f0_f1_f1]},
+      group_by_file([line_f0_f1_f1]))
 
-    line_x_f0 = FakeLine(FakeNode(1, 'f0'))
+    line_x_f0_f0 = FakeLine(FakeNode(1, 'f0'),
+                            FakeNode(2, 'f0'))
     self.assertEqual(
-      {(1, 'f1'): [line_f0_f1],
-       (1, 'f0'): [line_x_f0]},
-      group_by_file([line_f0_f1, line_x_f0]))
+      {(2, 'f1'): [line_f0_f1_f1],
+       (2, 'f0'): [line_x_f0_f0]},
+      group_by_file([line_f0_f1_f1, line_x_f0_f0]))
 
+    # Deleted file
+    line_f0_x_x = FakeLine(FakeNode(0, 'f0'),
+                           FakeNode(1, '/dev/null'),
+                           FakeNode(2, '/dev/null'))
+    self.assertEqual(
+      {(0, 'f0'): [line_f0_x_x],
+       (2, 'f0'): [line_x_f0_f0]},
+      group_by_file([line_f0_x_x, line_x_f0_f0]))
 
 
   def test_016_004(self):
