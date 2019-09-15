@@ -23,7 +23,7 @@ After installing the requirements (see below), simply run:
 
 - Run `python setup.py develop`
 
-- Run `python update_tests.py`. This also needs to be run if you make changes to any repo under `tests/diffs/`
+- Run `python tests/update_tests.py`. This also needs to be run if you make changes to any repo under `tests/diffs/`
 
 - Run `pytest` to actually run the tests
 
