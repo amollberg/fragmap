@@ -87,13 +87,37 @@ def decorate_matrix(m):
 # order node lines (separate start and end) by their line enumber in the latest diff
 #   end  >= start
 #   ones that are on the same line, recursively order by line number in previous diff, or stop
-def new_group_fragment_bound_lines(node_lines):
-  def group_fragment_bound_lines_one_file(lines):
-    pass
-  #
-  return [line
-          for line in group_fragment_bound_lines_one_file(lines)
-          for file, lines in group_by_file(node_lines).items()]
+def new_group_fragment_bound_lines(nodelines):
+  # TODO: Take care of bound kinds
+  def group_fragment_bound_lines_same_file(lines, diff_i):
+    linegroups = {}
+    for line in lines:
+      line_number = line._nodehistory[diff_i]._line if diff_i in line._nodehistory else -1
+      add_or_create(linegroups, line, line_number)
+    ordered_linegroups = [lines for linenumber, lines in sorted(linegroups.items(), key=lambda kv: kv[0])]
+    if diff_i > 0:
+      # Refine each group into groups according to previous diff
+      ordered_linegroups = [refined_group
+                            for group in ordered_linegroups
+                            for refined_group in group_fragment_bound_lines_same_file(group, diff_i - 1)]
+    return ordered_linegroups
+  return {f: group_fragment_bound_lines_same_file(lines, n_patches(lines)-1)
+          for f, lines in group_by_file(nodelines).items()}
+
+def add_or_create(itemmap, item, key):
+  if key not in itemmap:
+    itemmap[key] = []
+  if item not in itemmap[key]:
+    itemmap[key].append(item)
+def test_add_or_create():
+  m = {1: ['e'], 2: []}
+  add_or_create(m, 'a', 2)
+  assert m[2] == ['a']
+  add_or_create(m, 'b', 1)
+  assert m[1] == ['e', 'b']
+  add_or_create(m, 'c', 3)
+  assert m[3] == ['c']
+test_add_or_create()
 
 # Each line
 #  check all previously grouped lines:

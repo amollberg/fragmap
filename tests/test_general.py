@@ -5,7 +5,7 @@ from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
-from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines, group_by_file
+from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines, group_by_file, new_group_fragment_bound_lines
 from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import fragmap.debug as debug
 
@@ -210,6 +210,54 @@ class Test(unittest.TestCase):
                      line_x_f0_f0,
                      line_x_f1_f1]))
 
+  def test_new_group_fragment_bound_lines(self):
+    class FakeNode():
+      def __init__(self, diff_i, line, kind):
+        self._diff_i = diff_i
+        self._filename = 'dummy'
+        self._line = line
+        self._kind = kind
+      def __repr__(self):
+        return str(('FakeNode', self._diff_i, self._filename,
+                    self._line, self._kind))
+    class FakeLine():
+      def __init__(self, *nodes):
+        self._nodehistory = {node._diff_i : node
+                             for node in nodes}
+      def __repr__(self):
+        return str(('FakeLine', self._nodehistory))
+    start_0_0_0 = FakeLine(FakeNode(0, 0, START),
+                           FakeNode(1, 0, START),
+                           FakeNode(2, 0, START))
+    self.assertEqual(
+      {(2, 'dummy'):
+       [[start_0_0_0]]},
+      new_group_fragment_bound_lines([start_0_0_0]))
+
+    end_0_1_3 = FakeLine(FakeNode(0, 0, END),
+                         FakeNode(1, 1, END),
+                         FakeNode(2, 3, END))
+    self.assertEqual(
+      {(2, 'dummy'):
+       [[start_0_0_0], [end_0_1_3]]},
+      new_group_fragment_bound_lines([start_0_0_0,
+                                      end_0_1_3]))
+
+    end_1_3 = FakeLine(FakeNode(1, 1, END),
+                       FakeNode(2, 3, END))
+    def eq(a, b):
+      print('a:', a)
+      print('b:', b)
+      self.assertEqual(a, b)
+    eq(
+      {(2, 'dummy'):
+       # TODO: Make the list of node lines into sets, order should not matter
+       # TODO: This is how it should be
+       #[[start_0_0_0], [end_0_1_3, end_1_3]]},
+       [[start_0_0_0], [end_1_3], [end_0_1_3]]},
+      new_group_fragment_bound_lines([start_0_0_0,
+                                      end_0_1_3,
+                                      end_1_3]))
 
 
   def test_016_004(self):
