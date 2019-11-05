@@ -97,6 +97,8 @@ class FakeLine():
   def __repr__(self):
     return str(('FakeLine', self._nodehistory))
 
+
+
 class Test(unittest.TestCase):
 
   # Append instead of replace default assertion failure message
@@ -223,49 +225,43 @@ class Test(unittest.TestCase):
                      line_x_f0_f0,
                      line_x_f1_f1]))
 
-  def test_new_group_fragment_bound_lines(self):
+  def test_new_group_fragment_bound_lines_insertion(self):
+    start_0_0 = FakeLine(FakeNode(0, 0, START),
+                         FakeNode(1, 0, START))
+    self.assertEqual(
+      {(1, 'dummy'):
+       [set([start_0_0])]},
+      new_group_fragment_bound_lines([start_0_0]))
+
+    end_0_1 = FakeLine(FakeNode(0, 0, END),
+                       FakeNode(1, 1, END))
+    self.assertEqual(
+      {(1, 'dummy'):
+       [set([start_0_0]), set([end_0_1])]},
+      new_group_fragment_bound_lines([start_0_0,
+                                      end_0_1]))
+
+  def test_new_group_fragment_bound_lines_two_insertions(self):
     start_0_0_0 = FakeLine(FakeNode(0, 0, START),
                            FakeNode(1, 0, START),
                            FakeNode(2, 0, START))
-    self.assertEqual(
-      {(2, 'dummy'):
-       [set([start_0_0_0])]},
-      new_group_fragment_bound_lines([start_0_0_0]))
-
     end_0_1_3 = FakeLine(FakeNode(0, 0, END),
                          FakeNode(1, 1, END),
                          FakeNode(2, 3, END))
-    self.assertEqual(
-      {(2, 'dummy'):
-       [set([start_0_0_0]), set([end_0_1_3])]},
-      new_group_fragment_bound_lines([start_0_0_0,
-                                      end_0_1_3]))
-
     end_1_3 = FakeLine(FakeNode(1, 1, END),
                        FakeNode(2, 3, END))
-    def eq(expected, actual):
-      def jprint(v):
-        import prettyprint
-        pretty = prettyprint.Formatter()
-        print(pretty(v, htchar='  '))
-      print('expected:', end='')
-      jprint(expected)
-      print('actual:', end='')
-      jprint(actual)
-      self.assertEqual(expected, actual)
-    eq(
+    self.eq(
       {(2, 'dummy'):
        [set([start_0_0_0]), set([end_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([start_0_0_0,
                                       end_0_1_3,
                                       end_1_3]))
 
-    eq(
+    self.eq(
       {(2, 'dummy'):
        [set([end_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([end_0_1_3,
                                       end_1_3]))
-
 
 
   def test_016_004(self):
@@ -564,6 +560,18 @@ class Test(unittest.TestCase):
                             '##'])
 
   # === Helper functions ===
+
+  def eq(self, expected, actual):
+    def jprint(v):
+      import prettyprint
+      pretty = prettyprint.Formatter()
+      print(pretty(v, htchar='  '))
+    print('expected:', end='')
+    jprint(expected)
+    print('actual:', end='')
+    jprint(actual)
+    self.assertEqual(expected, actual)
+
 
   def unstaged_change(self, filename, lines):
     test_name = self.id().split('.')[-1]
