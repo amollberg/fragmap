@@ -109,10 +109,16 @@ def new_group_fragment_bound_lines(nodelines):
       elif kind_of_line(line) == FragmentBoundNode.END:
         later_endlines.add(line)
     ordered_linegroups = [lines for linenumber, lines in sorted(linegroups.items(), key=lambda kv: kv[0])]
-    # "Round down" the end lines to the lowest group
-    ordered_linegroups[0] |= later_endlines
-    # "Round up" the start lines to the highest group
-    ordered_linegroups[-1] |= later_startlines
+    if ordered_linegroups:
+      # "Round down" the end lines to the lowest group
+      ordered_linegroups[0] |= later_endlines
+      # "Round up" the start lines to the highest group
+      ordered_linegroups[-1] |= later_startlines
+    else:
+      if later_endlines:
+        ordered_linegroups.append(later_endlines)
+      if later_startlines:
+        ordered_linegroups.append(later_startlines)
     if diff_i > 0:
       # Refine each group into groups according to previous diff
       ordered_linegroups = [refined_group

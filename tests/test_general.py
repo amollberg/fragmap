@@ -45,8 +45,8 @@ def render_matrix_for_test(matrix):
       m[r][c] = render_cell(matrix[r][c])
   return m
 
-START = 0
-END = 1
+START = FragmentBoundNode.START
+END = FragmentBoundNode.END
 
 def MockDiffFile(path):
   return Mock(path=path)
@@ -241,27 +241,51 @@ class Test(unittest.TestCase):
       new_group_fragment_bound_lines([start_0_0,
                                       end_0_1]))
 
-  def test_new_group_fragment_bound_lines_two_insertions(self):
+  def test_new_group_fragment_bound_lines_two_insertions_same_start(self):
     start_0_0_0 = FakeLine(FakeNode(0, 0, START),
                            FakeNode(1, 0, START),
                            FakeNode(2, 0, START))
+    start_x_0_0 = FakeLine(FakeNode(1, 0, START),
+                           FakeNode(2, 0, START))
+
     end_0_1_3 = FakeLine(FakeNode(0, 0, END),
                          FakeNode(1, 1, END),
                          FakeNode(2, 3, END))
-    end_1_3 = FakeLine(FakeNode(1, 1, END),
-                       FakeNode(2, 3, END))
+    end_x_1_3 = FakeLine(FakeNode(1, 1, END),
+                         FakeNode(2, 3, END))
     self.eq(
       {(2, 'dummy'):
-       [set([start_0_0_0]), set([end_1_3, end_0_1_3])]},
+       [set([start_0_0_0, start_x_0_0]), set([end_x_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([start_0_0_0,
+                                      start_x_0_0,
                                       end_0_1_3,
-                                      end_1_3]))
+                                      end_x_1_3]))
 
     self.eq(
       {(2, 'dummy'):
-       [set([end_1_3, end_0_1_3])]},
+       [set([end_x_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([end_0_1_3,
-                                      end_1_3]))
+                                      end_x_1_3]))
+
+  def test_new_group_fragment_bound_lines_partial_overlap(self):
+    # 123456789
+    #  ####
+    #    #####
+    start_2_2_2 = FakeLine(FakeNode(0, 2, START),
+                           FakeNode(1, 2, START),
+                           FakeNode(2, 2, START))
+    start_x_4_4 = FakeLine(FakeNode(1, 4, START),
+                           FakeNode(2, 4, START))
+    end_5_5_8 = FakeLine(FakeNode(0, 5, END),
+                         FakeNode(1, 5, END),
+                         FakeNode(2, 8, END))
+    end_x_8_8 = FakeLine(FakeNode(1, 8, END),
+                         FakeNode(2, 8, END))
+    self.eq(
+      {(2, 'dummy'):
+        [set([start_2_2_2]), set([start_x_4_4]), set([end_5_5_8]), set([end_x_8_8])]},
+      new_group_fragment_bound_lines([start_2_2_2, start_x_4_4, end_5_5_8, end_x_8_8]))
+
 
 
   def test_016_004(self):
