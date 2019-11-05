@@ -91,13 +91,28 @@ def new_group_fragment_bound_lines(nodelines):
   """
   Return {file: [set([nodeline, nodeline]), ...], ...}
   """
-  # TODO: Take care of bound kinds
   def group_fragment_bound_lines_same_file(lines, diff_i):
+    """
+    Return [set([nodeline, ...]), ...]
+    """
+    def kind_of_line(line):
+      return next(iter(line._nodehistory.values()))._kind
     linegroups = {}
+    later_startlines = set([])
+    later_endlines = set([])
     for line in lines:
-      line_number = line._nodehistory[diff_i]._line if diff_i in line._nodehistory else -1
-      add_or_create(linegroups, line, line_number)
+      if diff_i in line._nodehistory:
+        line_number = line._nodehistory[diff_i]._line
+        add_or_create(linegroups, line, line_number)
+      elif kind_of_line(line) == FragmentBoundNode.START:
+        later_startlines.add(line)
+      elif kind_of_line(line) == FragmentBoundNode.END:
+        later_endlines.add(line)
     ordered_linegroups = [lines for linenumber, lines in sorted(linegroups.items(), key=lambda kv: kv[0])]
+    # "Round down" the end lines to the lowest group
+    ordered_linegroups[0] |= later_endlines
+    # "Round up" the start lines to the highest group
+    ordered_linegroups[-1] |= later_startlines
     if diff_i > 0:
       # Refine each group into groups according to previous diff
       ordered_linegroups = [refined_group
