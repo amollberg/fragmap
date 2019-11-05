@@ -74,6 +74,29 @@ def MockPatch(mockdelta, mockhunks):
 def MockCommit(hex, message):
   return Mock(hex=hex, message=message)
 
+class FakeFileNode():
+  def __init__(self, diff_i, filename):
+    self._diff_i = diff_i
+    self._filename = filename
+  def __repr__(self):
+    return str((self._diff_i, self._filename))
+
+class FakeNode():
+  def __init__(self, diff_i, line, kind):
+    self._diff_i = diff_i
+    self._filename = 'dummy'
+    self._line = line
+    self._kind = kind
+  def __repr__(self):
+    return str(('FakeNode', self._diff_i, self._filename,
+                self._line, self._kind))
+class FakeLine():
+  def __init__(self, *nodes):
+    self._nodehistory = {node._diff_i : node
+                         for node in nodes}
+  def __repr__(self):
+    return str(('FakeLine', self._nodehistory))
+
 class Test(unittest.TestCase):
 
   # Append instead of replace default assertion failure message
@@ -166,44 +189,33 @@ class Test(unittest.TestCase):
     self.assertEqual(node_line.last().end._line, 7)
 
   def test_group_by_file(self):
-    class FakeNode():
-      def __init__(self, diff_i, filename):
-        self._diff_i = diff_i
-        self._filename = filename
-      def __repr__(self):
-        return str((self._diff_i, self._filename))
-    class FakeLine():
-      def __init__(self, *nodes):
-        self._nodehistory = {node._diff_i : node for node in nodes}
-      def __repr__(self):
-        return str(self._nodehistory)
-    line_f0_f1_f1 = FakeLine(FakeNode(0, 'f0'),
-                             FakeNode(1, 'f1'),
-                             FakeNode(2, 'f1'))
+    line_f0_f1_f1 = FakeLine(FakeFileNode(0, 'f0'),
+                             FakeFileNode(1, 'f1'),
+                             FakeFileNode(2, 'f1'))
     self.assertEqual(
       {(2, 'f1'): [line_f0_f1_f1]},
       group_by_file([line_f0_f1_f1]))
 
-    line_x_f0_f0 = FakeLine(FakeNode(1, 'f0'),
-                            FakeNode(2, 'f0'))
+    line_x_f0_f0 = FakeLine(FakeFileNode(1, 'f0'),
+                            FakeFileNode(2, 'f0'))
     self.assertEqual(
       {(2, 'f1'): [line_f0_f1_f1],
        (2, 'f0'): [line_x_f0_f0]},
       group_by_file([line_f0_f1_f1, line_x_f0_f0]))
 
     # Deleted file
-    line_f0_x_x = FakeLine(FakeNode(0, 'f0'),
-                           FakeNode(1, '/dev/null'),
-                           FakeNode(2, '/dev/null'))
+    line_f0_x_x = FakeLine(FakeFileNode(0, 'f0'),
+                           FakeFileNode(1, '/dev/null'),
+                           FakeFileNode(2, '/dev/null'))
     self.assertEqual(
       {(0, 'f0'): [line_f0_x_x],
        (2, 'f0'): [line_x_f0_f0]},
       group_by_file([line_f0_x_x, line_x_f0_f0]))
 
-    line_x_f0_f0 = FakeLine(FakeNode(1, 'f0'),
-                            FakeNode(2, 'f0'))
-    line_x_f1_f1 = FakeLine(FakeNode(1, 'f1'),
-                            FakeNode(2, 'f1'))
+    line_x_f0_f0 = FakeLine(FakeFileNode(1, 'f0'),
+                            FakeFileNode(2, 'f0'))
+    line_x_f1_f1 = FakeLine(FakeFileNode(1, 'f1'),
+                            FakeFileNode(2, 'f1'))
     self.assertEqual(
     {(2, 'f0'): [line_x_f0_f0],
      (2, 'f1'): [line_f0_f1_f1, line_x_f1_f1]},
@@ -212,21 +224,6 @@ class Test(unittest.TestCase):
                      line_x_f1_f1]))
 
   def test_new_group_fragment_bound_lines(self):
-    class FakeNode():
-      def __init__(self, diff_i, line, kind):
-        self._diff_i = diff_i
-        self._filename = 'dummy'
-        self._line = line
-        self._kind = kind
-      def __repr__(self):
-        return str(('FakeNode', self._diff_i, self._filename,
-                    self._line, self._kind))
-    class FakeLine():
-      def __init__(self, *nodes):
-        self._nodehistory = {node._diff_i : node
-                             for node in nodes}
-      def __repr__(self):
-        return str(('FakeLine', self._nodehistory))
     start_0_0_0 = FakeLine(FakeNode(0, 0, START),
                            FakeNode(1, 0, START),
                            FakeNode(2, 0, START))
@@ -258,13 +255,17 @@ class Test(unittest.TestCase):
       self.assertEqual(expected, actual)
     eq(
       {(2, 'dummy'):
-       # TODO: Make the list of node lines into sets, order should not matter
-       # TODO: This is how it should be
-       #[[start_0_0_0], [end_0_1_3, end_1_3]]},
        [set([start_0_0_0]), set([end_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([start_0_0_0,
                                       end_0_1_3,
                                       end_1_3]))
+
+    eq(
+      {(2, 'dummy'):
+       [set([end_1_3, end_0_1_3])]},
+      new_group_fragment_bound_lines([end_0_1_3,
+                                      end_1_3]))
+
 
 
   def test_016_004(self):
