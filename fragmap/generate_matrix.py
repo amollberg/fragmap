@@ -88,6 +88,9 @@ def decorate_matrix(m):
 #   end  >= start
 #   ones that are on the same line, recursively order by line number in previous diff, or stop
 def new_group_fragment_bound_lines(nodelines):
+  """
+  Return {file: [set([nodeline, nodeline]), ...], ...}
+  """
   # TODO: Take care of bound kinds
   def group_fragment_bound_lines_same_file(lines, diff_i):
     linegroups = {}
@@ -106,17 +109,17 @@ def new_group_fragment_bound_lines(nodelines):
 
 def add_or_create(itemmap, item, key):
   if key not in itemmap:
-    itemmap[key] = []
+    itemmap[key] = set([])
   if item not in itemmap[key]:
-    itemmap[key].append(item)
+    itemmap[key].add(item)
 def test_add_or_create():
-  m = {1: ['e'], 2: []}
+  m = {1: set(['e']), 2: set([])}
   add_or_create(m, 'a', 2)
-  assert m[2] == ['a']
+  assert m[2] == set(['a'])
   add_or_create(m, 'b', 1)
-  assert m[1] == ['e', 'b']
+  assert m[1] == set(['e', 'b'])
   add_or_create(m, 'c', 3)
-  assert m[3] == ['c']
+  assert m[3] == set(['c'])
 test_add_or_create()
 
 # Each line

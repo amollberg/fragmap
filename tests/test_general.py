@@ -231,7 +231,7 @@ class Test(unittest.TestCase):
                            FakeNode(2, 0, START))
     self.assertEqual(
       {(2, 'dummy'):
-       [[start_0_0_0]]},
+       [set([start_0_0_0])]},
       new_group_fragment_bound_lines([start_0_0_0]))
 
     end_0_1_3 = FakeLine(FakeNode(0, 0, END),
@@ -239,7 +239,7 @@ class Test(unittest.TestCase):
                          FakeNode(2, 3, END))
     self.assertEqual(
       {(2, 'dummy'):
-       [[start_0_0_0], [end_0_1_3]]},
+       [set([start_0_0_0]), set([end_0_1_3])]},
       new_group_fragment_bound_lines([start_0_0_0,
                                       end_0_1_3]))
 
@@ -254,7 +254,7 @@ class Test(unittest.TestCase):
        # TODO: Make the list of node lines into sets, order should not matter
        # TODO: This is how it should be
        #[[start_0_0_0], [end_0_1_3, end_1_3]]},
-       [[start_0_0_0], [end_1_3], [end_0_1_3]]},
+       [set([start_0_0_0]), set([end_1_3, end_0_1_3])]},
       new_group_fragment_bound_lines([start_0_0_0,
                                       end_0_1_3,
                                       end_1_3]))
