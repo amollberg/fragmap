@@ -12,6 +12,7 @@ import fragmap.debug as debug
 import unittest
 from mock import Mock
 import os
+import pprint
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 DIFF_DIR = os.path.join(TEST_DIR, 'diffs')
@@ -245,10 +246,16 @@ class Test(unittest.TestCase):
 
     end_1_3 = FakeLine(FakeNode(1, 1, END),
                        FakeNode(2, 3, END))
-    def eq(a, b):
-      print('a:', a)
-      print('b:', b)
-      self.assertEqual(a, b)
+    def eq(expected, actual):
+      def jprint(v):
+        import prettyprint
+        pretty = prettyprint.Formatter()
+        print(pretty(v, htchar='  '))
+      print('expected:', end='')
+      jprint(expected)
+      print('actual:', end='')
+      jprint(actual)
+      self.assertEqual(expected, actual)
     eq(
       {(2, 'dummy'):
        # TODO: Make the list of node lines into sets, order should not matter
