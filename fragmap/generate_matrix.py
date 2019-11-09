@@ -209,7 +209,7 @@ def n_patches(lines):
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
 # As a note, at any subsequent diffs they will consequently be the same too.
-def group_fragment_bound_lines(node_lines):
+def old_group_fragment_bound_lines(node_lines):
   node_lines = sorted(node_lines)
   if debug.is_logging('grouping'):
     print_node_line_relation_table(node_lines)
@@ -306,14 +306,21 @@ class ColumnItem(object):
   def __repr__(self):
     return "<Cell inside=%s node_line=%s>" %(self.inside, self.node_line)
 
-def to_separate_lines(dual_bound_nodes):
+def to_separate_lines(dual_bound_lines):
   return \
-    [dual_bound_node.start for dual_bound_node in dual_bound_nodes] + \
-    [dual_bound_node.end for dual_bound_node in dual_bound_nodes]
+    [single_node_line
+     for bound_line in dual_bound_lines
+     for single_node_line in bound_line.to_single_bound_lines()]
 
 class Fragmap():
 
   def __init__(self, patches, grouped_node_lines):
+    # Ungroup by file, make a flat list of node line groups
+    # TODO: Do something useful with the file grouping, like parallelization
+    grouped_node_lines = [node_line_group
+                          for f, node_line_groups in grouped_node_lines.items()
+                          for node_line_group in node_line_groups]
+    print("Creating Fragmap with grouped_node_lines=", grouped_node_lines)
     self.patches = patches
     self.grouped_node_lines = grouped_node_lines
     debug.get('matrix').debug("Patches: %s", patches)
@@ -321,7 +328,7 @@ class Fragmap():
   @staticmethod
   def from_diffs(diffs):
     node_lines = update_all_positions_to_latest(diffs)
-    grouped_lines = new_group_fragment_bound_lines(node_lines)
+    grouped_lines = new_group_fragment_bound_lines(to_separate_lines(node_lines))
     return Fragmap(diffs, grouped_lines)
 
   def get_n_patches(self):
@@ -462,7 +469,7 @@ class BriefFragmap(object):
       debug.get('matrix').debug('key: %s', key)
       if key in list(connections.keys()):
         # Append to existing dict entry
-        connections[key].extend(group)
+        connections[key] |= group
       else:
         # Make a new entry in the dict
         connections[key] = group

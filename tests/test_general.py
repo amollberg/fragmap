@@ -5,7 +5,7 @@ from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
-from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_fragment_bound_lines, group_by_file, new_group_fragment_bound_lines
+from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_by_file, new_group_fragment_bound_lines
 from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import fragmap.debug as debug
 

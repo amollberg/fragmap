@@ -88,70 +88,33 @@ class FragmentDualBoundNode():
   def __repr__(self):
     return "<DualNode: (%s, %d), (%s, %s)>" %(self._diff_i, self._fragment_i, self.start, self.end)
 
+class FragmentSingleBoundLine():
+  _kind = None
+  _nodehistory = None
+  _startdiff_i = None
+
+  def __init__(self, fragment_bound_line, kind):
+    def get_node(dual_bound_node, kind):
+      if kind == FragmentBoundNode.START:
+        return dual_bound_node.start
+      if kind == FragmentBoundNode.END:
+        return dual_bound_node.end
+      raise ValueError("Unknown kind:" + kind)
+    self._nodehistory = {key : get_node(node, kind)
+                         for key, node in fragment_bound_line._nodehistory.items()}
+    self._startdiff_i = fragment_bound_line._startdiff_i
+    self._kind = kind
+
+  def __repr__(self):
+    return " \n<FragmentSingleBoundLine: %d, %d, %s>" % (
+      self._kind,
+      self._startdiff_i,
+      ''.join(["\n %2d: %s" %(key, val)
+              for key,val in sorted(self._nodehistory.items())]))
+
 class FragmentBoundLine():
   _nodehistory = None
   _startdiff_i = None
-  _kind = None
-
-  # Note: This ordering is not transitive so bound line sorting may be inconsistent
-  def __lt__(a, b):
-    def lt_at_diff(a, b, diff_i):
-      return a._nodehistory[diff_i].with_incremented_end() < b._nodehistory[diff_i].with_incremented_end()
-
-    debug.get('sorting').debug("<<<<< Comparing %s and %s", a,b)
-    common_diffs = set(a._nodehistory.keys()) & set(b._nodehistory.keys())
-    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
-    first_common_diff_i = min(common_diffs)
-    prev_diff_i = first_common_diff_i - 1
-    # Order by filename at latest diff and then by
-    # line at earliest common diff
-    debug.get('sorting').debug("First_common=%d", first_common_diff_i)
-
-    if lt_at_diff(a, b, prev_diff_i):
-      debug.get('sorting').debug("Lines are < at prev diff %d", prev_diff_i)
-      return True
-    if lt_at_diff(a, b, first_common_diff_i):
-      debug.get('sorting').debug("Lines are < at first diff %d", first_common_diff_i)
-      return True
-    else:
-      debug.get('sorting').debug("Lines are !<")
-      return False
-
-
-  # TODO: remove all this comparison, using new_group_fragment_bound_lines
-  # Helper function for __eq__
-  def eq_at_diff(a, b, diff_i):
-    def comparison_element(node):
-      return (node._filename, node.start._line, node.end._line)
-    return (comparison_element(a._nodehistory[diff_i].with_incremented_end()) ==
-            comparison_element(b._nodehistory[diff_i].with_incremented_end()))
-
-
-  def __eq__(a, b):
-    # # If a start and an end share a startdiff then it is not safe to
-    # # group them even though their kinds differ because it will not be
-    # # possible to distinguish the bounds.
-    # if a._kind != b._kind and a._startdiff_i == b._startdiff_i:
-    #   debug.get('grouping').debug("kind %d != %d and same startdiff %d", a._kind, b._kind, a._startdiff_i)
-    #   return False
-
-    debug.get('grouping').debug("===== Comparing %s and %s", a, b)
-    common_diffs = set(a._nodehistory.keys()) & set(b._nodehistory.keys())
-    common_diffs -= {a._startdiff_i-1, b._startdiff_i-1}
-    first_common_diff_i = min(common_diffs)
-    prev_diff_i = first_common_diff_i - 1
-
-    # If a start and an end does NOT share a startdiff then it is safe to
-    # group them.
-    if a.eq_at_diff(b, first_common_diff_i) \
-        and a.eq_at_diff(b, prev_diff_i) \
-        and a._startdiff_i != b._startdiff_i:
-      debug.get('grouping').debug("Lines are ==")
-      return True
-    else:
-      debug.get('grouping').debug("Lines are !=")
-      return False
-
 
   def __init__(self, dual_node):
     self._startdiff_i = dual_node._diff_i
@@ -165,6 +128,10 @@ class FragmentBoundLine():
       self._startdiff_i,
       ''.join(["\n %d: %s" %(key, val)
               for key,val in sorted(self._nodehistory.items())]))
+
+  def to_single_bound_lines(self):
+    return FragmentSingleBoundLine(self, FragmentBoundNode.START),\
+           FragmentSingleBoundLine(self, FragmentBoundNode.END),\
 
   def last(self):
     return self._nodehistory[max(self._nodehistory.keys())]
