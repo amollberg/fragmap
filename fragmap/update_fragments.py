@@ -43,6 +43,7 @@ class FragmentDualBoundNode():
   # References back into the diffs
   _diff_i = None
   _fragment = None
+  _file_patch = None
 
   # Info to sort on
   _filename = None
@@ -54,6 +55,19 @@ class FragmentDualBoundNode():
   def __lt__(a, b):
     return a.start < b.start or (
       a.start == b.start and a.end < b.end)
+
+  def __deepcopy__(self, memo):
+    cls = self.__class__
+    result = cls.__new__(cls)
+    memo[id(self)] = result
+    for k, v in self.__dict__.items():
+      if k in ['_fragment', '_file_patch']:
+        # Copy by reference, avoiding deepcopy
+        setattr(result, k, getattr(self, k))
+      else:
+        # Recursively call deepcopy
+        setattr(result, k, copy.deepcopy(v, memo))
+    return result
 
   def __init__(self, diff_i, file_patch, fragment_i, start_line, end_line):
     self._diff_i = diff_i
@@ -144,8 +158,10 @@ class FragmentBoundLine():
     assert(diff_i >= 0)
     if diff_i not in self._nodehistory:
       # Shallow copy previous
-      updated_node = copy.copy(self._nodehistory[diff_i-1])
+      updated_node = copy.deepcopy(self._nodehistory[diff_i-1])
       self._nodehistory[diff_i] = updated_node
+      def deb(a, b):
+        return "%s to %s, %s, %s, %s"%(a, b, a is b, a == b, a.start is b.start)
     return self._nodehistory[diff_i]
 
   def update(self, diff_i, filename, start_line, end_line):
