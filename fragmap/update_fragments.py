@@ -118,6 +118,7 @@ class FragmentBoundLine():
       return False
 
 
+  # TODO: remove all this comparison, using new_group_fragment_bound_lines
   # Helper function for __eq__
   def eq_at_diff(a, b, diff_i):
     def comparison_element(node):

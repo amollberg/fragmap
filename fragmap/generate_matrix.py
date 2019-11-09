@@ -119,6 +119,10 @@ def new_group_fragment_bound_lines(nodelines):
         ordered_linegroups.append(later_endlines)
       if later_startlines:
         ordered_linegroups.append(later_startlines)
+    import tests.prettyprint
+    print("endlines:",later_endlines)
+    print("startlines:",later_startlines)
+    print ('  '*diff_i, "line groups at diff", diff_i, tests.prettyprint.Formatter()(ordered_linegroups))
     if diff_i > 0:
       # Refine each group into groups according to previous diff
       ordered_linegroups = [refined_group
@@ -302,6 +306,10 @@ class ColumnItem(object):
   def __repr__(self):
     return "<Cell inside=%s node_line=%s>" %(self.inside, self.node_line)
 
+def to_separate_lines(dual_bound_nodes):
+  return \
+    [dual_bound_node.start for dual_bound_node in dual_bound_nodes] + \
+    [dual_bound_node.end for dual_bound_node in dual_bound_nodes]
 
 class Fragmap():
 
@@ -313,7 +321,7 @@ class Fragmap():
   @staticmethod
   def from_diffs(diffs):
     node_lines = update_all_positions_to_latest(diffs)
-    grouped_lines = group_fragment_bound_lines(node_lines)
+    grouped_lines = new_group_fragment_bound_lines(node_lines)
     return Fragmap(diffs, grouped_lines)
 
   def get_n_patches(self):
