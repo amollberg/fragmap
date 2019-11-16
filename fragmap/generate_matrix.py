@@ -123,7 +123,7 @@ def new_group_fragment_bound_lines(nodelines):
     print("endlines:",later_endlines)
     print("startlines:",later_startlines)
     print ('  '*diff_i, "line groups at diff", diff_i, tests.prettyprint.Formatter()(ordered_linegroups))
-    if diff_i > 0:
+    if diff_i >= 0:
       # Refine each group into groups according to previous diff
       ordered_linegroups = [refined_group
                             for group in ordered_linegroups
@@ -375,8 +375,21 @@ class Fragmap():
           print("Filling", start_i, "to", end_i, "with", start_node_line)
           fill_inside(matrix, start_i, end_i, start_node_line._dual_line)
           print(matrix)
-      # Remove the last line because that is never inside a bound
-      matrix = [row[0:-1] for row in matrix]
+      def is_column_empty(matrix, column_i):
+        for row in matrix:
+          if row[column_i].kind != Cell.NO_CHANGE:
+            return False
+        return True
+      def remove_column(matrix, column_i):
+        for row in matrix:
+          del row[column_i]
+      # Remove empty columns from matrix
+      column_i = 0
+      while column_i < len(matrix[0]):
+        if is_column_empty(matrix, column_i):
+          remove_column(matrix, column_i)
+        else:
+          column_i += 1
       print(matrix)
       return matrix
     def append_file_matrix(matrix, file_matrix):
