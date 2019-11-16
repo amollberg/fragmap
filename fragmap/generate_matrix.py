@@ -384,6 +384,14 @@ class Fragmap():
         assert(False)
       def fill_inside(matrix, start_i, end_i, dual_line):
         r = dual_line._startdiff_i
+        # TODO: Even including end_i below does not work because if
+        # the fragment is empty then end is in the group BEFORE start!
+        # The line-level interval mode of "start-inclusive, end-inclusive"
+        # leaks into - and is counter to - the node line group-level interval mode
+        # of "start-inclusive, end-exclusive"
+        # Two options:
+        #  (1) increment end before grouping it, so as to isolate the line-level interval mode
+        #  (2) force the start_i to be included always
         for c in range(start_i, end_i + 1):
           matrix[r][c] = Cell(Cell.CHANGE, dual_line._nodehistory[r])
       n_cols = len(grouped_node_lines_onefile)
