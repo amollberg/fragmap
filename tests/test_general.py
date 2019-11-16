@@ -5,7 +5,7 @@ from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
-from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_by_file, new_group_fragment_bound_lines
+from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_by_file, new_group_fragment_bound_lines, to_separate_lines
 from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
 import fragmap.debug as debug
 
@@ -312,7 +312,7 @@ class Test(unittest.TestCase):
   def test_003_004_groups(self):
     files = ['003-add-one-line-to-empty-file',
              '004-remove-one-line-empty-file']
-    self.check_node_group_kinds(files, [[START,START]]) # ((h))
+    self.check_node_group_kinds(files, [[START,START], [END,END]]) # ((h))
 
 
   def test_011(self):
@@ -641,10 +641,16 @@ class Test(unittest.TestCase):
       return [{START:'start', END:'end'}[e] for e in l]
     kinds_hist = histogram_kinds(kinds)
     kinds = list(map(stringify_kinds_list, kinds))
-    node_lines = self.get_node_lines(diff_filenames)
+    dual_node_lines = self.get_node_lines(diff_filenames)
+    for dual_node_line in dual_node_lines:
+      dual_node_line.increment_end()
+    node_lines = to_separate_lines(dual_node_lines)
     if debug.is_logging('test'):
       print_node_line_relation_table(node_lines)
-    grouped_node_lines = group_fragment_bound_lines(node_lines)
+    grouped_node_lines = new_group_fragment_bound_lines(node_lines)
+    grouped_node_lines = [node_line_group
+                          for f, node_line_groups in grouped_node_lines.items()
+                          for node_line_group in node_line_groups]
     error_string = "Required starts and ends in groups: \n %s\nActual: %s" %(
       kinds, grouped_node_lines)
     self.assertEqual(len(grouped_node_lines), len(kinds_hist), "Wrong length; " + error_string)
