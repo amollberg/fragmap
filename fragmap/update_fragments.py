@@ -106,6 +106,7 @@ class FragmentSingleBoundLine():
   _kind = None
   _nodehistory = None
   _startdiff_i = None
+  _dual_line = None
 
   def __init__(self, fragment_bound_line, kind):
     def get_node(dual_bound_node, kind):
@@ -118,13 +119,19 @@ class FragmentSingleBoundLine():
                          for key, node in fragment_bound_line._nodehistory.items()}
     self._startdiff_i = fragment_bound_line._startdiff_i
     self._kind = kind
+    # Backreference for matching start and end lines again
+    self._dual_line = fragment_bound_line
 
   def __repr__(self):
-    return " \n<FragmentSingleBoundLine: %d, %d, %s>" % (
+    return " \n<FragmentSingleBoundLine: kind %d, start %d, %s>" % (
       self._kind,
       self._startdiff_i,
       ''.join(["\n %2d: %s" %(key, val)
               for key,val in sorted(self._nodehistory.items())]))
+
+  def same_dual_line(self, other):
+    # Equality might be enough? But might also be slower
+    return self._dual_line is other._dual_line
 
 class FragmentBoundLine():
   _nodehistory = None

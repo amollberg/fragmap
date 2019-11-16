@@ -147,6 +147,8 @@ def test_add_or_create():
   assert m[3] == set(['c'])
 test_add_or_create()
 
+# Additionally group lines that are consecutive
+
 # Each line
 #  check all previously grouped lines:
 #    get first common diff
@@ -314,21 +316,18 @@ def to_separate_lines(dual_bound_lines):
 
 class Fragmap():
 
-  def __init__(self, patches, grouped_node_lines):
+  def __init__(self, patches, grouped_node_lines_filemap):
     # Ungroup by file, make a flat list of node line groups
     # TODO: Do something useful with the file grouping, like parallelization
-    grouped_node_lines = [node_line_group
-                          for f, node_line_groups in grouped_node_lines.items()
-                          for node_line_group in node_line_groups]
-    print("Creating Fragmap with grouped_node_lines=", grouped_node_lines)
+    print("Creating Fragmap with grouped_node_lines=", grouped_node_lines_filemap)
     self.patches = patches
-    self.grouped_node_lines = grouped_node_lines
+    self.grouped_node_lines_filemap = grouped_node_lines_filemap
     debug.get('matrix').debug("Patches: %s", patches)
 
   @staticmethod
   def from_diffs(diffs):
-    node_lines = update_all_positions_to_latest(diffs)
-    grouped_lines = new_group_fragment_bound_lines(to_separate_lines(node_lines))
+    dual_node_lines = update_all_positions_to_latest(diffs)
+    grouped_lines = new_group_fragment_bound_lines(to_separate_lines(dual_node_lines))
     return Fragmap(diffs, grouped_lines)
 
   def get_n_patches(self):
@@ -357,13 +356,14 @@ class Fragmap():
         for node_line in node_line_group:
           # If node belongs in on this row
           if node_line._startdiff_i == diff_i:
-            inside_fragment[r] = ColumnItem(node_line, True) #node_line._kind == FragmentBoundNode.START)
+            inside_fragment[r] = ColumnItem(node_line, node_line._kind == FragmentBoundNode.START)
             debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
             # If it was updated to False:
             if not inside_fragment[r].inside:
               # False overrides True so that if start and end from same diff
               # appear in same group we don't get stuck at True
-              break
+              #break
+              pass
         debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
     return inside_fragment
 
@@ -371,19 +371,40 @@ class Fragmap():
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
     #debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
-
     n_rows = self.get_n_patches()
-    n_cols = len(self.grouped_node_lines)
-    debug.get('dco').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
-    prev_col = None
-    for c in range(n_cols):
-      column = self.generate_column(c, prev_col)
-      for r in range(n_rows):
-        if column[r] is not None and column[r].inside:
-          matrix[r][c].kind = Cell.CHANGE
-          matrix[r][c].node = column[r].node_line._nodehistory[r]
-      prev_col = column
+    def generate_file_matrix(grouped_node_lines_onefile):
+      def find_end(start_node_line, grouped_node_lines_onefile):
+        for end_i, end_group in enumerate(grouped_node_lines_onefile):
+          for end_node_line in end_group:
+            if end_node_line._kind != FragmentBoundNode.END:
+              continue
+            if start_node_line.same_dual_line(end_node_line):
+              return end_i
+        # There should always be an end line to a start line
+        assert(False)
+      def fill_inside(matrix, start_i, end_i, dual_line):
+        r = dual_line._startdiff_i
+        for c in range(start_i, end_i + 1):
+          matrix[r][c] = Cell(Cell.CHANGE, dual_line._nodehistory[r])
+      n_cols = len(grouped_node_lines_onefile)
+      debug.get('dco').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
+      matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
+      for start_i, start_group in enumerate(grouped_node_lines_onefile):
+        for start_node_line in start_group:
+          if start_node_line._kind != FragmentBoundNode.START:
+            continue
+          end_i = find_end(start_node_line, grouped_node_lines_onefile)
+          print("Filling", start_i, "to", end_i, "with", start_node_line)
+          fill_inside(matrix, start_i, end_i, start_node_line._dual_line)
+      return matrix
+    def append_file_matrix(matrix, file_matrix):
+      assert(len(matrix) == len(file_matrix))
+      for r in range(len(matrix)):
+        matrix[r] += file_matrix[r]
+    matrix = [[]] * n_rows
+    for _, grouped_node_lines_onefile in self.grouped_node_lines_filemap.items():
+      file_matrix = generate_file_matrix(grouped_node_lines_onefile)
+      append_file_matrix(matrix, file_matrix)
     decorate_matrix(matrix)
     return matrix
 
