@@ -181,6 +181,10 @@ class FragmentBoundLine():
     updated_node.start._line = start_line
     updated_node.end._line = end_line
 
+  def increment_end(self):
+    self._nodehistory = {k : v.with_incremented_end()
+                         for k, v in self._nodehistory.items()}
+
 def update_new_bound(fragment):
   """
   Update a bound that belongs to the current diff. Simply apply whatever

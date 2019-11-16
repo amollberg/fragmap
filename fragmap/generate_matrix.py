@@ -327,6 +327,8 @@ class Fragmap():
   @staticmethod
   def from_diffs(diffs):
     dual_node_lines = update_all_positions_to_latest(diffs)
+    for dual_node_line in dual_node_lines:
+      dual_node_line.increment_end()
     grouped_lines = new_group_fragment_bound_lines(to_separate_lines(dual_node_lines))
     return Fragmap(diffs, grouped_lines)
 
@@ -392,7 +394,7 @@ class Fragmap():
         # Two options:
         #  (1) increment end before grouping it, so as to isolate the line-level interval mode
         #  (2) force the start_i to be included always
-        for c in range(start_i, end_i + 1):
+        for c in range(start_i, end_i):
           matrix[r][c] = Cell(Cell.CHANGE, dual_line._nodehistory[r])
       n_cols = len(grouped_node_lines_onefile)
       debug.get('dco').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
@@ -404,12 +406,16 @@ class Fragmap():
           end_i = find_end(start_node_line, grouped_node_lines_onefile)
           print("Filling", start_i, "to", end_i, "with", start_node_line)
           fill_inside(matrix, start_i, end_i, start_node_line._dual_line)
+          print(matrix)
+      # Remove the last line because that is never inside a bound
+      matrix = [row[0:-1] for row in matrix]
+      print(matrix)
       return matrix
     def append_file_matrix(matrix, file_matrix):
       assert(len(matrix) == len(file_matrix))
       for r in range(len(matrix)):
         matrix[r] += file_matrix[r]
-    matrix = [[]] * n_rows
+    matrix = [[] for i in range(n_rows)]
     for _, grouped_node_lines_onefile in self.grouped_node_lines_filemap.items():
       file_matrix = generate_file_matrix(grouped_node_lines_onefile)
       append_file_matrix(matrix, file_matrix)
