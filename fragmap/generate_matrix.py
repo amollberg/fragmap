@@ -338,38 +338,6 @@ class Fragmap():
   def get_patch(self, n):
     return self.patches[n]
 
-  def generate_column(self, col_index, prev_column=None):
-    c = col_index
-    n_rows = self.get_n_patches()
-    node_line_group = self.grouped_node_lines[c]
-    debug.get('dco').debug("grouped_node_lines at col %d: %s", c, node_line_group)
-    # Initialize inside_fragment
-    inside_fragment = prev_column
-    if prev_column is None:
-      if col_index <= 0:
-        inside_fragment = [None] * n_rows
-      else:
-        inside_fragment = self.generate_column(col_index - 1)
-    # For each row in the column
-    for r in range(n_rows):
-      diff_i = r
-      debug.get('grid').debug("%d,%d: %s", r, c, node_line_group)
-      if True: #earliest_diff(node_line_group) <= diff_i:
-        for node_line in node_line_group:
-          # If node belongs in on this row
-          if node_line._startdiff_i == diff_i:
-            inside_fragment[r] = ColumnItem(node_line, node_line._kind == FragmentBoundNode.START)
-            debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
-            # If it was updated to False:
-            if not inside_fragment[r].inside:
-              # False overrides True so that if start and end from same diff
-              # appear in same group we don't get stuck at True
-              #break
-              pass
-        debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
-    return inside_fragment
-
-
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
   def generate_matrix(self):
     #debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
@@ -470,7 +438,7 @@ class BriefFragmap(object):
   @staticmethod
   def group_by_patch_connection(fragmap):
     def patch_connection_key(column):
-      inside = [it.inside if it is not None else False for it in column]
+      inside = [it.kind == Cell.CHANGE if it is not None else False for it in column]
       if inside == [False] * fragmap.get_n_patches():
         # Skip empty columns
         return False, None
@@ -485,7 +453,11 @@ class BriefFragmap(object):
 
   @staticmethod
   def _group_columns_by(fragmap, keyfunc):
-    groups = fragmap.grouped_node_lines
+    full_matrix = fragmap.generate_matrix()
+    def get_column(matrix, column_i):
+      return [row[column_i] for row in matrix]
+    def get_node_lines(column):
+      return set([cell.node for cell in column if cell.kind == Cell.CHANGE])
     # connections : '01001000..010' -> [node, node, ..]
     # The key strings are formatted such that
     # character i is 1 if the node line group has a node with start from patch i, and
@@ -493,10 +465,11 @@ class BriefFragmap(object):
     connections = {}
     connections_key_index = []
     prev_column = None
-    debug.get('matrix').debug("Group by connection: Before: %s", groups)
-    for c in range(len(groups)):
-      group = groups[c]
-      column = fragmap.generate_column(c, prev_column)
+    #debug.get('matrix').debug("Group by connection: Before: %s", groups)
+    n_cols_full_matrix = len(full_matrix[0])
+    for c in range(n_cols_full_matrix):
+      column = get_column(full_matrix, c)
+      group = get_node_lines(column)
       prev_column = column
       valid, key = keyfunc(column)
       if not valid:
