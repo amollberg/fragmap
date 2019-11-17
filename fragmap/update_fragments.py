@@ -216,6 +216,9 @@ def update_normal_line(line, bound_kind, fragment): # 4, START, (4,3) -> (4,8)
     line += newrange(fragment)._end - oldrange(fragment)._end
   return line
 
+def diffhunk_str(diffhunk):
+  return "<DiffHunk (%s) -> (%s) header:%s>" %(oldrange(diffhunk), newrange(diffhunk), diffhunk.header)
+
 def update_inherited_bound(start_line, end_line, file_patch):
   """
   Update a bound inherited from an older patch. Must never be
@@ -229,6 +232,7 @@ def update_inherited_bound(start_line, end_line, file_patch):
   # subsequent lines map as e -> e-b+d
   marker = None
   for patch_fragment in file_patch.hunks:
+    debug.get('update').debug("Marker? %s", diffhunk_str(patch_fragment))
     if not end_line < oldrange(patch_fragment)._start:
       marker = patch_fragment
     else:
