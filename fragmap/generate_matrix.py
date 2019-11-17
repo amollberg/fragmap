@@ -141,12 +141,15 @@ def new_group_fragment_bound_lines(nodelines):
                                   for line in first if diff_i in line._dual_line._nodehistory]
         second_start_line_numbers = [line._dual_line._nodehistory[diff_i].start._line
                                      for line in second if diff_i in line._dual_line._nodehistory]
+        print("first, second lines:", first_end_line_numbers, second_start_line_numbers)
         return not first_end_line_numbers or not second_start_line_numbers \
           or max(first_end_line_numbers) <= min(second_start_line_numbers)
       comparison_diff_i = last_startdiff_i(first_group | second_group)
       fw = all([groupable_at(first_group, second_group, diff_i) for diff_i in range(-1, comparison_diff_i + 1)])
       bw = all([groupable_at(second_group, first_group, diff_i) for diff_i in range(-1, comparison_diff_i + 1)])
-      return fw or bw
+      r = fw or bw
+      print("groupable?", fw, bw, first_group, second_group)
+      return r
     linegroups = linegroups_in_one_file
     new_list = [set([])]
     for group in linegroups:
@@ -155,7 +158,8 @@ def new_group_fragment_bound_lines(nodelines):
         prev_group |= group
       else:
         new_list.append(group)
-    print("group_consec:", linegroups, new_list)
+    print("group_consec:", linegroups)
+    print("->           ", new_list)
     return new_list
   return {f: group_consecutive(group_fragment_bound_lines_same_file(lines, n_patches(lines)-1))
           for f, lines in group_by_file(nodelines).items()}
