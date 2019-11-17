@@ -229,7 +229,7 @@ def update_inherited_bound(start_line, end_line, file_patch):
   # subsequent lines map as e -> e-b+d
   marker = None
   for patch_fragment in file_patch.hunks:
-    if oldrange(patch_fragment)._start <= start_line:
+    if not end_line < oldrange(patch_fragment)._start:
       marker = patch_fragment
     else:
       break
