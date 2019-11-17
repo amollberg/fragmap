@@ -129,7 +129,20 @@ def new_group_fragment_bound_lines(nodelines):
                             for group in ordered_linegroups
                             for refined_group in group_fragment_bound_lines_same_file(group, diff_i - 1)]
     return ordered_linegroups
-  return {f: group_fragment_bound_lines_same_file(lines, n_patches(lines)-1)
+  def group_consecutive(linegroups_in_one_file):
+    def can_merge(first_group, second_group):
+      return first_group == set([])
+    linegroups = linegroups_in_one_file
+    new_list = [set([])]
+    for group in linegroups:
+      prev_group = new_list[-1]
+      if can_merge(prev_group, group):
+        prev_group |= group
+      else:
+        new_list.append(group)
+    print("group_consec:", linegroups, new_list)
+    return new_list
+  return {f: group_consecutive(group_fragment_bound_lines_same_file(lines, n_patches(lines)-1))
           for f, lines in group_by_file(nodelines).items()}
 
 def add_or_create(itemmap, item, key):
