@@ -131,7 +131,22 @@ def new_group_fragment_bound_lines(nodelines):
     return ordered_linegroups
   def group_consecutive(linegroups_in_one_file):
     def can_merge(first_group, second_group):
-      return first_group == set([])
+      def last_startdiff_i(lines):
+        return max([line._startdiff_i for line in lines])
+      # If either is empty
+      if not first_group or not second_group:
+        return True
+      def groupable_at(first, second, diff_i):
+        first_end_line_numbers = [line._dual_line._nodehistory[diff_i].end._line
+                                  for line in first if diff_i in line._dual_line._nodehistory]
+        second_start_line_numbers = [line._dual_line._nodehistory[diff_i].start._line
+                                     for line in second if diff_i in line._dual_line._nodehistory]
+        return not first_end_line_numbers or not second_start_line_numbers \
+          or max(first_end_line_numbers) <= min(second_start_line_numbers)
+      comparison_diff_i = last_startdiff_i(first_group | second_group)
+      fw = all([groupable_at(first_group, second_group, diff_i) for diff_i in range(-1, comparison_diff_i + 1)])
+      bw = all([groupable_at(second_group, first_group, diff_i) for diff_i in range(-1, comparison_diff_i + 1)])
+      return fw or bw
     linegroups = linegroups_in_one_file
     new_list = [set([])]
     for group in linegroups:
