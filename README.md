@@ -4,6 +4,14 @@
 After installing the requirements (see below), simply run:
 
     pip install fragmap
+    
+After installing, the fragmap application can be invoked with simply:
+
+    fragmap
+    
+See the help screen for command line options:
+
+    fragmap --help
 
 # Requirements
 
