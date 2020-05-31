@@ -234,7 +234,7 @@ def update_inherited_bound(start_line, end_line, file_patch):
   # Find the last fragment that starts before or at the end_line
   for patch_fragment in file_patch.hunks:
     debug.get('update').debug("Marker? %s", diffhunk_str(patch_fragment))
-    if not end_line < oldrange(patch_fragment)._start - 1:
+    if oldrange(patch_fragment)._start - 1 <= end_line:
       marker = patch_fragment
     else:
       break
