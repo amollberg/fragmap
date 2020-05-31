@@ -2,7 +2,6 @@
 
 from fragmap.commitdiff import CommitDiff
 from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
-from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_normal_line, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentDualBoundNode, FragmentBoundLine
 from fragmap.generate_matrix import Cell, Fragmap, BriefFragmap, group_by_file, new_group_fragment_bound_lines, to_separate_lines
@@ -379,10 +378,10 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c',
                       '032-addmod-change-bc-to-xy',
                       '033-addmod-add-z-between-xy'],
-                     ['##...',
-                      '.^###',
-                      '.####',
-                      '...#.'])
+                     ['#####.',
+                      '.^####',
+                      '.#####',
+                      '...#..'])
 
 
   def test_030_033_groups(self):
