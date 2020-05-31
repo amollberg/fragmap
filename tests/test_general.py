@@ -385,12 +385,14 @@ class Test(unittest.TestCase):
 
 
   def test_030_033_groups(self):
-    self.check_node_group_kinds(['030-addmod-create-with-ab',
-                                 '031-addmod-add-c',
-                                 '032-addmod-change-bc-to-xy',
-                                 '033-addmod-add-z-between-xy'],
+    self.check_node_group_kinds(['030-addmod-create-with-ab', # s,e
+                                 '031-addmod-add-c', # s,es,e
+                                 '032-addmod-change-bc-to-xy', # s,ss,ee,e
+                                 '033-addmod-add-z-between-xy'], # s,ss,s,e,ee,e
                                 # 5a3.54x2z2y43
-                                [[START],[START],[END,START],[START],[END],[END,END]])
+                                # [s0],[s2], [s1], [s3], [e3], [e0], [e1,e2]
+
+                                [[START],[START],[START],[START],[END],[END],[END,END]])
 
 
   def test_041_042_043(self):
@@ -501,10 +503,10 @@ class Test(unittest.TestCase):
                             '031-addmod-add-c',
                             '032-addmod-change-bc-to-xy',
                             '033-addmod-add-z-between-xy'],
-                           ['##..',
-                            '.^##',
-                            '.###',
-                            '...#'])
+                           ['####.',
+                            '.^###',
+                            '.####',
+                            '...#.'])
 
   def test_041_042_043_brief(self):
     self.check_diffs_brief(['041-successivemod-mod-ab',
@@ -538,11 +540,11 @@ class Test(unittest.TestCase):
                             '59718d27a WIP: Prepare for divertable',
                             '76c3fa0690213 WIP: divertable failing',
                             '2872a758eb7 WIP: Fix: Copy input table'],
-                           ['.........##.',
-                            '.#.###....^.',
-                            '..#^##.##.#.',
-                            '...^.####..#',
-                            '#..#........'])
+                           ['...##....',
+                            '....^.###',
+                            '.#..##.##',
+                            '##......#',
+                            '..#......'])
 
   def test_staged(self):
     self.reset_hard()
