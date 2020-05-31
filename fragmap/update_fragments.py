@@ -102,6 +102,12 @@ class FragmentDualBoundNode():
   def __repr__(self):
     return "<DualNode: (%s, %d), (%s, %s)>" %(self._diff_i, self._fragment_i, self.start, self.end)
 
+  def __eq__(self, other):
+    return self._comparable() == other._comparable()
+
+  def _comparable(self):
+    return (self._diff_i, self._fragment_i, self.start, self.end)
+
 class FragmentSingleBoundLine():
   _kind = None
   _nodehistory = None
@@ -132,6 +138,12 @@ class FragmentSingleBoundLine():
   def same_dual_line(self, other):
     # Equality might be enough? But might also be slower
     return self._dual_line is other._dual_line
+
+  def __eq__(self, other):
+    return self._comparable() == other._comparable()
+
+  def _comparable(self):
+    return (self._kind, self._nodehistory, self._startdiff_i)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -184,6 +196,12 @@ class FragmentBoundLine():
   def increment_end(self):
     self._nodehistory = {k : v.with_incremented_end()
                          for k, v in self._nodehistory.items()}
+
+  def __eq__(self, other):
+    return self._comparable() == other._comparable()
+
+  def _comparable(self):
+    return (self._nodehistory, self._startdiff_i)
 
 def update_new_bound(fragment):
   """
