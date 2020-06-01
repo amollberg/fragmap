@@ -149,7 +149,7 @@ class FragmentSingleBoundLine():
     return hash(self._comparable())
 
   def _comparable(self):
-    return (self._kind, self._nodehistory, self._startdiff_i)
+    return (self._kind, self._nodehistory.values(), self._startdiff_i)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -210,7 +210,7 @@ class FragmentBoundLine():
     return hash(self._comparable())
 
   def _comparable(self):
-    return (self._nodehistory, self._startdiff_i)
+    return (self._nodehistory.values(), self._startdiff_i)
 
 def update_new_bound(fragment):
   """

@@ -97,6 +97,10 @@ class FakeDualNode():
     self._diff_i = self.start._diff_i
     self._filename = self.start._filename
 
+  def __eq__(self, other):
+    return FragmentDualBoundNode(self, other)
+
+
 class FakeLine():
   def __init__(self, *nodes):
     self._nodehistory = {node._diff_i : node
@@ -110,6 +114,14 @@ class FakeLine():
   def __repr__(self):
     return str(('FakeLine', self._nodehistory, self._startdiff_i))
 
+  def __eq__(self, other):
+    return FragmentBoundLine.__eq__(self, other)
+
+  def __hash__(self):
+    return hash(self._comparable())
+
+  def _comparable(self):
+    return FragmentBoundLine._comparable(self)
 
 class Test(unittest.TestCase):
 
@@ -250,30 +262,24 @@ class Test(unittest.TestCase):
     self.assertEqual(expected, actual)
 
   def test_new_group_fragment_bound_lines_two_insertions_same_start(self):
-    start_0_0_0 = FakeLine(FakeNode(0, 0, START),
-                           FakeNode(1, 0, START),
-                           FakeNode(2, 0, START))
-    start_x_0_0 = FakeLine(FakeNode(1, 0, START),
-                           FakeNode(2, 0, START))
+    line_0 = FakeLine(FakeDualNode(FakeNode(0, 0, START), FakeNode(0, 0, END)),
+                      FakeDualNode(FakeNode(1, 0, START), FakeNode(1, 1, END)),
+                      FakeDualNode(FakeNode(2, 0, START), FakeNode(2, 3, END)))
+    line_1 = FakeLine(FakeDualNode(FakeNode(1, 0, START), FakeNode(1, 1, END)),
+                      FakeDualNode(FakeNode(2, 0, START), FakeNode(2, 3, END)))
 
-    end_0_1_3 = FakeLine(FakeNode(0, 0, END),
-                         FakeNode(1, 1, END),
-                         FakeNode(2, 3, END))
-    end_x_1_3 = FakeLine(FakeNode(1, 1, END),
-                         FakeNode(2, 3, END))
+    start_0_0_0, end_0_1_3 = line_0.to_single_bound_lines()
+    start_x_0_0, end_x_1_3 = line_1.to_single_bound_lines()
+
     self.eq(
       {(2, 'dummy'):
        [set([start_0_0_0, start_x_0_0]), set([end_x_1_3, end_0_1_3])]},
-      new_group_fragment_bound_lines([start_0_0_0,
-                                      start_x_0_0,
-                                      end_0_1_3,
-                                      end_x_1_3]))
+      new_group_fragment_bound_lines(to_separate_lines([line_0, line_1])))
 
     self.eq(
       {(2, 'dummy'):
        [set([end_x_1_3, end_0_1_3])]},
-      new_group_fragment_bound_lines([end_0_1_3,
-                                      end_x_1_3]))
+      new_group_fragment_bound_lines(to_separate_lines([line_1])))
 
   def test_new_group_fragment_bound_lines_partial_overlap(self):
     # 123456789
