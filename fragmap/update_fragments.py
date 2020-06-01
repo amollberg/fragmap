@@ -105,6 +105,9 @@ class FragmentDualBoundNode():
   def __eq__(self, other):
     return self._comparable() == other._comparable()
 
+  def __hash__(self):
+    return hash(self._comparable())
+
   def _comparable(self):
     return (self._diff_i, self._fragment_i, self.start, self.end)
 
@@ -141,6 +144,9 @@ class FragmentSingleBoundLine():
 
   def __eq__(self, other):
     return self._comparable() == other._comparable()
+
+  def __hash__(self):
+    return hash(self._comparable())
 
   def _comparable(self):
     return (self._kind, self._nodehistory, self._startdiff_i)
@@ -199,6 +205,9 @@ class FragmentBoundLine():
 
   def __eq__(self, other):
     return self._comparable() == other._comparable()
+
+  def __hash__(self):
+    return hash(self._comparable())
 
   def _comparable(self):
     return (self._nodehistory, self._startdiff_i)
