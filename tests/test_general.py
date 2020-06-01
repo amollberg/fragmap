@@ -90,6 +90,15 @@ class FakeNode():
     return str(('FakeNode', self._diff_i, self._filename,
                 self._line, self._kind))
 
+  def __eq__(self, other):
+    return self._comparable() == other._comparable()
+
+  def __hash__(self):
+    return hash(self._comparable())
+
+  def _comparable(self):
+    return (self._diff_i, self._filename, self._line, self._kind)
+
 class FakeDualNode():
   def __init__(self, start, end):
     self.start = start
@@ -127,6 +136,7 @@ class Test(unittest.TestCase):
 
   # Append instead of replace default assertion failure message
   longMessage = True
+  maxDiff = None
 
   def test_update_normal_line_create_at_beginning(self):
     fragment = MockDiffHunk((0,0), (1,1), [])
@@ -285,21 +295,18 @@ class Test(unittest.TestCase):
     # 123456789
     #  ####
     #    #####
-    start_2_2_2 = FakeLine(FakeNode(0, 2, START),
-                           FakeNode(1, 2, START),
-                           FakeNode(2, 2, START))
-    start_x_4_4 = FakeLine(FakeNode(1, 4, START),
-                           FakeNode(2, 4, START))
-    end_5_5_8 = FakeLine(FakeNode(0, 5, END),
-                         FakeNode(1, 5, END),
-                         FakeNode(2, 8, END))
-    end_x_8_8 = FakeLine(FakeNode(1, 8, END),
-                         FakeNode(2, 8, END))
+    line_0 = FakeLine(FakeDualNode(FakeNode(0, 2, START), FakeNode(0, 5, END)),
+                      FakeDualNode(FakeNode(1, 2, START), FakeNode(1, 5, END)),
+                      FakeDualNode(FakeNode(2, 2, START), FakeNode(2, 8, END)))
+    line_1 = FakeLine(FakeDualNode(FakeNode(1, 4, START), FakeNode(1, 8, END)),
+                      FakeDualNode(FakeNode(2, 4, START), FakeNode(2, 8, END)))
+    start_2_2_2, end_5_5_8 = line_0.to_single_bound_lines()
+    start_x_4_4, end_x_8_8 = line_1.to_single_bound_lines()
+                        
     self.eq(
       {(2, 'dummy'):
         [set([start_2_2_2]), set([start_x_4_4]), set([end_5_5_8]), set([end_x_8_8])]},
-      new_group_fragment_bound_lines([start_2_2_2, start_x_4_4, end_5_5_8, end_x_8_8]))
-
+      new_group_fragment_bound_lines(to_separate_lines([line_0, line_1])))
 
 
   def test_016_004(self):

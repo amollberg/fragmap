@@ -146,10 +146,10 @@ class FragmentSingleBoundLine():
     return self._comparable() == other._comparable()
 
   def __hash__(self):
-    return hash(self._comparable())
+    return hash((self._kind, sum([hash(kv) for kv in self._nodehistory.items()]), self._startdiff_i))
 
   def _comparable(self):
-    return (self._kind, self._nodehistory.values(), self._startdiff_i)
+    return (self._kind, sorted(self._nodehistory.items(), key=lambda kv: kv[0]), self._startdiff_i)
 
 class FragmentBoundLine():
   _nodehistory = None
@@ -207,10 +207,10 @@ class FragmentBoundLine():
     return self._comparable() == other._comparable()
 
   def __hash__(self):
-    return hash(self._comparable())
+    return hash((sum(hash(self._nodehistory.items())), self._startdiff_i))
 
   def _comparable(self):
-    return (self._nodehistory.values(), self._startdiff_i)
+    return (sorted(self._nodehistory.items(), key=lambda kv: kv[0]), self._startdiff_i)
 
 def update_new_bound(fragment):
   """
