@@ -288,7 +288,7 @@ class Test(unittest.TestCase):
 
     self.eq(
       {(2, 'dummy'):
-       [set([end_x_1_3, end_0_1_3])]},
+       [set([start_x_0_0, end_x_1_3])]},
       new_group_fragment_bound_lines(to_separate_lines([line_1])))
 
   def test_new_group_fragment_bound_lines_partial_overlap(self):
