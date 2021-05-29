@@ -66,6 +66,13 @@ class Range(object):
     self._start += start_delta
     self._end += end_delta
 
+  def overlaps(self, other):
+    return \
+      self._start <= other._start <= self._end or \
+      self._start <= other._end <= self._end or \
+      other._start <= self._start <= other._end or \
+      other._start <= self._end <= other._end
+
 def oldrange(fragment):
   return Range(fragment.old_start, fragment.old_lines)
 

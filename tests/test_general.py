@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from fragmap.commitdiff import CommitDiff
+from fragmap.graph import SpgFragmap
 from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 from fragmap.update_fragments import update_inherited_bound, update_new_bound, update_positions, update_all_positions_to_latest
 from fragmap.update_fragments import FragmentBoundNode, FragmentBoundLine
@@ -533,7 +534,7 @@ class Test(unittest.TestCase):
                     for diff_filename in diff_filenames]
     cl = CommitLoader()
     diffs = cl.load(repo_path, ExplicitCommitSelection(commit_hexes))
-    h = Fragmap.from_diffs(diffs)
+    h = SpgFragmap.from_diffs(diffs)
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
