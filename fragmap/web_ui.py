@@ -3,7 +3,7 @@
 
 from yattag import Doc
 from .generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
-from .http import start_server
+from .httphelper import start_server
 from .common_ui import first_line
 
 import os
