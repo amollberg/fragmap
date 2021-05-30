@@ -3,9 +3,10 @@
 from dataclasses import dataclass
 
 from math import inf
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Union
 
-from pygit2 import Oid
+import pygit2
+from pygit2 import Oid, DiffHunk
 
 from fragmap.commitdiff import CommitDiff
 from fragmap.generate_matrix import Cell
@@ -35,25 +36,39 @@ class DiffLine:
 
 
 @dataclass(frozen=True)
+class Node:
+  hunk: Union[pygit2.DiffHunk, DiffHunk]
+  generation: int
+  active: bool
+
+  @staticmethod
+  def active(diff_hunk: pygit2.DiffHunk, generation: int):
+    return Node(diff_hunk, generation, active=True)
+
+  @staticmethod
+  def inactive(old_start_and_lines, new_start_and_lines, generation: int):
+    return Node(
+      DiffHunk.from_tup(old_start_and_lines, new_start_and_lines),
+      generation,
+      active=False)
+
+
+@dataclass(frozen=True)
 class DiffHunk:
   old_start: int
   old_lines: int
   new_start: int
   new_lines: int
-  generation: int = -1
-  active: bool = True
 
   @staticmethod
-  def from_tup(old_start_and_lines, new_start_and_lines, generation,
-               active=True):
+  def from_tup(old_start_and_lines, new_start_and_lines):
     old_start, old_lines = old_start_and_lines
     new_start, new_lines = new_start_and_lines
     return DiffHunk(old_start=old_start,
                     old_lines=old_lines,
                     new_start=new_start,
-                    new_lines=new_lines,
-                    generation=generation,
-                    active=active)
+                    new_lines=new_lines)
+
 
 @dataclass(frozen=True)
 class Patch:
@@ -64,10 +79,12 @@ class Patch:
 class Diff(list):
   pass
 
+
 @dataclass(frozen=True)
 class Commit:
   hex: str
   message: str
+
 
 @dataclass(frozen=True)
 class Span:
@@ -95,8 +112,8 @@ class Span:
             other.end <= self.start
     )
 
-SOURCE = DiffHunk.from_tup((0, 0), (0, inf), -1, False)
-SINK = DiffHunk.from_tup((0, inf), (0, 0), inf, False)
+SOURCE = Node.inactive((0, 0), (0, inf), -1)
+SINK = Node.inactive((0, inf), (0, 0), inf)
 
 
 def empty_spg():
@@ -105,7 +122,7 @@ def empty_spg():
   }
 
 
-def to_dot(spg, file_id: FileId):
+def to_dot(spg: Dict[Node, List[Node]], file_id: FileId):
   def name(node):
     if node == SOURCE:
       return "s"
@@ -113,8 +130,8 @@ def to_dot(spg, file_id: FileId):
       return "t"
     prefix = '_A_' if node.active else ''
     return f"{prefix}n{node.generation}_" \
-           f"{node.old_start}_{node.old_lines}_" \
-           f"{node.new_start}_{node.new_lines}"
+           f"{node.hunk.old_start}_{node.hunk.old_lines}_" \
+           f"{node.hunk.new_start}_{node.hunk.new_lines}"
 
   return f"""
   # {file_id}
@@ -131,56 +148,58 @@ def to_dot(spg, file_id: FileId):
 
 
 def add_on_top_of(
-        spg,
-        hunks_from_previous_commit: list[DiffHunk],
-        diff_hunk: DiffHunk):
-  cur_range = Span.from_old(diff_hunk)
+        spg: Dict[Node, List[Node]],
+        nodes_from_previous_commit: List[Node],
+        node: Node):
+  cur_range = Span.from_old(node.hunk)
   some_overlap = False
-  for prev_hunk in hunks_from_previous_commit:
-    prev_range = Span.from_new(prev_hunk)
+  for prev_node in nodes_from_previous_commit:
+    prev_range = Span.from_new(prev_node.hunk)
     if cur_range.overlaps(prev_range):
-      spg[prev_hunk] = [item for item in spg[prev_hunk]
+      spg[prev_node] = [item for item in spg[prev_node]
                         if item != SINK]
-      spg[prev_hunk].append(diff_hunk)
+      spg[prev_node].append(node)
       some_overlap = True
 
-  spg[diff_hunk] = [SINK]
+  spg[node] = [SINK]
   if not some_overlap:
     print("-----------------")
     print("spg:", spg)
-    print("prev:", hunks_from_previous_commit)
-    print("to add:", diff_hunk)
+    print("prev:", nodes_from_previous_commit)
+    print("to add:", node)
   assert some_overlap
 
 
-def fill_in_between(hunks: list[DiffHunk]):
+def fill_in_between(hunks: list[Node]):
   return [el
           for left, right in zip(hunks, hunks[1:])
           for el in [
             left,
-            DiffHunk.from_tup((left.old_start + left.old_lines,
-                               right.old_start - left.old_start - left.old_lines),
-                              (left.new_start + left.new_lines,
-                               right.new_start - left.new_start - left.new_lines),
-                              left.generation,
-                              False)]
+            Node.inactive(
+              (left.hunk.old_start + left.hunk.old_lines,
+               right.hunk.old_start - left.hunk.old_start - left.hunk.old_lines),
+              (left.hunk.new_start + left.hunk.new_lines,
+               right.hunk.new_start - left.hunk.new_start - left.hunk.new_lines),
+              left.generation)
+          ]
   ] + ([hunks[-1]] if hunks else [])
 
 
-def update_unchanged_file(file_spg: Dict[DiffHunk, List[DiffHunk]]):
+def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
      if SINK in ends],
-    key=lambda hunk: hunk.new_start)
-  filler = DiffHunk.from_tup(
+    key=lambda node: node.hunk.new_start)
+  filler = Node.inactive(
     (0, inf),
     (0, inf),
-    prev_nodes_by_end[0].generation + 1,
-    False)
+    generation)
   add_on_top_of(file_spg, prev_nodes_by_end, filler)
 
 
-def update_file(file_spg: Dict[DiffHunk, List[DiffHunk]], filepatch: Patch):
+def update_file(file_spg: Dict[Node, List[Node]],
+                filepatch: Patch,
+                generation: int):
   def get_first_node(nodes):
     if not nodes:
       return None
@@ -191,31 +210,37 @@ def update_file(file_spg: Dict[DiffHunk, List[DiffHunk]], filepatch: Patch):
     return sorted(nodes, key=lambda node: node.new_start)[-1]
 
   hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
-  hunks_by_start = fill_in_between(hunks_by_start)
+  nodes_by_start = [Node.active(diff_hunk, generation)
+                    for diff_hunk in hunks_by_start]
+  nodes_by_start = fill_in_between(nodes_by_start)
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
      if SINK in ends],
-    key=lambda hunk: hunk.new_start)
+    key=lambda node: node.hunk.new_start)
 
-  for cur_hunk in hunks_by_start:
-    add_on_top_of(file_spg, prev_nodes_by_end, cur_hunk)
+  for cur_node in nodes_by_start:
+    add_on_top_of(file_spg, prev_nodes_by_end, cur_node)
 
-  if hunks_by_start and hunks_by_start[0].new_start > 0:
-    prev_first = Span.from_old(hunks_by_start[0])
-    cur_first = Span.from_new(hunks_by_start[0])
-    filler = DiffHunk.from_tup(
+  if nodes_by_start and (nodes_by_start[0].hunk.new_start > 0 or
+                         nodes_by_start[0].hunk.old_start > 0
+  ):
+    prev_first = Span.from_old(nodes_by_start[0].hunk)
+    cur_first = Span.from_new(nodes_by_start[0].hunk)
+    filler = Node.inactive(
       (0, prev_first.start),
       (0, cur_first.start),
-      hunks_by_start[0].generation, False)
+      generation)
     add_on_top_of(file_spg, prev_nodes_by_end, filler)
 
-  if hunks_by_start and hunks_by_start[-1].new_lines < inf:
-    prev_last = Span.from_old(hunks_by_start[-1])
-    cur_last = Span.from_new(hunks_by_start[-1])
-    filler = DiffHunk.from_tup(
+  if nodes_by_start and (nodes_by_start[-1].hunk.new_lines < inf or
+                         nodes_by_start[-1].hunk.old_lines < inf
+  ):
+    prev_last = Span.from_old(nodes_by_start[-1].hunk)
+    cur_last = Span.from_new(nodes_by_start[-1].hunk)
+    filler = Node.inactive(
       (prev_last.end, inf),
       (cur_last.end, inf),
-      hunks_by_start[-1].generation, False)
+      generation)
     add_on_top_of(file_spg, prev_nodes_by_end, filler)
 
   return file_spg
@@ -228,14 +253,14 @@ class FileId:
 
 
 def update_commit_diff(
-        spgs: Dict[FileId, Dict[DiffHunk, List[DiffHunk]]],
+        spgs: Dict[FileId, Dict[Node, List[Node]]],
         files: Dict[FileId, FileId],
         commit_diff: CommitDiff,
         diff_i: int):
   return update(spgs, files, Diff(commit_diff.filepatches), diff_i)
 
 
-def update(spgs: Dict[FileId, Dict[DiffHunk, List[DiffHunk]]],
+def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
            files: Dict[FileId, FileId],
            diff: Diff,
            diff_i: int):
@@ -290,7 +315,7 @@ def update(spgs: Dict[FileId, Dict[DiffHunk, List[DiffHunk]]],
     print(list(spgs.keys()))
     original_file_id = files[file_id]
     file_spg = spgs[original_file_id]
-    update_unchanged_file(file_spg)
+    update_unchanged_file(file_spg, diff_i)
 
   # Update graph of files that have changes (are in the diff)
   update_changed_files()
@@ -299,10 +324,10 @@ def update(spgs: Dict[FileId, Dict[DiffHunk, List[DiffHunk]]],
     if original_file_id not in spgs:
       spgs[original_file_id] = empty_spg()
     file_spg = spgs[original_file_id]
-    update_file(file_spg, filepatch)
+    update_file(file_spg, filepatch, diff_i)
 
 
-def all_paths(spg, source=SOURCE) -> List[List[DiffHunk]]:
+def all_paths(spg, source=SOURCE) -> List[List[Node]]:
   if source == SINK:
     return [[SINK]]
   return [[source] + path
