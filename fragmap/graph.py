@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass
+from enum import Enum
 
 from math import inf
 from typing import List, Dict, Type, Union
@@ -98,6 +99,10 @@ class Commit:
   hex: str
   message: str
 
+class Overlap(Enum):
+  NO_OVERLAP = 0
+  POINT_OVERLAP = 1
+  INTERVAL_OVERLAP = 2
 
 @dataclass(frozen=True)
 class Span:
@@ -116,14 +121,20 @@ class Span:
     return Span(start=diff_hunk.new_start,
                 end=diff_hunk.new_start + diff_hunk.new_lines)
 
-  def overlaps(self, other: Span):
-    return (
+  def overlap(self, other: Span) -> Overlap:
+    if (
       self.start == other.start or
       self.end == other.end
     ) or not (
             self.end <= other.start or
             other.end <= self.start
-    )
+    ):
+      if self.is_empty() or other.is_empty():
+        return Overlap.POINT_OVERLAP
+      else:
+        return Overlap.INTERVAL_OVERLAP
+    else:
+      return Overlap.NO_OVERLAP
 
 SOURCE = Node.inactive((0, 0), (0, inf), -1)
 SINK = Node.inactive((0, inf), (0, 0), inf)
@@ -168,7 +179,9 @@ def add_on_top_of(
   some_overlap = False
   for prev_node in nodes_from_previous_commit:
     prev_range = Span.from_new(prev_node.hunk)
-    if cur_range.overlaps(prev_range):
+    overlap = cur_range.overlap(prev_range)
+    if overlap == Overlap.INTERVAL_OVERLAP or \
+      overlap == Overlap.POINT_OVERLAP and not (node.active and prev_node.active):
       spg[prev_node] = [item for item in spg[prev_node]
                         if item != SINK]
       spg[prev_node].append(node)

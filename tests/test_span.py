@@ -1,29 +1,40 @@
 import unittest
 
-from fragmap.graph import Span
+from fragmap.graph import Span, Overlap
+
 
 class SpanTest(unittest.TestCase):
   def test_overlaps_same_start(self):
-    self.assertTrue(self.overlap(Span(0, 1), Span(0, 2)))
+    self.assertEqual(Overlap.INTERVAL_OVERLAP,
+                     self.overlap(Span(0, 1), Span(0, 2)))
 
   def test_not_overlaps_adjacent(self):
-    self.assertFalse(self.overlap(Span(0, 1), Span(1, 2)))
+    self.assertEqual(Overlap.NO_OVERLAP,
+                     self.overlap(Span(0, 1), Span(1, 2)))
 
   def test_overlaps_empty_contained(self):
-    self.assertTrue(self.overlap(Span(0, 2), Span(1, 1)))
+    self.assertEqual(Overlap.POINT_OVERLAP,
+                     self.overlap(Span(0, 2), Span(1, 1)))
 
   def test_overlaps_same_end(self):
-    self.assertTrue(self.overlap(Span(1, 2), Span(0, 2)))
+    self.assertEqual(Overlap.INTERVAL_OVERLAP,
+                     self.overlap(Span(1, 2), Span(0, 2)))
 
   def test_overlaps_empty_at_start(self):
-    self.assertTrue(self.overlap(Span(0, 2), Span(0, 0)))
+    self.assertEqual(Overlap.POINT_OVERLAP,
+                     self.overlap(Span(0, 2), Span(0, 0)))
 
   def test_overlaps_empty_at_end(self):
-    self.assertTrue(self.overlap(Span(0, 2), Span(2, 2)))
+    self.assertEqual(Overlap.POINT_OVERLAP,
+                     self.overlap(Span(0, 2), Span(2, 2)))
+
+  def test_overlaps_empty_at_end2(self):
+    self.assertEqual(Overlap.POINT_OVERLAP,
+                     self.overlap(Span(1, 3), Span(3, 3)))
 
   def overlap(self, a, b):
-    self.assertEqual(a.overlaps(b), b.overlaps(a))
-    return a.overlaps(b)
+    self.assertEqual(a.overlap(b), b.overlap(a))
+    return a.overlap(b)
 
 
 
