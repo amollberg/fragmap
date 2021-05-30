@@ -189,8 +189,8 @@ class Test(unittest.TestCase):
   def test_011_012(self):
     self.check_diffs(['011-add-x-to-A-and-N',
                       '012-add-x-to-A-C'],
-                     ['#..#.',
-                      '##...'])
+                     ['#.#.',
+                      '.##.'])
   def test_011_012_groups(self):
     self.check_node_group_kinds(['011-add-x-to-A-and-N',
                                  '012-add-x-to-A-C'],
