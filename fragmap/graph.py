@@ -15,6 +15,7 @@ from pygit2 import Oid, DiffHunk
 
 from fragmap.commitdiff import CommitDiff
 from fragmap.generate_matrix import Cell, decorate_matrix
+from fragmap.load_commits import is_nullfile
 from . import debug
 
 
@@ -52,6 +53,16 @@ class Node:
     return Node(diff_hunk, generation, active=True)
 
   @staticmethod
+  def active_binary(diff_delta: pygit2.DiffDelta, generation: int):
+    return Node(
+      DiffHunk.from_tup(
+        (0,0) if is_nullfile(diff_delta.old_file) else (1,1),
+        (0,0) if is_nullfile(diff_delta.new_file) else (1,1)
+      ),
+      generation,
+      active=True)
+
+  @staticmethod
   def inactive(old_start_and_lines, new_start_and_lines, generation: int):
     return Node(
       DiffHunk.from_tup(old_start_and_lines, new_start_and_lines),
@@ -66,7 +77,6 @@ class Node:
         (old_node.hunk.new_start, old_node.hunk.new_lines)),
       generation,
       active=False)
-
 
 
 @dataclass(frozen=True)
@@ -347,9 +357,12 @@ def update_file(file_spg: Dict[Node, List[Node]],
       return None
     return sorted(nodes, key=lambda node: node.new_start)[-1]
 
-  hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
-  nodes_by_start = [Node.active(diff_hunk, generation)
-                    for diff_hunk in hunks_by_start]
+  if filepatch.delta.is_binary:
+    nodes_by_start = [Node.active_binary(filepatch.delta, generation)]
+  else:
+    hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
+    nodes_by_start = [Node.active(diff_hunk, generation)
+                      for diff_hunk in hunks_by_start]
   nodes_by_start = surround_with_inactive(nodes_by_start)
   debug.get('update').debug(
     f"updating changed to generation {generation}:\n"
