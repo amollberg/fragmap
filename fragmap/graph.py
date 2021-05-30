@@ -368,7 +368,7 @@ class SpgFragmap:
     columns = [
       tuple(node.active
              for node in path)
-       for spg in self.spgs.values()
+       for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0])
        for path in all_paths(spg)
     ]
     columns = list(set(columns))
