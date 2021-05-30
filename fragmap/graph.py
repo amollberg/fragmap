@@ -9,7 +9,7 @@ import pygit2
 from pygit2 import Oid, DiffHunk
 
 from fragmap.commitdiff import CommitDiff
-from fragmap.generate_matrix import Cell
+from fragmap.generate_matrix import Cell, decorate_matrix
 
 
 @dataclass(frozen=True)
@@ -377,11 +377,14 @@ class SpgFragmap:
       print("All columns are not equally long", columns)
       assert(False)
     rows = list(zip(*columns))
-    return [
+
+    m = [
       [Cell(Cell.CHANGE) if cell else Cell(Cell.NO_CHANGE)
        for cell in row]
       for row in rows[1:-1]
     ]
+    decorate_matrix(m)
+    return m
 
 
 def main():
