@@ -372,6 +372,10 @@ class SpgFragmap:
        for path in all_paths(spg)
     ]
     columns = list(set(columns))
+    # All columns should be equally long
+    if 1 != len(list(set([len(col) for col in columns]))):
+      print("All columns are not equally long", columns)
+      assert(False)
     rows = list(zip(*columns))
     return [
       [Cell(Cell.CHANGE) if cell else Cell(Cell.NO_CHANGE)
