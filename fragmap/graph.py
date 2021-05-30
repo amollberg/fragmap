@@ -385,7 +385,9 @@ class SpgFragmap:
        for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0])
        for path in all_paths(spg)
     ]
-    columns = list(set(columns))
+    columns = [column
+               for column in columns
+               if True in column]
     # All columns should be equally long
     if 1 != len(list(set([len(col) for col in columns]))):
       print("All columns are not equally long", columns)

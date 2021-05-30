@@ -157,9 +157,9 @@ class Test(unittest.TestCase):
     self.check_diffs(['016-add-one-line-to-empty.txt',
                       '002-rename-empty-file',
                       '004-remove-one-line-empty-file'],
-                     ['#.',
-                      '^.',
-                      '#.'])
+                     ['#',
+                      '^',
+                      '#'])
 
   def test_003(self):
     self.check_diff('003-add-one-line-to-empty-file', ['#.'])
@@ -171,8 +171,8 @@ class Test(unittest.TestCase):
     files = ['003-add-one-line-to-empty-file',
              '004-remove-one-line-empty-file']
     self.check_diffs(files,
-                     ['#.',
-                      '#.'])
+                     ['#',
+                      '#'])
 
   def test_003_004_groups(self):
     files = ['003-add-one-line-to-empty-file',
@@ -189,8 +189,8 @@ class Test(unittest.TestCase):
   def test_011_012(self):
     self.check_diffs(['011-add-x-to-A-and-N',
                       '012-add-x-to-A-C'],
-                     ['#.#.',
-                      '.##.'])
+                     ['#.#',
+                      '##.'])
   def test_011_012_groups(self):
     self.check_node_group_kinds(['011-add-x-to-A-and-N',
                                  '012-add-x-to-A-C'],
@@ -206,14 +206,14 @@ class Test(unittest.TestCase):
   def test_020_021(self):
     self.check_diffs(['020-modfile-create',
                       '021-modfile-remove-first-line'],
-                     ['##.',
-                      '#..'])
+                     ['##',
+                      '#.'])
 
   def test_022_023(self):
     self.check_diffs(['022-modfile-mod-second-line',
                       '023-modfile-readd-first-line'],
-                     ['.#.',
-                      '#..'])
+                     ['.#',
+                      '#.'])
 
 
   def test_030(self):
@@ -222,16 +222,16 @@ class Test(unittest.TestCase):
   def test_030_031(self):
     self.check_diffs(['030-addmod-create-with-ab',
                       '031-addmod-add-c'],
-                     ['#..',
-                      '.#.'])
+                     ['#.',
+                      '.#'])
 
   def test_030_032(self):
     self.check_diffs(['030-addmod-create-with-ab',
                       '031-addmod-add-c',
                       '032-addmod-change-bc-to-xy'],
-                     ['##..',
-                      '.^#.',
-                      '.##.'])
+                     ['##.',
+                      '.^#',
+                      '.##'])
   def test_030_032_groups(self):
     self.check_node_group_kinds(['030-addmod-create-with-ab',
                                  '031-addmod-add-c',
@@ -244,10 +244,10 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c',
                       '032-addmod-change-bc-to-xy',
                       '033-addmod-add-z-between-xy'],
-                     ['##....',
-                      '.^###.',
-                      '.####.',
-                      '...#..'])
+                     ['##...',
+                      '.^###',
+                      '.####',
+                      '...#.'])
 
 
   def test_030_033_groups(self):
@@ -263,9 +263,9 @@ class Test(unittest.TestCase):
     self.check_diffs(['041-successivemod-mod-ab',
                       '042-successivemod-mod-cd',
                       '043-successivemod-mod-ef'],
-                     ['#...',
-                      '.#..',
-                      '..#.'])
+                     ['#..',
+                      '.#.',
+                      '..#'])
 
   def test_050_054(self):
     self.check_diffs(['050-twofiles-create-a-with-a',
@@ -273,17 +273,17 @@ class Test(unittest.TestCase):
                       '052-twofiles-add-y-to-b',
                       '053-twofiles-add-z-to-b',
                       '054-twofiles-add-w-to-b'],
-                     ['#......',
-                      '..#....',
-                      '...#...',
-                      '....#..',
-                      '.....#.'])
+                     ['#....',
+                      '.#...',
+                      '..#..',
+                      '...#.',
+                      '....#'])
 
   def test_060_061(self):
     self.check_diffs(['060-binaryfile-added',
                       '061-binaryfile-changed'],
-                     ['#.',
-                      '#.'])
+                     ['#',
+                      '#'])
 
   # == Test brief fragmaps ==
 
