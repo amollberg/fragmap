@@ -167,7 +167,20 @@ def fill_in_between(hunks: list[DiffHunk]):
   ] + ([hunks[-1]] if hunks else [])
 
 
-def update_file(file_spg: Dict[DiffHunk, List[DiffHunk]], diff: Patch):
+def update_unchanged_file(file_spg: Dict[DiffHunk, List[DiffHunk]]):
+  prev_nodes_by_end = sorted(
+    [start for start, ends in file_spg.items()
+     if SINK in ends],
+    key=lambda hunk: hunk.new_start)
+  filler = DiffHunk.from_tup(
+    (0, inf),
+    (0, inf),
+    prev_nodes_by_end[0].generation + 1,
+    False)
+  add_on_top_of(file_spg, prev_nodes_by_end, filler)
+
+
+def update_file(file_spg: Dict[DiffHunk, List[DiffHunk]], filepatch: Patch):
   def get_first_node(nodes):
     if not nodes:
       return None
@@ -177,7 +190,7 @@ def update_file(file_spg: Dict[DiffHunk, List[DiffHunk]], diff: Patch):
       return None
     return sorted(nodes, key=lambda node: node.new_start)[-1]
 
-  hunks_by_start = sorted(diff.hunks, key=lambda hunk: hunk.old_start)
+  hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
   hunks_by_start = fill_in_between(hunks_by_start)
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
@@ -224,22 +237,69 @@ def update_commit_diff(
 
 def update(spgs: Dict[FileId, Dict[DiffHunk, List[DiffHunk]]],
            files: Dict[FileId, FileId],
-           diff: Patch,
+           diff: Diff,
            diff_i: int):
-  def update_files():
-    old_file_id = FileId(diff_i-1, diff.delta.old_file.path)
-    if old_file_id not in files:
-      files[old_file_id] = old_file_id
+  def old_patch_file_id(filepatch):
+    return FileId(diff_i-1, filepatch.delta.old_file.path)
 
-    new_file_id = FileId(diff_i, diff.delta.new_file.path)
-    files[new_file_id] = files[old_file_id]
-    return files[new_file_id]
+  def new_patch_file_id(filepatch):
+    return FileId(diff_i, filepatch.delta.new_file.path)
 
-  original_file_id = update_files()
-  if original_file_id not in spgs:
-    spgs[original_file_id] = empty_spg()
-  file_spg = spgs[original_file_id]
-  update_file(file_spg, diff)
+  def update_unchanged_files():
+    old_filepaths_of_changed = [filepatch.delta.old_file.path
+                                for filepatch in diff]
+
+    # Propagate the old known files that have not changed
+    def update_unchanged(file_id: FileId):
+      new_file_id = FileId(commit=diff_i, path=file_id.path)
+      files[new_file_id] = files[file_id]
+      print("mapped", new_file_id, "to", files[file_id])
+      return new_file_id
+
+    return [
+      update_unchanged(file_id)
+      for file_id in list(files.keys())
+      if file_id.commit == diff_i - 1 and \
+              file_id.path not in old_filepaths_of_changed
+    ]
+
+  def update_changed_files():
+    # Update the files that have changed (are in the diff)
+    def update_changed(filepatch: Patch):
+      old_file_id = old_patch_file_id(filepatch)
+      # Register previously undiscovered file's old name
+      if old_file_id not in files:
+        print("mapped undiscovered", old_file_id)
+        files[old_file_id] = old_file_id
+
+      # Register file's new name
+      new_file_id = new_patch_file_id(filepatch)
+      files[new_file_id] = files[old_file_id]
+      print("mapping changed", new_file_id, "to", files[old_file_id])
+      return files[new_file_id]
+
+    return [
+      update_changed(filepatch)
+      for filepatch in diff
+    ]
+
+  # Update graph of files that have not changed
+  for file_id in update_unchanged_files():
+    print("unchanged:", file_id, "in commit", diff_i)
+    print(files)
+    print(list(spgs.keys()))
+    original_file_id = files[file_id]
+    file_spg = spgs[original_file_id]
+    update_unchanged_file(file_spg)
+
+  # Update graph of files that have changes (are in the diff)
+  update_changed_files()
+  for filepatch in diff:
+    original_file_id = files[new_patch_file_id(filepatch)]
+    if original_file_id not in spgs:
+      spgs[original_file_id] = empty_spg()
+    file_spg = spgs[original_file_id]
+    update_file(file_spg, filepatch)
 
 
 def all_paths(spg, source=SOURCE) -> List[List[DiffHunk]]:
@@ -298,7 +358,7 @@ class SpgFragmap:
 def main():
   diffs = [
     Diff([
-      Patch(DiffDelta.from_paths("F1", "f1"), [
+      Patch(DiffDelta.from_paths("B1", "b1"), [
         DiffHunk.from_tup((100, 0), (100, 2), 0),
       ]),
       Patch(DiffDelta.from_paths("f1", "F1"), [
@@ -315,8 +375,7 @@ def main():
   spgs = {}
   files = {}
   for i, diff in enumerate(diffs):
-    for patch in diff:
-      update(spgs, files, patch, i)
+    update(spgs, files, diff, i)
     for file_id, spg in spgs.items():
       print(to_dot(spg, file_id))
     print("-------")
