@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+# To be able to use the enclosing class type in class method type hints
+from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 
 from math import inf
@@ -52,6 +55,16 @@ class Node:
       generation,
       active=False)
 
+  @staticmethod
+  def propagated(old_node: Node, generation: int):
+    return Node(
+      DiffHunk.from_tup(
+        (old_node.hunk.new_start, old_node.hunk.new_lines),
+        (old_node.hunk.new_start, old_node.hunk.new_lines)),
+      generation,
+      active=False)
+
+
 
 @dataclass(frozen=True)
 class DiffHunk:
@@ -103,7 +116,7 @@ class Span:
     return Span(start=diff_hunk.new_start,
                 end=diff_hunk.new_start + diff_hunk.new_lines)
 
-  def overlaps(self, other):
+  def overlaps(self, other: Span):
     return (
       self.start == other.start or
       self.end == other.end
@@ -190,11 +203,9 @@ def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
     [start for start, ends in file_spg.items()
      if SINK in ends],
     key=lambda node: node.hunk.new_start)
-  filler = Node.inactive(
-    (0, inf),
-    (0, inf),
-    generation)
-  add_on_top_of(file_spg, prev_nodes_by_end, filler)
+  for prev_node in prev_nodes_by_end:
+    propagated = Node.propagated(prev_node, generation)
+    add_on_top_of(file_spg, prev_nodes_by_end, propagated)
 
 
 def update_file(file_spg: Dict[Node, List[Node]],
@@ -242,6 +253,9 @@ def update_file(file_spg: Dict[Node, List[Node]],
       (cur_last.end, inf),
       generation)
     add_on_top_of(file_spg, prev_nodes_by_end, filler)
+
+  if not nodes_by_start:
+    update_unchanged_file(file_spg, generation)
 
   return file_spg
 
