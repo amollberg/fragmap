@@ -8,12 +8,14 @@ from enum import Enum
 
 from math import inf
 from typing import List, Dict, Type, Union
+from pprint import pprint, pformat
 
 import pygit2
 from pygit2 import Oid, DiffHunk
 
 from fragmap.commitdiff import CommitDiff
 from fragmap.generate_matrix import Cell, decorate_matrix
+from . import debug
 
 
 @dataclass(frozen=True)
@@ -122,13 +124,24 @@ class Span:
   @staticmethod
   def from_new(diff_hunk: DiffHunk):
     start = diff_hunk.new_start
-    end = diff_hunk.new_start + diff_hunk.new_lines
     if diff_hunk.new_lines == 0:
       start += 1
+    end = start + diff_hunk.new_lines
     return Span(start, end)
 
   def is_empty(self):
     return self.start == self.end
+
+  def adjacent_up_to(self, new_end):
+    return Span(self.end, new_end)
+
+  def adjacent_down_to(self, new_start):
+    return Span(new_start, self.start)
+
+  def to_git(self):
+    if self.start == self.end:
+      return [self.start - 1, 0]
+    return [self.start, self.end - self.start]
 
   def overlap(self, other: Span) -> Overlap:
     if (
@@ -162,9 +175,11 @@ def to_dot(spg: Dict[Node, List[Node]], file_id: FileId):
     if node == SINK:
       return "t"
     prefix = '_A_' if node.active else ''
+    old = Span.from_old(node.hunk)
+    new = Span.from_new(node.hunk)
     return f"{prefix}n{node.generation}_" \
-           f"{node.hunk.old_start}_{node.hunk.old_lines}_" \
-           f"{node.hunk.new_start}_{node.hunk.new_lines}"
+           f"{old.start}_{old.end}_" \
+           f"{new.start}_{new.end}"
 
   return f"""
   # {file_id}
@@ -180,44 +195,131 @@ def to_dot(spg: Dict[Node, List[Node]], file_id: FileId):
 """
 
 
+def register(spg, prev_node, node):
+  if prev_node not in spg:
+    spg[prev_node] = []
+  spg[prev_node] = [item for item in spg[prev_node]
+                    if item != SINK]
+  spg[prev_node].append(node)
+
+
 def add_on_top_of(
         spg: Dict[Node, List[Node]],
         nodes_from_previous_commit: List[Node],
         node: Node):
   cur_range = Span.from_old(node.hunk)
   some_overlap = False
-  for prev_node in nodes_from_previous_commit:
+
+  def overlap_on_border(a: Span, b: Span):
+    return a.start == b.start or a.end == b.end
+
+  def add_if_interval_overlap(prev_node):
     prev_range = Span.from_new(prev_node.hunk)
     overlap = cur_range.overlap(prev_range)
-    if overlap == Overlap.INTERVAL_OVERLAP or \
-      overlap == Overlap.POINT_OVERLAP and not (node.active and prev_node.active):
-      spg[prev_node] = [item for item in spg[prev_node]
-                        if item != SINK]
-      spg[prev_node].append(node)
-      some_overlap = True
+    do_register = overlap == Overlap.INTERVAL_OVERLAP
+    debug.get('update').debug(
+      f"add_if_interval_overlap on {prev_range}? {do_register}")
+    if do_register:
+      register(spg, prev_node, node)
+    return do_register
+
+  def add_unless_point_to_active(prev_node):
+    prev_range = Span.from_new(prev_node.hunk)
+    overlap = cur_range.overlap(prev_range)
+    do_register = overlap != Overlap.NO_OVERLAP \
+                  and not (overlap == Overlap.POINT_OVERLAP
+                           and overlap_on_border(cur_range, prev_range)
+                           and prev_node.active)
+    debug.get('update').debug(
+      f"add_unless_point_to_active on {prev_range}? {do_register}")
+    if do_register:
+      register(spg, prev_node, node)
+    return do_register
+
+  def add_if_to_inactive(prev_node):
+    prev_range = Span.from_new(prev_node.hunk)
+    overlap = cur_range.overlap(prev_range)
+    do_register = overlap != Overlap.NO_OVERLAP \
+                  and not prev_node.active
+    debug.get('update').debug(
+      f"add_if_to_inactive on {prev_range}? {do_register}")
+    if do_register:
+      register(spg, prev_node, node)
+    return do_register
+
+  def add_if_overlap(prev_node):
+    prev_range = Span.from_new(prev_node.hunk)
+    overlap = cur_range.overlap(prev_range)
+    do_register = overlap != Overlap.NO_OVERLAP
+    debug.get('update').debug(
+      f"add_if_overlap on {prev_range}? {do_register}")
+    if do_register:
+      register(spg, prev_node, node)
+    return do_register
+
+  debug.get('update').debug(
+    f"Adding {node} {cur_range} on top of previous")
+  for prev_node in nodes_from_previous_commit:
+    some_overlap = add_if_interval_overlap(prev_node) or some_overlap
+
+  # Note the order of or-ed terms. The function call is put on the right to
+  # effectively skip the rest of the nodes after the first overlap
+  if not some_overlap:
+    for prev_node in nodes_from_previous_commit:
+      some_overlap = some_overlap or add_unless_point_to_active(prev_node)
+
+  if not some_overlap:
+    for prev_node in nodes_from_previous_commit:
+      some_overlap = some_overlap or add_if_to_inactive(prev_node)
+
+  if not some_overlap:
+    for prev_node in nodes_from_previous_commit:
+      some_overlap = some_overlap or add_if_overlap(prev_node)
 
   spg[node] = [SINK]
   if not some_overlap:
-    print("-----------------")
-    print("spg:", spg)
-    print("prev:", nodes_from_previous_commit)
-    print("to add:", node)
+    debug.get('update').critical(
+      '\n'.join([
+        "-----------------",
+        "SPG:", pformat(spg),
+        "Previous nodes:", pformat(nodes_from_previous_commit),
+        "To be added:", cur_range, pformat(node)
+      ])
+    )
   assert some_overlap
 
 
-def fill_in_between(hunks: list[Node]):
-  return [el
-          for left, right in zip(hunks, hunks[1:])
-          for el in [
-            left,
-            Node.inactive(
-              (left.hunk.old_start + left.hunk.old_lines,
-               right.hunk.old_start - left.hunk.old_start - left.hunk.old_lines),
-              (left.hunk.new_start + left.hunk.new_lines,
-               right.hunk.new_start - left.hunk.new_start - left.hunk.new_lines),
-              left.generation)
-          ]
-  ] + ([hunks[-1]] if hunks else [])
+def surround_with_inactive(nodes: List[Node]) -> List[Node]:
+  if not nodes:
+    return []
+  generation = nodes[0].generation
+  def top_node_to(right: pygit2.DiffHunk) -> Node:
+    old = Span.from_old(right).adjacent_down_to(1).to_git()
+    new = Span.from_new(right).adjacent_down_to(1).to_git()
+    return Node.inactive(old, new, generation)
+  def node_between(left: pygit2.DiffHunk, right: pygit2.DiffHunk) -> Node:
+    old_left = Span.from_old(left)
+    new_left = Span.from_new(left)
+    old_right = Span.from_old(right)
+    new_right = Span.from_new(right)
+    old = old_left.adjacent_up_to(old_right.start).to_git()
+    new = new_left.adjacent_up_to(new_right.start).to_git()
+    debug.get('update').debug(
+      f"creating between: {Node.inactive(old, new, generation)}")
+    return Node.inactive(old, new, generation)
+  def bottom_node_from(left: pygit2.DiffHunk) -> Node:
+    old = Span.from_old(left).adjacent_up_to(inf).to_git()
+    new = Span.from_new(left).adjacent_up_to(inf).to_git()
+    return Node.inactive(old, new, generation)
+
+  return \
+    [top_node_to(nodes[0].hunk)] + \
+    [el
+     for left, right in zip(nodes, nodes[1:])
+     for el in [left, node_between(left.hunk, right.hunk)]
+     ] + \
+    [nodes[-1]] + \
+    [bottom_node_from(nodes[-1].hunk)]
 
 
 def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
@@ -225,6 +327,9 @@ def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
     [start for start, ends in file_spg.items()
      if SINK in ends],
     key=lambda node: node.hunk.new_start)
+  debug.get('update').debug(
+    f"propagating unchanged to generation {generation}:\n"
+    f" {pformat(prev_nodes_by_end)}")
   for prev_node in prev_nodes_by_end:
     propagated = Node.propagated(prev_node, generation)
     add_on_top_of(file_spg, prev_nodes_by_end, propagated)
@@ -245,7 +350,10 @@ def update_file(file_spg: Dict[Node, List[Node]],
   hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
   nodes_by_start = [Node.active(diff_hunk, generation)
                     for diff_hunk in hunks_by_start]
-  nodes_by_start = fill_in_between(nodes_by_start)
+  nodes_by_start = surround_with_inactive(nodes_by_start)
+  debug.get('update').debug(
+    f"updating changed to generation {generation}:\n"
+    f" {pformat(nodes_by_start)}")
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
      if SINK in ends],
@@ -254,31 +362,21 @@ def update_file(file_spg: Dict[Node, List[Node]],
   for cur_node in nodes_by_start:
     add_on_top_of(file_spg, prev_nodes_by_end, cur_node)
 
-  if nodes_by_start and (nodes_by_start[0].hunk.new_start > 0 or
-                         nodes_by_start[0].hunk.old_start > 0
-  ):
-    prev_first = Span.from_old(nodes_by_start[0].hunk)
-    cur_first = Span.from_new(nodes_by_start[0].hunk)
-    filler = Node.inactive(
-      (0, prev_first.start),
-      (0, cur_first.start),
-      generation)
-    add_on_top_of(file_spg, prev_nodes_by_end, filler)
+  # Not too early, this prepagation is too dumb to be applied to proper
+  # nodes
+  for prev_node in prev_nodes_by_end:
+    if SINK in file_spg[prev_node]:
+      propagated = Node.propagated(prev_node, generation)
+      debug.get('update').debug(
+        f"updating dangling to generation {generation}:\n"
+        f" {pformat(prev_node)}")
+      register(file_spg, prev_node, propagated)
+      register(file_spg, propagated, SINK)
+      nodes_by_start.append(propagated)
+      nodes_by_start = sorted(nodes_by_start,
+                              key=lambda node: node.hunk.old_start)
 
-  if nodes_by_start and (nodes_by_start[-1].hunk.new_lines < inf or
-                         nodes_by_start[-1].hunk.old_lines < inf
-  ):
-    prev_last = Span.from_old(nodes_by_start[-1].hunk)
-    cur_last = Span.from_new(nodes_by_start[-1].hunk)
-    filler = Node.inactive(
-      (prev_last.end, inf),
-      (cur_last.end, inf),
-      generation)
-    add_on_top_of(file_spg, prev_nodes_by_end, filler)
-
-  if not nodes_by_start:
-    update_unchanged_file(file_spg, generation)
-
+  debug.get('update').debug("------------------ done update_file")
   return file_spg
 
 
@@ -317,7 +415,8 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
     def update_unchanged(file_id: FileId):
       new_file_id = FileId(commit=diff_i, path=file_id.path)
       files[new_file_id] = files[file_id]
-      print("mapped", new_file_id, "to", files[file_id])
+      debug.get('update_files').debug(
+        f"mapped unchanged {new_file_id} to original {files[file_id]}")
       return new_file_id
 
     return [
@@ -333,13 +432,17 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
       old_file_id = old_patch_file_id(filepatch)
       # Register previously undiscovered file's old name
       if old_file_id not in files:
-        print("mapped undiscovered", old_file_id)
+        debug.get('update_files').debug(
+          f"created undiscovered old {old_file_id}")
         files[old_file_id] = old_file_id
 
       # Register file's new name
       new_file_id = new_patch_file_id(filepatch)
       files[new_file_id] = files[old_file_id]
-      print("mapping changed", new_file_id, "to", files[old_file_id])
+      debug.get('update_files').debug(
+        f"mapping changed {new_file_id} "
+        f"to original {files[old_file_id]} "
+        f"via {old_file_id}")
       return files[new_file_id]
 
     return [
@@ -349,9 +452,7 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
 
   # Update graph of files that have not changed
   for file_id in update_unchanged_files():
-    print("unchanged:", file_id, "in commit", diff_i)
-    print(files)
-    print(list(spgs.keys()))
+    debug.get('update_files').debug(f"unchanged {file_id} in commit {diff_i}")
     original_file_id = files[file_id]
     file_spg = spgs[original_file_id]
     update_unchanged_file(file_spg, diff_i)
@@ -360,6 +461,8 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
   update_changed_files()
   for filepatch in diff:
     original_file_id = files[new_patch_file_id(filepatch)]
+    debug.get('update_files').debug(
+      f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
     if original_file_id not in spgs:
       spgs[original_file_id] = empty_spg()
     file_spg = spgs[original_file_id]
@@ -376,6 +479,8 @@ def all_paths(spg, source=SOURCE) -> List[List[Node]]:
            node.hunk.old_lines,
            node.hunk.new_lines]))
     for path in all_paths(spg, end)]
+  debug.get('grouping').debug(f"paths: \n{pformat(paths)}")
+  return paths
 
 
 def print_fragmap(spg):
@@ -420,7 +525,8 @@ class SpgFragmap:
                if True in column]
     # All columns should be equally long
     if 1 != len(list(set([len(col) for col in columns]))):
-      print("All columns are not equally long", columns)
+      debug.get('matrix').critical(f"All columns are not equally long: \n"
+                                   f"{pformat(columns)}")
       assert(False)
     rows = list(zip(*columns))
 
@@ -458,13 +564,10 @@ def main():
       print(to_dot(spg, file_id))
     print("-------")
 
-  from pprint import pprint
   pprint(files)
   for spg in spgs.values():
     pprint(all_paths(spg))
     print_fragmap(spg)
-
-
 
 
 if __name__ == '__main__':

@@ -244,10 +244,10 @@ class Test(unittest.TestCase):
                       '031-addmod-add-c',
                       '032-addmod-change-bc-to-xy',
                       '033-addmod-add-z-between-xy'],
-                     ['##...',
-                      '.^###',
-                      '.####',
-                      '...#.'])
+                     ['####...',
+                      '.^^^###',
+                      '.######',
+                      '..#..#.'])
 
 
   def test_030_033_groups(self):
