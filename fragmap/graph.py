@@ -465,6 +465,11 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
       f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
     if original_file_id not in spgs:
       spgs[original_file_id] = empty_spg()
+      file_spg = spgs[original_file_id]
+      # Create nodes for older commits where the file did not exist
+      # yet (=unchanged)
+      for i in range(diff_i):
+        update_unchanged_file(file_spg, i)
     file_spg = spgs[original_file_id]
     update_file(file_spg, filepatch, diff_i)
 
