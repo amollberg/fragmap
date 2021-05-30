@@ -113,13 +113,22 @@ class Span:
 
   @staticmethod
   def from_old(diff_hunk: DiffHunk):
-    return Span(start=diff_hunk.old_start,
-                end=diff_hunk.old_start + diff_hunk.old_lines)
+    start = diff_hunk.old_start
+    if diff_hunk.old_lines == 0:
+      start += 1
+    end = start + diff_hunk.old_lines
+    return Span(start, end)
 
   @staticmethod
   def from_new(diff_hunk: DiffHunk):
-    return Span(start=diff_hunk.new_start,
-                end=diff_hunk.new_start + diff_hunk.new_lines)
+    start = diff_hunk.new_start
+    end = diff_hunk.new_start + diff_hunk.new_lines
+    if diff_hunk.new_lines == 0:
+      start += 1
+    return Span(start, end)
+
+  def is_empty(self):
+    return self.start == self.end
 
   def overlap(self, other: Span) -> Overlap:
     if (
