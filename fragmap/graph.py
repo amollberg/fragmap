@@ -278,6 +278,9 @@ class FileId:
   commit: int
   path: str
 
+  def tuple(self):
+    return tuple([self.path, self.commit])
+
 
 def update_commit_diff(
         spgs: Dict[FileId, Dict[Node, List[Node]]],
@@ -357,8 +360,12 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
 def all_paths(spg, source=SOURCE) -> List[List[Node]]:
   if source == SINK:
     return [[SINK]]
-  return [[source] + path
-    for end in spg[source]
+  paths= [[source] + path
+    for end in sorted(spg[source], key=lambda node:
+    tuple([node.hunk.old_start,
+           node.hunk.new_start,
+           node.hunk.old_lines,
+           node.hunk.new_lines]))
     for path in all_paths(spg, end)]
 
 
@@ -395,7 +402,8 @@ class SpgFragmap:
     columns = [
       tuple(node.active
              for node in path)
-       for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0])
+       # Sort by file
+       for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0].tuple())
        for path in all_paths(spg)
     ]
     columns = [column
