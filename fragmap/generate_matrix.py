@@ -2,7 +2,7 @@
 import itertools
 from dataclasses import dataclass
 from enum import Enum
-from pprint import pformat
+from pprint import pformat, pprint
 from typing import List, Dict, Type, TypeVar, Generic
 
 from .commitdiff import CommitDiff
@@ -298,7 +298,8 @@ class BriefFragmap:
   def _group_by_patch_connection(columns: ColumnMajorMatrix[SingleNodeCell]) \
           -> ColumnMajorMatrix:
     def connection(column: List[Cell]):
-      return ''.join(['1' if r.kind != CellKind.NO_CHANGE else '0' for r in column])
+      return ''.join(['1' if r.kind == CellKind.CHANGE else '0'
+                      for r in column])
 
     def groupby(l: List[List[Cell]], key) -> List[List[List[Cell]]]:
       d = StableListDict()
@@ -307,16 +308,22 @@ class BriefFragmap:
       return [values for k, values in d.items()]
 
     column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
-
+    debug.get('matrix').debug(f"grouped columns: {pformat(column_groups)}")
     def multi_cell_kind(cells: List[Cell]):
       kinds = list(set([cell.kind for cell in cells]))
-      assert(len(kinds) == 1)
+      if len(kinds) != 1:
+        print("Cells have different kinds:", kinds)
+        pprint(cells)
+        assert False
       return kinds[0]
+
+    def transpose(list_of_lists):
+      return list(zip(*list_of_lists))
 
     return ColumnMajorMatrix([
       [MultiNodeCell(multi_cell_kind(cell_group),
                      [cell.node for cell in cell_group])
-       for cell_group in list(zip(*column_group))]
+       for cell_group in transpose(column_group)]
       for column_group in column_groups
     ])
 
