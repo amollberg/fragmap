@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name = "fragmap",
-    version = "0.3.1",
+    version = "0.4.0",
     author = "Alexander Mollberg",
     author_email = "amollberg@users.noreply.github.com",
     description = ("Visualize a timeline of Git commit changes on a grid"),
@@ -20,7 +20,7 @@ setup(
     url = "https://github.com/amollberg/fragmap",
     packages=['fragmap', 'tests', 'getch'],
     long_description=read('README.md'),
-    python_requires='>=3.4',
+    python_requires='>=3.6',
     classifiers=[
         "Topic :: Software Development :: Version Control",
         "Environment :: Console",
