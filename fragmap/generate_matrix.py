@@ -7,6 +7,7 @@ from typing import List, Dict, Type, TypeVar, Generic
 
 from .commitdiff import CommitDiff
 from .graph import FileId, Node, update_commit_diff, to_dot, all_paths
+from .stable_list_dict import StableListDict
 from .update_fragments import *
 from . import debug
 from .console_color import *
@@ -300,8 +301,11 @@ class BriefFragmap:
       return ''.join(['1' if r.kind != CellKind.NO_CHANGE else '0' for r in column])
 
     def groupby(l: List[List[Cell]], key) -> List[List[List[Cell]]]:
-      l = sorted(l, key=key)
-      return [list(g) for k, g in (itertools.groupby(l, key=key))]
+      d = StableListDict()
+      for item in l:
+        d.add(key(item), item)
+      return [values for k, values in d.items()]
+
     column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
 
     def multi_cell_kind(cells: List[Cell]):
