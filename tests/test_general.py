@@ -16,6 +16,8 @@ import os
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 DIFF_DIR = os.path.join(TEST_DIR, 'diffs')
 
+debug.set_logging_categories('all')
+
 def read_diff(filename):
   filepath = os.path.join(TEST_DIR, 'diffs', filename)
   with open(filepath) as f:
