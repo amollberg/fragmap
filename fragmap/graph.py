@@ -172,19 +172,24 @@ SOURCE = Node.inactive((0, 0), (0, inf), -1)
 SINK = Node.inactive((0, inf), (0, 0), inf)
 
 
-def empty_spg():
-  return {
+def empty_spg() -> SPG:
+  return SPG({
     SOURCE: [SINK],
-  }
+  }, downstream_from_active={
+    SOURCE: False
+  })
 
 
-def to_dot(spg: Dict[Node, List[Node]], file_id: FileId):
+def to_dot(spg: SPG, file_id: FileId):
   def name(node):
     if node == SOURCE:
       return "s"
     if node == SINK:
       return "t"
-    prefix = '_A_' if node.active else ''
+    prefix = \
+      '_A_' if node.active else (
+        '_' if spg.downstream_from_active[node] else
+        '')
     old = Span.from_old(node.hunk)
     new = Span.from_new(node.hunk)
     return f"{prefix}n{node.generation}_" \
@@ -205,16 +210,35 @@ def to_dot(spg: Dict[Node, List[Node]], file_id: FileId):
 """
 
 
-def register(spg, prev_node, node):
-  if prev_node not in spg:
-    spg[prev_node] = []
-  spg[prev_node] = [item for item in spg[prev_node]
-                    if item != SINK]
-  spg[prev_node].append(node)
+def register(spg: SPG, prev_node, node):
+  if prev_node not in spg.nodes():
+    spg.graph[prev_node] = []
+  spg.graph[prev_node] = [item for item in spg.graph[prev_node]
+                          if item != SINK]
+  spg.graph[prev_node].append(node)
+  spg.propagate_active(prev_node, node)
+
+
+@dataclass
+class SPG:
+  graph: Dict[Node, List[Node]]
+  downstream_from_active: Dict[Node, bool] = dataclasses.field(default_factory=lambda: {})
+
+  def propagate_active(self, prev_node, node):
+    if not node in self.downstream_from_active:
+      self.downstream_from_active[node] = False
+    self.downstream_from_active[node] |= \
+      prev_node.active or self.downstream_from_active[prev_node]
+
+  def nodes(self):
+    return self.graph.keys()
+
+  def items(self):
+    return self.graph.items()
 
 
 def add_on_top_of(
-        spg: Dict[Node, List[Node]],
+        spg: SPG,
         nodes_from_previous_commit: List[Node],
         node: Node):
   cur_range = Span.from_old(node.hunk)
@@ -286,7 +310,7 @@ def add_on_top_of(
     for prev_node in nodes_from_previous_commit:
       some_overlap = some_overlap or add_if_overlap(prev_node)
 
-  spg[node] = [SINK]
+  spg.graph[node] = [SINK]
   if not some_overlap:
     debug.get('update').critical(
       '\n'.join([
@@ -332,7 +356,22 @@ def surround_with_inactive(nodes: List[Node]) -> List[Node]:
     [bottom_node_from(nodes[-1].hunk)]
 
 
-def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
+def update_dangling(file_spg: SPG,
+                    nodes: List[Node],
+                    generation: int):
+  for prev_node in nodes:
+    debug.get('update').debug(f"Checking dangling: {prev_node}: "
+                              f"{file_spg.graph[prev_node]}")
+    if SINK in file_spg.graph[prev_node]:
+      propagated = Node.propagated(prev_node, generation)
+      debug.get('update').debug(
+        f"updating dangling to generation {generation}:\n"
+        f" {pformat(prev_node)}")
+      register(file_spg, prev_node, propagated)
+      register(file_spg, propagated, SINK)
+
+
+def update_unchanged_file(file_spg: SPG, generation):
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
      if SINK in ends],
@@ -344,8 +383,10 @@ def update_unchanged_file(file_spg: Dict[Node, List[Node]], generation):
     propagated = Node.propagated(prev_node, generation)
     add_on_top_of(file_spg, prev_nodes_by_end, propagated)
 
+  update_dangling(file_spg, prev_nodes_by_end, generation)
 
-def update_file(file_spg: Dict[Node, List[Node]],
+
+def update_file(file_spg: SPG,
                 filepatch: Patch,
                 generation: int):
   def get_first_node(nodes):
@@ -377,17 +418,7 @@ def update_file(file_spg: Dict[Node, List[Node]],
 
   # Not too early, this prepagation is too dumb to be applied to proper
   # nodes
-  for prev_node in prev_nodes_by_end:
-    if SINK in file_spg[prev_node]:
-      propagated = Node.propagated(prev_node, generation)
-      debug.get('update').debug(
-        f"updating dangling to generation {generation}:\n"
-        f" {pformat(prev_node)}")
-      register(file_spg, prev_node, propagated)
-      register(file_spg, propagated, SINK)
-      nodes_by_start.append(propagated)
-      nodes_by_start = sorted(nodes_by_start,
-                              key=lambda node: node.hunk.old_start)
+  update_dangling(file_spg, prev_nodes_by_end, generation)
 
   debug.get('update').debug("------------------ done update_file")
   return file_spg
@@ -403,14 +434,14 @@ class FileId:
 
 
 def update_commit_diff(
-        spgs: Dict[FileId, Dict[Node, List[Node]]],
+        spgs: Dict[FileId, SPG],
         files: Dict[FileId, FileId],
         commit_diff: CommitDiff,
         diff_i: int):
   return update(spgs, files, Diff(commit_diff.filepatches), diff_i)
 
 
-def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
+def update(spgs: Dict[FileId, SPG],
            files: Dict[FileId, FileId],
            diff: Diff,
            diff_i: int):
@@ -487,11 +518,11 @@ def update(spgs: Dict[FileId, Dict[Node, List[Node]]],
     update_file(file_spg, filepatch, diff_i)
 
 
-def all_paths(spg, source=SOURCE) -> List[List[Node]]:
+def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
   if source == SINK:
     return [[SINK]]
   paths= [[source] + path
-    for end in sorted(spg[source], key=lambda node:
+    for end in sorted(spg.graph[source], key=lambda node:
     tuple([node.hunk.old_start,
            node.hunk.new_start,
            node.hunk.old_lines,
@@ -501,7 +532,7 @@ def all_paths(spg, source=SOURCE) -> List[List[Node]]:
   return paths
 
 
-def print_fragmap(spg):
+def print_fragmap(spg: SPG):
   paths = all_paths(spg)
   columns = [tuple(node.active
              for node in path)
