@@ -169,7 +169,7 @@ class CommitSelection(object):
     commits = [commit for commit in walker]
     if self.max_count:
       # Limit the number of commits
-      commits = commits[0:(self.max_count + 1)]
+      commits = commits[0:self.max_count]
 
     def add_if_nonempty(commit):
       if len(commit.get_diff(repo)) > 0:
