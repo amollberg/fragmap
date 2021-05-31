@@ -8,15 +8,16 @@ import unittest
 
 def create_base_cell(character):
   if character == ' ':
-    return Cell(Cell.NO_CHANGE)
+    return SingleNodeCell(CellKind.NO_CHANGE, None)
   if character == '^':
-    return Cell(Cell.BETWEEN_CHANGES, '^')
-  return Cell(Cell.CHANGE, str(character))
+    return SingleNodeCell(CellKind.BETWEEN_CHANGES, '^')
+  return SingleNodeCell(CellKind.CHANGE, str(character))
 
 
 def create_node_matrix_from_description(desc_matrix):
   return [[create_base_cell(cell) for cell in row] for row in desc_matrix]
-assert [[Cell(Cell.CHANGE, '3'), Cell(Cell.NO_CHANGE)]] == \
+assert [[SingleNodeCell(CellKind.CHANGE, '3'),
+         SingleNodeCell(CellKind.NO_CHANGE)]] == \
        create_node_matrix_from_description(['3 '])
 
 

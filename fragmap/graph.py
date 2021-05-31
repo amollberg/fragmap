@@ -14,7 +14,6 @@ import pygit2
 from pygit2 import Oid, DiffHunk
 
 from fragmap.commitdiff import CommitDiff
-from fragmap.generate_matrix import Cell, decorate_matrix
 from fragmap.load_commits import is_nullfile
 from . import debug
 
@@ -85,6 +84,7 @@ class DiffHunk:
   old_lines: int
   new_start: int
   new_lines: int
+  lines: str = dataclasses.field(default_factory=lambda: tuple())
 
   @staticmethod
   def from_tup(old_start_and_lines, new_start_and_lines):
@@ -512,49 +512,6 @@ def print_fragmap(spg):
     print(''.join([
       '#' if cell else '.'
       for cell in row]))
-
-
-@dataclass
-class SpgFragmap:
-  spgs: Dict[FileId, Dict[Node, List[Node]]]
-
-  @staticmethod
-  def from_diffs(diffs: List[CommitDiff]):
-    files = {}
-    spgs = {}
-    for i, diff in enumerate(diffs):
-      update_commit_diff(spgs, files, diff, i)
-      for file_id, spg in spgs.items():
-        debug.get('update').debug(to_dot(spg, file_id))
-      debug.get('update').debug("-------")
-
-    return SpgFragmap(spgs)
-
-  def generate_matrix(self) -> List[List[Cell]]:
-    columns = [
-      tuple(node.active
-             for node in path)
-       # Sort by file
-       for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0].tuple())
-       for path in all_paths(spg)
-    ]
-    columns = [column
-               for column in columns
-               if True in column]
-    # All columns should be equally long
-    if 1 != len(list(set([len(col) for col in columns]))):
-      debug.get('matrix').critical(f"All columns are not equally long: \n"
-                                   f"{pformat(columns)}")
-      assert(False)
-    rows = list(zip(*columns))
-
-    m = [
-      [Cell(Cell.CHANGE) if cell else Cell(Cell.NO_CHANGE)
-       for cell in row]
-      for row in rows[1:-1]
-    ]
-    decorate_matrix(m)
-    return m
 
 
 def main():

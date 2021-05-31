@@ -44,7 +44,8 @@ def print_fragmap(fragmap, do_color):
     reported_terminal_column_size = 80
   # Note: Subtracting two because ConEmu/Cmder line wraps two columns before
   terminal_column_size = reported_terminal_column_size - 2
-  max_actual_commit_width = max([len(first_line(p.header.message)) for p in fragmap.patches])
+  max_actual_commit_width = max([len(first_line(p.header.message))
+                                 for p in fragmap.patches()])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 int(terminal_column_size/2),
                                 terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
@@ -64,7 +65,7 @@ def print_fragmap(fragmap, do_color):
       print_matrix_action(r)
   # Draw the text and matrix
   def print_line(r):
-    cur_patch = fragmap.patches[r].header
+    cur_patch = fragmap.patches()[r].header
     commit_msg = first_line(cur_patch.message)
     hash = cur_patch.hex
     # Pad short commit messages

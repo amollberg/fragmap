@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 
-from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
+from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, \
+  ConnectedFragmap, Fragmap, BriefFragmap
 from fragmap.web_ui import open_fragmap_page, start_fragmap_server
 from fragmap.console_ui import print_fragmap
 from fragmap.console_color import ANSI_UP
@@ -22,7 +23,7 @@ def make_fragmap(diff_list, brief=False, infill=False) -> Fragmap:
   # with open('fragmap_ast.json', 'wb') as f:
   #   json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
   if brief:
-    fragmap = BriefFragmap.group_by_patch_connection(fragmap)
+    fragmap = BriefFragmap(fragmap)
   if infill:
     fragmap = ConnectedFragmap(fragmap)
   return fragmap

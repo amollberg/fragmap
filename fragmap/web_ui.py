@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 from yattag import Doc
-from .generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
+from .generate_matrix import CellKind, BriefFragmap, ConnectedFragmap, \
+  ConnectedCell, ConnectionStatus
 from .httphelper import start_server
 from .common_ui import first_line
 
@@ -34,7 +35,7 @@ def render_cell_graphics(tag, connected_cell, inner):
       return "active"
     return ""
 
-  if kind != Cell.NO_CHANGE:
+  if kind != CellKind.NO_CHANGE:
     inner()
     with tag('div', klass="cell " + activitymarker(changes.center)):
       etag('div', klass="top " + hideempty(changes.up))
@@ -79,14 +80,14 @@ def make_fragmap_page(fragmap):
       with tag('div', klass='code'):
         if cell.base.node:
           text(str(cell.base.node))
-          for line in cell.base.node._fragment.lines:
+          for line in cell.base.node.hunk.lines:
             colorized_line(line)
     render_cell_graphics(tag, cell, inner)
 
   def get_first_filename(matrix, c):
     for r in range(len(matrix)):
       cell = matrix[r][c]
-      if cell.base.kind != Cell.NO_CHANGE:
+      if cell.base.kind != CellKind.NO_CHANGE:
         return cell.base.node._filename
     return None
 
@@ -143,7 +144,7 @@ def make_fragmap_page(fragmap):
               if len(matrix) > 0:
                 render_filename_start_row(start_filenames)
             for r in range(len(matrix)):
-              cur_patch = fragmap.patches[r].header
+              cur_patch = fragmap.patches()[r].header
               commit_msg = first_line(cur_patch.message)
               hash = cur_patch.hex
               with tag('tr'):
