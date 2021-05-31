@@ -17,7 +17,7 @@ from getch.getch import getch
 
 import json
 
-def make_fragmap(diff_list, brief=False, infill=False):
+def make_fragmap(diff_list, brief=False, infill=False) -> Fragmap:
   fragmap = Fragmap.from_diffs(diff_list)
   # with open('fragmap_ast.json', 'wb') as f:
   #   json.dump(fragmap.patches, f, cls=DictCoersionEncoder)

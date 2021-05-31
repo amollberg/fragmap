@@ -21,6 +21,8 @@
 
 import sys
 import re
+from typing import List
+
 import pygit2
 import json
 import os
@@ -83,7 +85,7 @@ def binary_newrange(patch):
   assert(patch.delta.is_binary)
   return Range(0, binary_range_length(patch.delta.new_file))
 
-def get_diff(repo, commit, find_similar=True):
+def get_diff(repo: pygit2.Repository, commit, find_similar=True) -> pygit2.Diff:
   if isinstance(commit, pygit2.Commit):
     diff = repo.diff(commit.parents[0], commit, context_lines=0, interhunk_lines=0)
   else:
@@ -146,7 +148,7 @@ class CommitSelection(object):
     self.include_unstaged = include_unstaged
     self.max_count = max_count
 
-  def get_items(self, repo):
+  def get_items(self, repo) -> List[pygit2.Commit]:
     print('... Finding commits            \r', end='')
     walker = repo.walk(repo.head.target,
                        pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_REVERSE)
@@ -183,7 +185,7 @@ class ExplicitCommitSelection(object):
 
 class CommitLoader(object):
   @staticmethod
-  def load(repo_dir, commit_selection):
+  def load(repo_dir, commit_selection) -> List[CommitDiff]:
     repo_root = pygit2.discover_repository(repo_dir)
     if repo_root is None:
       raise RuntimeError('Error: Working directory is not a git repository.')

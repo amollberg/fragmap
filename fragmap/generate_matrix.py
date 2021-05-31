@@ -81,7 +81,8 @@ def decorate_matrix(m):
 # Group node lines that are equal, i.e. that at the first
 # common diff are at the same position and of the same kind.
 # As a note, at any subsequent diffs they will consequently be the same too.
-def group_fragment_bound_lines(node_lines):
+def group_fragment_bound_lines(node_lines: List[FragmentBoundLine]) \
+        -> List[List[FragmentBoundLine]]:
   node_lines = sorted(node_lines)
   if debug.is_logging('grouping'):
     print_node_line_relation_table(node_lines)
@@ -168,7 +169,7 @@ class ConnectedCell(Cell):
 
 class ColumnItem(object):
 
-  def __init__(self, node_line, inside):
+  def __init__(self, node_line: FragmentBoundLine, inside: bool):
     self.node_line = node_line
     self.inside = inside
 
@@ -184,7 +185,7 @@ class Fragmap():
     debug.get('matrix').debug("Patches: %s", patches)
 
   @staticmethod
-  def from_diffs(diffs):
+  def from_diffs(diffs: List[CommitDiff]):
     node_lines = update_all_positions_to_latest(diffs)
     grouped_lines = group_fragment_bound_lines(node_lines)
     return Fragmap(diffs, grouped_lines)
@@ -195,7 +196,8 @@ class Fragmap():
   def get_patch(self, n):
     return self.patches[n]
 
-  def generate_column(self, col_index, prev_column=None):
+  def generate_column(self, col_index, prev_column=None) \
+          -> List[ColumnItem]:
     c = col_index
     n_rows = self.get_n_patches()
     node_line_group = self.grouped_node_lines[c]
@@ -224,9 +226,8 @@ class Fragmap():
         debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
     return inside_fragment
 
-
   # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
-  def generate_matrix(self):
+  def generate_matrix(self) -> List[List[Cell]]:
     debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
 
     n_rows = self.get_n_patches()

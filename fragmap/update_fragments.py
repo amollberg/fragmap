@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 import copy
+from typing import List
+
+from fragmap.commitdiff import CommitDiff
+
 from .load_commits import BinaryHunk, nonnull_file, oldrange, newrange
 from . import debug
 
@@ -284,7 +288,7 @@ def update_positions(node_lines, patch, diff_i):
   return node_lines
 
 
-def extract_nodes(diff, diff_i):
+def extract_nodes(diff: CommitDiff, diff_i: int):
   node_list = []
   for file_patch in diff.filepatches:
     for fragment_i in range(len(file_patch.hunks)):
@@ -306,7 +310,7 @@ def extract_nodes(diff, diff_i):
   return node_list
 
 
-def extract_node_lines(diff, diff_i):
+def extract_node_lines(diff: CommitDiff, diff_i):
   return list(map(FragmentBoundLine, extract_nodes(diff, diff_i)))
 
 
@@ -317,7 +321,8 @@ def extract_node_lines(diff, diff_i):
 # * Starting diff : old to new, propagation: old to new
 #   + Can get all nodes from a patch in one go
 
-def update_all_positions_to_latest(diff_list):
+def update_all_positions_to_latest(diff_list: List[CommitDiff]) -> \
+        List[FragmentBoundLine]:
   """
   Update all diffs to the latest patch, letting
   newer diffs act as patches for older diffs.
