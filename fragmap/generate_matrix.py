@@ -138,7 +138,8 @@ def decorate_matrix(m: RowMajorMatrix[Cell]):
     for c in range(n_cols):
       cell = m[r][c]
       if cell.kind == CellKind.CHANGE:
-        debug.get('grid').debug("last_patch %s %s %s", last_patch[c], c, r)
+        if debug.is_logging('grid'):
+          debug.get('grid').debug("last_patch %s %s %s", last_patch[c], c, r)
         if last_patch[c] >= 0:
           # Mark the cells inbetween
           start = last_patch[c]
@@ -203,9 +204,10 @@ class Fragmap:
     spgs = {}
     for i, diff in enumerate(diffs):
       update_commit_diff(spgs, files, diff, i)
-      for file_id, spg in spgs.items():
-        debug.get('update').debug(to_dot(spg, file_id))
-      debug.get('update').debug("-------")
+      if debug.is_logging('update'):
+        for file_id, spg in spgs.items():
+          debug.get('update').debug(to_dot(spg, file_id))
+        debug.get('update').debug("-------")
 
     return Fragmap(diffs, spgs)
 
@@ -308,7 +310,8 @@ class BriefFragmap:
       return [values for k, values in d.items()]
 
     column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
-    debug.get('matrix').debug(f"grouped columns: {pformat(column_groups)}")
+    if debug.is_logging('matrix'):
+      debug.get('matrix').debug(f"grouped columns: {pformat(column_groups)}")
     def multi_cell_kind(cells: List[Cell]):
       kinds = list(set([cell.kind for cell in cells]))
       if len(kinds) != 1:

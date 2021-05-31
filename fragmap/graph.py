@@ -256,8 +256,9 @@ def add_on_top_of(
     prev_range = Span.from_new(prev_node.hunk)
     overlap = cur_range.overlap(prev_range)
     do_register = overlap == Overlap.INTERVAL_OVERLAP
-    debug.get('update').debug(
-      f"add_if_interval_overlap on {prev_range}? {do_register}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"add_if_interval_overlap on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
@@ -269,8 +270,9 @@ def add_on_top_of(
                   and not (overlap == Overlap.POINT_OVERLAP
                            and overlap_on_border(cur_range, prev_range)
                            and spg.downstream_from_active[prev_node])
-    debug.get('update').debug(
-      f"add_unless_point_to_downstream_active on {prev_range}? {do_register}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"add_unless_point_to_downstream_active on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
@@ -282,8 +284,9 @@ def add_on_top_of(
                   and not (overlap == Overlap.POINT_OVERLAP
                            and overlap_on_border(cur_range, prev_range)
                            and prev_node.active)
-    debug.get('update').debug(
-      f"add_unless_point_to_active on {prev_range}? {do_register}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"add_unless_point_to_active on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
@@ -293,8 +296,9 @@ def add_on_top_of(
     overlap = cur_range.overlap(prev_range)
     do_register = overlap != Overlap.NO_OVERLAP \
                   and not prev_node.active
-    debug.get('update').debug(
-      f"add_if_to_inactive on {prev_range}? {do_register}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"add_if_to_inactive on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
@@ -303,14 +307,16 @@ def add_on_top_of(
     prev_range = Span.from_new(prev_node.hunk)
     overlap = cur_range.overlap(prev_range)
     do_register = overlap != Overlap.NO_OVERLAP
-    debug.get('update').debug(
-      f"add_if_overlap on {prev_range}? {do_register}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"add_if_overlap on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
 
-  debug.get('update').debug(
-    f"Adding {node} {cur_range} on top of previous")
+  if debug.is_logging('update'):
+    debug.get('update').debug(
+      f"Adding {node} {cur_range} on top of previous")
   for prev_node in nodes_from_previous_commit:
     some_overlap = add_if_interval_overlap(prev_node) or some_overlap
 
@@ -360,8 +366,9 @@ def surround_with_inactive(nodes: List[Node]) -> List[Node]:
     new_right = Span.from_new(right)
     old = old_left.adjacent_up_to(old_right.start).to_git()
     new = new_left.adjacent_up_to(new_right.start).to_git()
-    debug.get('update').debug(
-      f"creating between: {Node.inactive(old, new, generation)}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(
+        f"creating between: {Node.inactive(old, new, generation)}")
     return Node.inactive(old, new, generation)
   def bottom_node_from(left: pygit2.DiffHunk) -> Node:
     old = Span.from_old(left).adjacent_up_to(inf).to_git()
@@ -382,13 +389,15 @@ def update_dangling(file_spg: SPG,
                     nodes: List[Node],
                     generation: int):
   for prev_node in nodes:
-    debug.get('update').debug(f"Checking dangling: {prev_node}: "
-                              f"{file_spg.graph[prev_node]}")
+    if debug.is_logging('update'):
+      debug.get('update').debug(f"Checking dangling: {prev_node}: "
+                                f"{file_spg.graph[prev_node]}")
     if SINK in file_spg.graph[prev_node]:
       propagated = Node.propagated(prev_node, generation)
-      debug.get('update').debug(
-        f"updating dangling to generation {generation}:\n"
-        f" {pformat(prev_node)}")
+      if debug.is_logging('update'):
+        debug.get('update').debug(
+          f"updating dangling to generation {generation}:\n"
+          f" {pformat(prev_node)}")
       register(file_spg, prev_node, propagated)
       register(file_spg, propagated, SINK)
 
@@ -398,9 +407,10 @@ def update_unchanged_file(file_spg: SPG, generation):
     [start for start, ends in file_spg.items()
      if SINK in ends],
     key=lambda node: node.hunk.new_start)
-  debug.get('update').debug(
-    f"propagating unchanged to generation {generation}:\n"
-    f" {pformat(prev_nodes_by_end)}")
+  if debug.is_logging('update'):
+    debug.get('update').debug(
+      f"propagating unchanged to generation {generation}:\n"
+      f" {pformat(prev_nodes_by_end)}")
   for prev_node in prev_nodes_by_end:
     propagated = Node.propagated(prev_node, generation)
     add_on_top_of(file_spg, prev_nodes_by_end, propagated)
@@ -427,9 +437,10 @@ def update_file(file_spg: SPG,
     nodes_by_start = [Node.active(diff_hunk, generation)
                       for diff_hunk in hunks_by_start]
   nodes_by_start = surround_with_inactive(nodes_by_start)
-  debug.get('update').debug(
-    f"updating changed to generation {generation}:\n"
-    f" {pformat(nodes_by_start)}")
+  if debug.is_logging('update'):
+    debug.get('update').debug(
+      f"updating changed to generation {generation}:\n"
+      f" {pformat(nodes_by_start)}")
   prev_nodes_by_end = sorted(
     [start for start, ends in file_spg.items()
      if SINK in ends],
@@ -481,8 +492,9 @@ def update(spgs: Dict[FileId, SPG],
     def update_unchanged(file_id: FileId):
       new_file_id = FileId(commit=diff_i, path=file_id.path)
       files[new_file_id] = files[file_id]
-      debug.get('update_files').debug(
-        f"mapped unchanged {new_file_id} to original {files[file_id]}")
+      if debug.is_logging('update_files'):
+        debug.get('update_files').debug(
+          f"mapped unchanged {new_file_id} to original {files[file_id]}")
       return new_file_id
 
     return [
@@ -498,17 +510,19 @@ def update(spgs: Dict[FileId, SPG],
       old_file_id = old_patch_file_id(filepatch)
       # Register previously undiscovered file's old name
       if old_file_id not in files:
-        debug.get('update_files').debug(
-          f"created undiscovered old {old_file_id}")
+        if debug.is_logging('update_files'):
+          debug.get('update_files').debug(
+            f"created undiscovered old {old_file_id}")
         files[old_file_id] = old_file_id
 
       # Register file's new name
       new_file_id = new_patch_file_id(filepatch)
       files[new_file_id] = files[old_file_id]
-      debug.get('update_files').debug(
-        f"mapping changed {new_file_id} "
-        f"to original {files[old_file_id]} "
-        f"via {old_file_id}")
+      if debug.is_logging('update_files'):
+        debug.get('update_files').debug(
+          f"mapping changed {new_file_id} "
+          f"to original {files[old_file_id]} "
+          f"via {old_file_id}")
       return files[new_file_id]
 
     return [
@@ -518,7 +532,8 @@ def update(spgs: Dict[FileId, SPG],
 
   # Update graph of files that have not changed
   for file_id in update_unchanged_files():
-    debug.get('update_files').debug(f"unchanged {file_id} in commit {diff_i}")
+    if debug.is_logging('update_files'):
+      debug.get('update_files').debug(f"unchanged {file_id} in commit {diff_i}")
     original_file_id = files[file_id]
     file_spg = spgs[original_file_id]
     update_unchanged_file(file_spg, diff_i)
@@ -527,8 +542,9 @@ def update(spgs: Dict[FileId, SPG],
   update_changed_files()
   for filepatch in diff:
     original_file_id = files[new_patch_file_id(filepatch)]
-    debug.get('update_files').debug(
-      f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
+    if debug.is_logging('update_files'):
+      debug.get('update_files').debug(
+        f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
     if original_file_id not in spgs:
       spgs[original_file_id] = empty_spg()
       file_spg = spgs[original_file_id]
@@ -550,7 +566,8 @@ def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
            node.hunk.old_lines,
            node.hunk.new_lines]))
     for path in all_paths(spg, end)]
-  debug.get('grouping').debug(f"paths: \n{pformat(paths)}")
+  if debug.is_logging('grouping'):
+    debug.get('grouping').debug(f"paths: \n{pformat(paths)}")
   return paths
 
 
