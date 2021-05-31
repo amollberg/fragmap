@@ -186,10 +186,14 @@ def to_dot(spg: SPG, file_id: FileId):
       return "s"
     if node == SINK:
       return "t"
-    prefix = \
-      '_A_' if node.active else (
-        '_' if spg.downstream_from_active[node] else
-        '')
+
+    prefix = ""
+    if node.active:
+      prefix += "A"
+    if spg.downstream_from_active[node]:
+      prefix += "d"
+    if prefix:
+      prefix = f"_{prefix}_"
     old = Span.from_old(node.hunk)
     new = Span.from_new(node.hunk)
     return f"{prefix}n{node.generation}_" \
@@ -225,10 +229,11 @@ class SPG:
   downstream_from_active: Dict[Node, bool] = dataclasses.field(default_factory=lambda: {})
 
   def propagate_active(self, prev_node, node):
+    if not prev_node in self.downstream_from_active:
+      self.downstream_from_active[prev_node] = prev_node.active
     if not node in self.downstream_from_active:
-      self.downstream_from_active[node] = False
-    self.downstream_from_active[node] |= \
-      prev_node.active or self.downstream_from_active[prev_node]
+      self.downstream_from_active[node] = node.active
+    self.downstream_from_active[node] |= self.downstream_from_active[prev_node]
 
   def nodes(self):
     return self.graph.keys()
@@ -253,6 +258,19 @@ def add_on_top_of(
     do_register = overlap == Overlap.INTERVAL_OVERLAP
     debug.get('update').debug(
       f"add_if_interval_overlap on {prev_range}? {do_register}")
+    if do_register:
+      register(spg, prev_node, node)
+    return do_register
+
+  def add_unless_point_to_downstream_active(prev_node):
+    prev_range = Span.from_new(prev_node.hunk)
+    overlap = cur_range.overlap(prev_range)
+    do_register = overlap != Overlap.NO_OVERLAP \
+                  and not (overlap == Overlap.POINT_OVERLAP
+                           and overlap_on_border(cur_range, prev_range)
+                           and spg.downstream_from_active[prev_node])
+    debug.get('update').debug(
+      f"add_unless_point_to_downstream_active on {prev_range}? {do_register}")
     if do_register:
       register(spg, prev_node, node)
     return do_register
@@ -298,6 +316,10 @@ def add_on_top_of(
 
   # Note the order of or-ed terms. The function call is put on the right to
   # effectively skip the rest of the nodes after the first overlap
+  if not some_overlap:
+    for prev_node in nodes_from_previous_commit:
+      some_overlap = some_overlap or add_unless_point_to_downstream_active(prev_node)
+
   if not some_overlap:
     for prev_node in nodes_from_previous_commit:
       some_overlap = some_overlap or add_unless_point_to_active(prev_node)
