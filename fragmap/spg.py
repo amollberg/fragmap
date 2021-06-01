@@ -168,4 +168,4 @@ class SPG:
     attributes = '\n'.join([
       f"{key}:\n{pformat(value, indent=3)}" for key, value in
       self.__dict__.items()])
-    return f"SPG({attributes})\n"
+    return f"SPG({attributes})\n{self.to_dot(FileId(0, 'unknown'))}"
