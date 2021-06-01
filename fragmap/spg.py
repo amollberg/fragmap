@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass
 from math import inf
+from pprint import pformat
 from typing import Dict, List, Union
 
 import pygit2
@@ -103,7 +104,7 @@ class SPG:
     })
 
   def register(self, prev_node, node):
-    if prev_node not in self.nodes():
+    if prev_node not in self.graph.keys():
       self.graph[prev_node] = []
     self.graph[prev_node] = [item for item in self.graph[prev_node]
                              if item != SINK]
@@ -155,3 +156,9 @@ class SPG:
         t [shape=Msquare];
       }
     """
+
+  def pformat(self):
+    attributes = '\n'.join([
+      f"{key}:\n{pformat(value, indent=3)}" for key, value in
+      self.__dict__.items()])
+    return f"SPG({attributes})\n"

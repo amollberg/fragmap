@@ -153,14 +153,14 @@ def add_on_top_of(
     for prev_node in nodes_from_previous_commit:
       some_overlap = some_overlap or add_if_overlap(prev_node)
 
-  spg.graph[node] = [SINK]
+  spg.register(node, SINK)
   if not some_overlap:
     debug.get('update').critical(
       '\n'.join([
         "-----------------",
-        "SPG:", pformat(spg),
+        "SPG:", spg.pformat(),
         "Previous nodes:", pformat(nodes_from_previous_commit),
-        "To be added:", cur_range, pformat(node)
+        "To be added:", str(cur_range), pformat(node)
       ])
     )
   assert some_overlap
