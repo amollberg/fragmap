@@ -6,14 +6,7 @@ from backports.shutil_get_terminal_size import get_terminal_size
 from fragmap.common_ui import first_line
 from fragmap.generate_matrix import ConnectedFragmap
 from .console_color import *
-
-
-
-def lzip(*args):
-  """
-  zip(...) but returns list of lists instead of list of tuples
-  """
-  return [list(el) for el in zip(*args)]
+from .datastructure_util import lzip
 
 
 def filter_consecutive_equal_columns(char_matrix):

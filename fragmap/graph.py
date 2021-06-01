@@ -2,19 +2,17 @@
 # To be able to use the enclosing class type in class method type hints
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
-from enum import Enum
-
-from math import inf
-from typing import List, Dict
+from typing import List, Dict, Union, Tuple
 from pprint import pprint, pformat
-
 import pygit2
 from pygit2 import DiffHunk
 
 from fragmap.commitdiff import CommitDiff
+from fragmap.datastructure_util import flatten
 from fragmap.span import Span, Overlap
-from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, SOURCE
+from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, SOURCE, CommitNodes
 from . import debug
 
 
@@ -139,7 +137,8 @@ def add_on_top_of(
   # effectively skip the rest of the nodes after the first overlap
   if not some_overlap:
     for prev_node in nodes_from_previous_commit:
-      some_overlap = some_overlap or add_unless_point_to_downstream_active(prev_node)
+      some_overlap = some_overlap or \
+                     add_unless_point_to_downstream_active(prev_node)
 
   if not some_overlap:
     for prev_node in nodes_from_previous_commit:
@@ -166,38 +165,144 @@ def add_on_top_of(
   assert some_overlap
 
 
-def surround_with_inactive(nodes: List[Node]) -> List[Node]:
-  if not nodes:
-    return []
-  generation = nodes[0].generation
-  def top_node_to(right: pygit2.DiffHunk) -> Node:
-    old = Span.from_old(right).adjacent_down_to(1).to_git()
-    new = Span.from_new(right).adjacent_down_to(1).to_git()
-    return Node.inactive(old, new, generation)
-  def node_between(left: pygit2.DiffHunk, right: pygit2.DiffHunk) -> Node:
-    old_left = Span.from_old(left)
-    new_left = Span.from_new(left)
-    old_right = Span.from_old(right)
-    new_right = Span.from_new(right)
-    old = old_left.adjacent_up_to(old_right.start).to_git()
-    new = new_left.adjacent_up_to(new_right.start).to_git()
-    if debug.is_logging('update'):
-      debug.get('update').debug(
-        f"creating between: {Node.inactive(old, new, generation)}")
-    return Node.inactive(old, new, generation)
-  def bottom_node_from(left: pygit2.DiffHunk) -> Node:
-    old = Span.from_old(left).adjacent_up_to(inf).to_git()
-    new = Span.from_new(left).adjacent_up_to(inf).to_git()
-    return Node.inactive(old, new, generation)
+@dataclass
+class DiffSpan:
+  old: Span
+  new: Span
 
-  return \
-    [top_node_to(nodes[0].hunk)] + \
-    [el
-     for left, right in zip(nodes, nodes[1:])
-     for el in [left, node_between(left.hunk, right.hunk)]
-     ] + \
-    [nodes[-1]] + \
-    [bottom_node_from(nodes[-1].hunk)]
+  @staticmethod
+  def from_hunk(hunk: Union[pygit2.DiffHunk, DiffHunk]):
+    return DiffSpan(old=Span.from_old(hunk),
+                    new=Span.from_new(hunk))
+
+@dataclass
+class RowLutEntry:
+  old: int
+  new: int
+  start_of_change: bool
+
+@dataclass
+class RowLut:
+  _entries_by_old: Dict[Tuple[int, bool], RowLutEntry]
+  # Keep an explicit list to ensure a sorted list of keys is accessible
+  _old_keys: List[int]
+
+  @staticmethod
+  def from_diff_spans(spans: List[DiffSpan]):
+    entries = flatten([
+      [RowLutEntry(change.old.start, change.new.start, True),
+       RowLutEntry(change.old.end, change.new.end, False)]
+      for change in spans])
+    return RowLut({(entry.old, entry.start_of_change): entry
+                   for entry in entries},
+                  [entry.old for entry in entries])
+
+  def lookup_old_start(self, old_row: int):
+    key_index = bisect_right(self._old_keys, old_row)
+    if key_index == 0:
+      return old_row
+    else:
+      key_index -= 1
+      key = (self._old_keys[key_index], False)
+      entry = self._entries_by_old[key]
+      new_row = old_row - entry.old + entry.new
+      return new_row
+
+  def lookup_old_end(self, old_row: int):
+    # Note: Since ends of spans are exclusive, we really want the entry
+    # affecting the previous row
+    key_index = bisect_right(self._old_keys, old_row - 1)
+    if key_index == 0:
+      return old_row
+    else:
+      key_index -= 1
+      key = (self._old_keys[key_index], False)
+      entry = self._entries_by_old[key]
+      new_row = old_row - entry.old + entry.new
+      return new_row
+
+
+def moved_span(new_changes: CommitNodes, old: Span) -> List[Span]:
+  new_change_spans = [DiffSpan.from_hunk(node.hunk)
+                      for node in new_changes.nodes]
+  # For lookup from old row to new row
+  row_lut = RowLut.from_diff_spans(new_change_spans)
+
+  def overhanging(change: DiffSpan, to_update: Span) -> List[Span]:
+    """ Return a list of spans that cover the updated span but not the given
+        change.
+    """
+    # to_update: |       [---]
+    # change:    | [---]
+    if change.old.end <= to_update.start:
+      return [to_update]
+    # to_update: |    [---]
+    # change:    | [---]
+    elif change.old.end <= to_update.end and change.old.start <= to_update.start:
+      return [Span(change.old.end, to_update.end)]
+    # to_update: |    [---]
+    # change:    |     [-]
+    elif change.old.end <= to_update.end and change.old.start > to_update.start:
+      return [Span(to_update.start, change.old.start),
+              Span(change.old.end, to_update.end)]
+    # to_update: |    [---]
+    # change:    | [--------]
+    elif change.old.end >= to_update.end and \
+            change.old.start <= to_update.start:
+      return []
+    # to_update: |    [---]
+    # change:    |      [---]
+    elif change.old.start <= to_update.end:
+      return [Span(to_update.start, change.old.start)]
+    elif change.old.start >= to_update.end:
+      return [to_update]
+    print("unknown case:", change, to_update)
+    assert False
+
+  def update(to_update: Span) -> Span:
+    new_start = row_lut.lookup_old_start(to_update.start)
+    new_end = row_lut.lookup_old_end(to_update.end)
+    return Span(new_start, new_end)
+
+  overhang = [old]
+
+  for new_change in new_change_spans:
+    overhang = [span
+                for resulting_span in overhang
+                for span in overhanging(new_change, resulting_span)]
+  overhang = [span
+              for span in overhang
+              if not span.is_empty()]
+  updated = [update(span) for span in overhang]
+  if debug.is_logging('update'):
+    debug.get('update').debug("(ov)-> %s", overhang)
+    debug.get('update').debug("moved_span: %s %s", old, new_change_spans)
+    debug.get('update').debug("    -> %s", updated)
+  return updated
+
+
+def add_and_propagate(prev_commit: CommitNodes,
+                      commit: CommitNodes) -> CommitNodes:
+  generation = prev_commit.nodes[0].generation + 1
+  prev_commit = CommitNodes([node
+                             for node in prev_commit.nodes
+                             if not Span.from_new(node.hunk).is_empty()])
+  added = commit.nodes
+
+  # 1. empty, add all from commit (supposedly all are active), propagate the
+  #    non-overlapping parts of the previous
+  # -> row delta computation: start and en separately, common function
+  def propagate(prev_node: Node):
+    prev_span = Span.from_new(prev_node.hunk)
+    new_spans = moved_span(commit, prev_span)
+    return [Node.inactive(prev_span.to_git(), new_span.to_git(), generation)
+            for new_span in new_spans]
+  propagated = [span
+                for prev_node in prev_commit.nodes
+                for span in propagate(prev_node)]
+
+  new_nodes = sorted(added + propagated, key=node_by_new)
+  return CommitNodes(new_nodes)
 
 
 def update_dangling(file_spg: SPG,
@@ -240,33 +345,37 @@ def update_file(file_spg: SPG,
     if not nodes:
       return None
     return sorted(nodes, key=lambda node: node.new_start)[0]
+
   def get_last_node(nodes):
     if not nodes:
       return None
     return sorted(nodes, key=lambda node: node.new_start)[-1]
 
   if filepatch.delta.is_binary:
-    nodes_by_start = [Node.active_binary(filepatch.delta, generation)]
+    nodes_by_old = [Node.active_binary(filepatch.delta, generation)]
   else:
-    hunks_by_start = sorted(filepatch.hunks, key=lambda hunk: hunk.old_start)
-    nodes_by_start = [Node.active(diff_hunk, generation)
-                      for diff_hunk in hunks_by_start]
-  nodes_by_start = surround_with_inactive(nodes_by_start)
+    nodes_by_old = sorted([Node.active(diff_hunk, generation)
+                             for diff_hunk in filepatch.hunks],
+                          key=node_by_old)
+  prev_nodes_by_new = sorted([start for start, ends in file_spg.items()
+                              if SINK in ends],
+                             key=node_by_new)
+  # Propagate the previous nodes and overwriting with the new ones
+  new_commit = add_and_propagate(CommitNodes(prev_nodes_by_new),
+                                 CommitNodes(nodes_by_old))
+  nodes_by_old = sorted(new_commit.nodes, key=node_by_old)
+
   if debug.is_logging('update'):
     debug.get('update').debug(
       f"updating changed to generation {generation}:\n"
-      f" {pformat(nodes_by_start)}")
-  prev_nodes_by_end = sorted(
-    [start for start, ends in file_spg.items()
-     if SINK in ends],
-    key=lambda node: node.hunk.new_start)
+      f" {pformat(nodes_by_old)}")
 
-  for cur_node in nodes_by_start:
-    add_on_top_of(file_spg, prev_nodes_by_end, cur_node)
+  for cur_node in nodes_by_old:
+    add_on_top_of(file_spg, prev_nodes_by_new, cur_node)
 
   # Not too early, this prepagation is too dumb to be applied to proper
   # nodes
-  update_dangling(file_spg, prev_nodes_by_end, generation)
+  update_dangling(file_spg, prev_nodes_by_new, generation)
 
   debug.get('update').debug("------------------ done update_file")
   return file_spg
@@ -285,7 +394,7 @@ def update(spgs: Dict[FileId, SPG],
            diff: Diff,
            diff_i: int):
   def old_patch_file_id(filepatch):
-    return FileId(diff_i-1, filepatch.delta.old_file.path)
+    return FileId(diff_i - 1, filepatch.delta.old_file.path)
 
   def new_patch_file_id(filepatch):
     return FileId(diff_i, filepatch.delta.new_file.path)
@@ -307,7 +416,7 @@ def update(spgs: Dict[FileId, SPG],
       update_unchanged(file_id)
       for file_id in list(files.keys())
       if file_id.commit == diff_i - 1 and \
-              file_id.path not in old_filepaths_of_changed
+         file_id.path not in old_filepaths_of_changed
     ]
 
   def update_changed_files():
@@ -362,16 +471,28 @@ def update(spgs: Dict[FileId, SPG],
     update_file(file_spg, filepatch, diff_i)
 
 
+def node_by_old(node: Node):
+  spans = DiffSpan.from_hunk(node.hunk)
+  return tuple([spans.old.start,
+                spans.new.start,
+                spans.old.end,
+                spans.new.end])
+
+
+def node_by_new(node: Node):
+  spans = DiffSpan.from_hunk(node.hunk)
+  return tuple([spans.new.start,
+                spans.old.start,
+                spans.new.end,
+                spans.old.end])
+
+
 def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
   if source == SINK:
     return [[SINK]]
-  paths= [[source] + path
-    for end in sorted(spg.graph[source], key=lambda node:
-    tuple([node.hunk.old_start,
-           node.hunk.new_start,
-           node.hunk.old_lines,
-           node.hunk.new_lines]))
-    for path in all_paths(spg, end)]
+  paths = [[source] + path
+           for end in sorted(spg.graph[source], key=node_by_new)
+           for path in all_paths(spg, end)]
   if debug.is_logging('grouping'):
     debug.get('grouping').debug(f"paths: \n{pformat(paths)}")
   return paths
@@ -380,7 +501,7 @@ def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
 def print_fragmap(spg: SPG):
   paths = all_paths(spg)
   columns = [tuple(node.active
-             for node in path)
+                   for node in path)
              for path in paths]
   columns = list(set(columns))
   rows = list(zip(*columns))

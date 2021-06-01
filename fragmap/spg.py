@@ -12,6 +12,7 @@ import pygit2
 
 from fragmap.load_commits import is_nullfile
 from fragmap.span import Span
+from fragmap.stable_list_dict import StableListDict
 
 
 @dataclass(frozen=True)
@@ -90,8 +91,6 @@ SINK = Node.inactive((0, inf), (0, 0), inf)
 @dataclass
 class SPG:
   graph: Dict[Node, List[Node]]
-  commits: Dict[int, CommitNodes] = \
-    dataclasses.field(default_factory=lambda: {})
   downstream_from_active: Dict[Node, bool] = \
     dataclasses.field(default_factory=lambda: {})
 
@@ -123,6 +122,14 @@ class SPG:
 
   def items(self):
     return self.graph.items()
+
+  def commits(self) -> Dict[int, CommitNodes]:
+    nodes_by_commit = StableListDict()
+    for node in self.nodes():
+      nodes_by_commit.add(node.generation, node)
+    sorted_by_generation = sorted(nodes_by_commit.items(), key=lambda kv: kv[0])
+    return {generation: CommitNodes(nodes)
+            for generation, nodes in sorted_by_generation}
 
   def to_dot(self, file_id: FileId):
     def name(node):

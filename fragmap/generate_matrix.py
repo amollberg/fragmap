@@ -6,6 +6,7 @@ from pprint import pformat, pprint
 from typing import List, Dict, Type, TypeVar, Generic
 
 from .commitdiff import CommitDiff
+from .datastructure_util import flatten, lzip
 from .graph import FileId, update_commit_diff, all_paths
 from .spg import Node
 from .stable_list_dict import StableListDict
@@ -399,19 +400,6 @@ def no_change_at(matrix, r, c):
   if not in_range(matrix, r, c):
     return True
   return matrix[r][c].kind == CellKind.NO_CHANGE
-
-
-def lzip(*args):
-  """
-  zip(...) but returns list of lists instead of list of tuples
-  """
-  return [list(el) for el in zip(*args)]
-
-def flatten(list_of_lists):
-  """
-  Flatten list of lists into a list
-  """
-  return [el for inner in list_of_lists for el in inner]
 
 
 class ConnectedFragmap(object):
