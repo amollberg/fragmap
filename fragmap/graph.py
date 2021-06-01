@@ -317,25 +317,34 @@ def update_dangling(file_spg: SPG,
       if debug.is_logging('update'):
         debug.get('update').debug(
           f"updating dangling to generation {generation}:\n"
-          f" {pformat(prev_node)}")
+          f" {pformat(prev_node)} {DiffSpan.from_hunk(prev_node.hunk)}")
       file_spg.register(prev_node, propagated)
       file_spg.register(propagated, SINK)
 
 
 def update_unchanged_file(file_spg: SPG, generation):
-  prev_nodes_by_end = sorted(
-    [start for start, ends in file_spg.items()
-     if SINK in ends],
-    key=lambda node: node.hunk.new_start)
+  prev_nodes_by_new = \
+    sorted([start for start, ends in file_spg.items()
+            if SINK in ends],
+           key=node_by_new)
   if debug.is_logging('update'):
     debug.get('update').debug(
       f"propagating unchanged to generation {generation}:\n"
-      f" {pformat(prev_nodes_by_end)}")
-  for prev_node in prev_nodes_by_end:
-    propagated = Node.propagated(prev_node, generation)
-    add_on_top_of(file_spg, prev_nodes_by_end, propagated)
+      f" {pformat(prev_nodes_by_new)}")
+  new_commit = add_and_propagate(CommitNodes(prev_nodes_by_new),
+                                 # No changes
+                                 CommitNodes([]))
+  nodes_by_old = sorted(new_commit.nodes, key=node_by_old)
 
-  update_dangling(file_spg, prev_nodes_by_end, generation)
+  if debug.is_logging('update'):
+    debug.get('update').debug(
+      f"updating unchanged to generation {generation}:\n"
+      f" {pformat(nodes_by_old)}")
+
+  for cur_node in nodes_by_old:
+    add_on_top_of(file_spg, prev_nodes_by_new, cur_node)
+
+  update_dangling(file_spg, prev_nodes_by_new, generation)
 
 
 def update_file(file_spg: SPG,
