@@ -181,6 +181,14 @@ class Test(unittest.TestCase):
                      ['#',
                       '#'])
 
+  def test_070_072(self):
+    self.check_diffs(['070-add-X-to-D',
+                      '071-add-X-to-A',
+                      '072-add-X-to-F'],
+                     ['.#.',
+                      '#..',
+                      '..#'])
+
   # == Test brief fragmaps ==
 
   def test_016_004_brief(self):
@@ -287,6 +295,14 @@ class Test(unittest.TestCase):
                             '..#..',
                             '...#.',
                             '....#'])
+
+  def test_070_072_brief(self):
+      self.check_diffs_brief(['070-add-X-to-D',
+                              '071-add-X-to-A',
+                              '072-add-X-to-F'],
+                             ['.#.',
+                              '#..',
+                              '..#'])
 
   def test_110_111_brief(self):
     self.check_diffs_brief(['110-realdiff-newfilebug-addfile',
