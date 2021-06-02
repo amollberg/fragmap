@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 import argparse
-import sys
 import logging
+import sys
 
 _logging_categories = ["grid", "sorting", "grouping", "parser", "update",
                        "update_files", "console", "test", "matrix"]
@@ -44,7 +45,7 @@ def set_logging_categories(*categories):
 
 def parse_args(extendable=False):
   # Parse command line arguments
-  p = argparse.ArgumentParser(add_help = not extendable)
+  p = argparse.ArgumentParser(add_help=not extendable)
   p.add_argument("--log", nargs="+", default=[],
                  choices=['all'] + _logging_categories,
                  metavar="CATEGORY",

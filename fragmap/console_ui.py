@@ -40,9 +40,11 @@ def print_fragmap(fragmap, do_color):
   max_actual_commit_width = max([len(first_line(p.header.message))
                                  for p in fragmap.patches()])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
-                                int(terminal_column_size/2),
-                                terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
+                                int(terminal_column_size / 2),
+                                terminal_column_size - (
+                                          hash_width + 1 + 1 + padded_matrix_width)))
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
+
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in range(len(matrix)):
@@ -52,10 +54,12 @@ def print_fragmap(fragmap, do_color):
       else:
         print(''.ljust(hash_width + 1 + max_commit_width), end='')
       print_matrix_action(i)
+
   def normal_layout(matrix, print_text_action, print_matrix_action):
     for r in range(len(matrix)):
       print_text_action(r)
       print_matrix_action(r)
+
   # Draw the text and matrix
   def print_line(r):
     cur_patch = fragmap.patches()[r].header
@@ -64,7 +68,7 @@ def print_fragmap(fragmap, do_color):
     # Pad short commit messages
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages
-    commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
+    commit_msg = commit_msg[0:min(max_commit_width, len(commit_msg))]
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
     if do_color:

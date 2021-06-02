@@ -1,20 +1,20 @@
 #!/usr/bin/env python
-import itertools
+# encoding: utf-8
+
+import collections
 from dataclasses import dataclass
 from enum import Enum
 from pprint import pformat, pprint
-from typing import List, Dict, Type, TypeVar, Generic
+from typing import List, Dict, TypeVar, Generic
 
+from . import debug
 from .commitdiff import CommitDiff
+from .console_color import *
 from .datastructure_util import flatten, lzip
 from .graph import FileId, update_commit_diff, all_paths
 from .spg import Node
 from .stable_list_dict import StableListDict
-from .update_fragments import *
-from . import debug
-from .console_color import *
 
-import collections
 
 # Hierarchy:
 # AST
@@ -48,14 +48,16 @@ import collections
 def earliest_diff(node_lines):
   return min([nl._startdiff_i for nl in node_lines])
 
+
 CellType = TypeVar('CellType')
+
 
 class Matrix(Generic[CellType], List[List[CellType]]):
   def _transpose(self):
     if 1 != len(list(set([len(col) for col in self]))):
       debug.get('matrix').critical(f"All rows/columns are not equally long: \n"
                                    f"{pformat(self)}")
-      assert(False)
+      assert (False)
     return list(zip(*self))
 
   def column_major(self):
@@ -82,9 +84,9 @@ class RowMajorMatrix(Matrix[CellType]):
 
 
 class CellKind(Enum):
-  NO_CHANGE=100
-  CHANGE=101
-  BETWEEN_CHANGES=102
+  NO_CHANGE = 100
+  CHANGE = 101
+  BETWEEN_CHANGES = 102
 
 
 @dataclass
@@ -107,7 +109,7 @@ class SingleNodeCell(Cell):
     if self.kind == CellKind.NO_CHANGE:
       return True
     if self.node != other.node:
-        return False
+      return False
     return True
 
   def __ne__(self, other):
@@ -157,7 +159,6 @@ def decorate_matrix(m: RowMajorMatrix[Cell]):
         last_patch[c] = r
 
 
-
 class ConnectionStatus(object):
   EMPTY = 1
   INFILL = 2
@@ -167,7 +168,9 @@ class ConnectionStatus(object):
 Status9Neighborhood = collections.namedtuple('Status9Neighborhood',
                                              ['up_left', 'up', 'up_right',
                                               'left', 'center', 'right',
-                                              'down_left', 'down', 'down_right'])
+                                              'down_left', 'down',
+                                              'down_right'])
+
 
 class ConnectedCell(Cell):
 
@@ -176,7 +179,7 @@ class ConnectedCell(Cell):
     self.changes = change_neighborhood
 
   def __repr__(self):
-    return "<ConnectedCell base=%s changes=%s>" %(self.base, self.changes)
+    return "<ConnectedCell base=%s changes=%s>" % (self.base, self.changes)
 
   def __eq__(self, other):
     if other is None:
@@ -196,7 +199,7 @@ class ColumnItem(object):
     self.inside = inside
 
   def __repr__(self):
-    return "<Cell inside=%s node_line=%s>" %(self.inside, self.node_line)
+    return "<Cell inside=%s node_line=%s>" % (self.inside, self.node_line)
 
 
 @dataclass
@@ -230,7 +233,8 @@ class Fragmap:
     return [
       GraphPath(path, file_id)
       # Sort by file
-      for file_id, spg in sorted(self.spgs.items(), key=lambda kv:kv[0].tuple())
+      for file_id, spg in
+      sorted(self.spgs.items(), key=lambda kv: kv[0].tuple())
       for path in all_paths(spg)
     ]
 
@@ -285,7 +289,7 @@ class Fragmap:
           return '.'
       if cell.kind == CellKind.NO_CHANGE:
         return '.'
-      assert False, "Unexpected cell kind: %s" %(cell.kind)
+      assert False, "Unexpected cell kind: %s" % (cell.kind)
 
     for r in range(n_rows):
       for c in range(n_cols):
@@ -325,6 +329,7 @@ class BriefFragmap:
     column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
     if debug.is_logging('matrix'):
       debug.get('matrix').debug(f"grouped columns: {pformat(column_groups)}")
+
     def multi_cell_kind(cells: List[Cell]):
       kinds = list(set([cell.kind for cell in cells]))
       if len(kinds) != 1:
@@ -368,12 +373,13 @@ class BriefFragmap:
           return '.'
       if cell.kind == CellKind.NO_CHANGE:
         return '.'
-      assert False, "Unexpected cell kind: %s" %(cell.kind)
+      assert False, "Unexpected cell kind: %s" % (cell.kind)
 
     for r in range(n_rows):
       for c in range(n_cols):
         m[r][c] = render_cell(matrix[r][c])
     return m
+
 
 def n_columns(matrix):
   if len(matrix) == 0:
@@ -384,6 +390,7 @@ def n_columns(matrix):
 def n_rows(matrix):
   return len(matrix)
 
+
 def in_range(matrix, r, c):
   if r < 0 or r >= n_rows(matrix):
     return False
@@ -391,21 +398,24 @@ def in_range(matrix, r, c):
     return False
   return True
 
+
 def equal_left_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c-1):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c - 1):
     return False
-  return matrix[r][c-1].node == matrix[r][c].node
+  return matrix[r][c - 1].node == matrix[r][c].node
 
 
 def equal_right_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c+1):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c + 1):
     return False
-  return matrix[r][c+1].node == matrix[r][c].node
+  return matrix[r][c + 1].node == matrix[r][c].node
+
 
 def change_at(matrix, r, c):
   if not in_range(matrix, r, c):
     return False
   return matrix[r][c].kind == CellKind.CHANGE
+
 
 def no_change_at(matrix, r, c):
   if not in_range(matrix, r, c):
@@ -430,10 +440,10 @@ class ConnectedFragmap(object):
     def create_cell(matrix, r, c):
       base_cell = matrix[r][c]
       change_center = not no_change_at(matrix, r, c)
-      change_up = not no_change_at(matrix, r-1, c)
-      change_down = not no_change_at(matrix, r+1, c)
-      change_left = change_at(matrix, r, c-1)
-      change_right = change_at(matrix, r, c+1)
+      change_up = not no_change_at(matrix, r - 1, c)
+      change_down = not no_change_at(matrix, r + 1, c)
+      change_left = change_at(matrix, r, c - 1)
+      change_right = change_at(matrix, r, c + 1)
       equal_left = equal_left_column(matrix, r, c)
       equal_right = equal_right_column(matrix, r, c)
       infill_up_left = equal_left and not no_change_at(matrix, r, c-1) and change_up and not no_change_at(matrix, r-1, c-1) and change_center
@@ -463,6 +473,7 @@ class ConnectedFragmap(object):
 
   def render_for_console(self, colorize):
     connection_matrix = self.generate_matrix()
+
     def create_cell_description(cell) -> List[List[str]]:
       def character(position, status) -> str:
         if status == ConnectionStatus.EMPTY:
@@ -474,7 +485,7 @@ class ConnectedFragmap(object):
         if position in ['up_left', 'up_right', 'down_left', 'down_right']:
           if status == ConnectionStatus.CONNECTION:
             # Should not happen
-            #assert False
+            # assert False
             return '!'
         if position in ['up', 'down']:
           if status == ConnectionStatus.CONNECTION:
@@ -499,9 +510,10 @@ class ConnectedFragmap(object):
                 return ANSI_BG_WHITE + ' ' + ANSI_RESET
               else:
                 return '#'
-        #assert False
+        # assert False
         # Should not happen
         return '!'
+
       return [[character('up_left', cell.changes.up_left),
                character('up', cell.changes.up),
                character('up_right', cell.changes.up_right)],
@@ -512,5 +524,6 @@ class ConnectedFragmap(object):
                character('down', cell.changes.down),
                character('down_right', cell.changes.down_right)]]
 
-    return flatten([[flatten(v) for v in lzip(*[create_cell_description(cell) for cell in row])]
+    return flatten([[flatten(v) for v in
+                     lzip(*[create_cell_description(cell) for cell in row])]
                     for row in connection_matrix])

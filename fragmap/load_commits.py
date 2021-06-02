@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 # Hierarchy:
 # AST
@@ -19,22 +20,21 @@
 #        _start                     .new_start
 #        _end                       .new_start + .new_lines
 
-import sys
-import re
+import json
+import os
 from typing import List
 
 import pygit2
-import json
-import os
 
-from .debug import *
 from .commitdiff import CommitDiff
 
 UNSTAGED_HEX = '0000000000000000000000000000000000000000'
 STAGED_HEX = '0000000100000000000000000000000000000000'
 
+
 def is_nullfile(fn):
   return fn == '/dev/null'
+
 
 def nonnull_file(delta):
   if not is_nullfile(delta.old_file.path):
@@ -73,33 +73,41 @@ class Range(object):
       other._start <= self._start <= other._end or \
       other._start <= self._end <= other._end
 
+
 def oldrange(fragment):
   return Range(fragment.old_start, fragment.old_lines)
 
+
 def newrange(fragment):
   return Range(fragment.new_start, fragment.new_lines)
+
 
 def binary_range_length(file_path):
   if is_nullfile(file_path):
     return 0
   return 1
 
+
 def binary_oldrange(patch):
-  assert(patch.delta.is_binary)
+  assert (patch.delta.is_binary)
   return Range(0, binary_range_length(patch.delta.old_file))
 
+
 def binary_newrange(patch):
-  assert(patch.delta.is_binary)
+  assert (patch.delta.is_binary)
   return Range(0, binary_range_length(patch.delta.new_file))
+
 
 def get_diff(repo: pygit2.Repository, commit, find_similar=True) -> pygit2.Diff:
   if isinstance(commit, pygit2.Commit):
-    diff = repo.diff(commit.parents[0], commit, context_lines=0, interhunk_lines=0)
+    diff = repo.diff(commit.parents[0], commit, context_lines=0,
+                     interhunk_lines=0)
   else:
     diff = commit.get_diff(repo, context_lines=0, interhunk_lines=0)
   if find_similar:
     diff.find_similar()
   return diff
+
 
 def hex_to_commit(repo, hex):
   if hex == STAGED_HEX:
@@ -108,26 +116,31 @@ def hex_to_commit(repo, hex):
     return Unstaged()
   return repo[hex]
 
+
 class BinaryLine(object):
   def __init__(self, content):
     self.origin = ''
     self.content = content
 
+
 class BinaryHunk(object):
   def __init__(self, patch_that_is_binary):
-    assert(patch_that_is_binary.delta.is_binary)
+    assert (patch_that_is_binary.delta.is_binary)
     delta = patch_that_is_binary.delta
     self.old_start = 0
     self.old_lines = binary_range_length(delta.old_file)
     self.new_start = 0
     self.new_lines = binary_range_length(delta.new_file)
-    self.lines = [BinaryLine(line) for line in patch_that_is_binary.text.splitlines()]
+    self.lines = [BinaryLine(line) for line in
+                  patch_that_is_binary.text.splitlines()]
+
 
 class FakeCommit(object):
   def __init__(self, hex):
     self.hex = hex
     self.message = ''
     # Add more fields here as required
+
 
 class Unstaged(FakeCommit):
   def __init__(self):
@@ -136,6 +149,7 @@ class Unstaged(FakeCommit):
 
   def get_diff(self, repo, **kwargs):
     return repo.diff(None, None, cached=False, **kwargs)
+
 
 class Staged(FakeCommit):
   def __init__(self):
@@ -147,8 +161,10 @@ class Staged(FakeCommit):
     # repo.diff(None, None, cached=True)
     return repo.index.diff_to_tree(repo.head.peel().tree, **kwargs)
 
+
 class CommitSelection(object):
-  def __init__(self, since_ref, until_ref, max_count, include_staged, include_unstaged):
+  def __init__(self, since_ref, until_ref, max_count, include_staged,
+               include_unstaged):
     self.start = since_ref
     self.end = until_ref
     self.include_staged = include_staged
@@ -183,12 +199,14 @@ class CommitSelection(object):
       add_if_nonempty(Unstaged())
     return commits
 
+
 class ExplicitCommitSelection(object):
   def __init__(self, commit_hex_list):
     self.commit_hexes = commit_hex_list
 
   def get_items(self, repo):
     return [hex_to_commit(repo, hex) for hex in self.commit_hexes]
+
 
 class CommitLoader(object):
   @staticmethod
@@ -199,9 +217,11 @@ class CommitLoader(object):
     repo = pygit2.Repository(repo_root)
     commits = commit_selection.get_items(repo)
     print('... Retrieving fragments       \r', end='')
-    commitdiffs = [CommitDiff(commit, get_diff(repo, commit)) for commit in commits]
+    commitdiffs = [CommitDiff(commit, get_diff(repo, commit)) for commit in
+                   commits]
     print('                               \r', end='')
     return commitdiffs
+
 
 class DictCoersionEncoder(json.JSONEncoder):
   def default(self, obj):
@@ -210,9 +230,12 @@ class DictCoersionEncoder(json.JSONEncoder):
     except TypeError:
       return vars(obj)
 
+
 def main():
   cl = CommitLoader()
-  print(CommitLoader.load(os.getcwd(), CommitSelection('HEAD~4', None, 4, True, True)))
+  print(CommitLoader.load(os.getcwd(),
+                          CommitSelection('HEAD~4', None, 4, True, True)))
+
 
 if __name__ == '__main__':
   debug.parse_args()

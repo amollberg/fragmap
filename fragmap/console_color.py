@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 ANSI_ESC = '\033'
 ANSI_BG_RED = ANSI_ESC + '[41m'

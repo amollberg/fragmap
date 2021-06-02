@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# encoding: utf-8
+
 # To be able to use the enclosing class type in class method type hints
 from __future__ import annotations
 
@@ -47,8 +49,8 @@ class Node:
   def active_binary(diff_delta: pygit2.DiffDelta, generation: int):
     return Node(
       DiffHunk.from_tup(
-        (0,0) if is_nullfile(diff_delta.old_file) else (1,1),
-        (0,0) if is_nullfile(diff_delta.new_file) else (1,1)
+        (0, 0) if is_nullfile(diff_delta.old_file) else (1, 1),
+        (0, 0) if is_nullfile(diff_delta.new_file) else (1, 1)
       ),
       generation,
       active=True)
@@ -155,14 +157,14 @@ class SPG:
     # {file_id}
     digraph G {{
     """ + \
-             '\n'.join([f"{name(start)} -> {name(end)};"
-                        for start, ends in self.items()
-                        for end in ends]) + \
-             """
-        s [shape=Mdiamond];
-        t [shape=Msquare];
-      }
-    """
+           '\n'.join([f"{name(start)} -> {name(end)};"
+                      for start, ends in self.items()
+                      for end in ends]) + \
+           """
+      s [shape=Mdiamond];
+      t [shape=Msquare];
+    }
+  """
 
   def pformat(self):
     attributes = '\n'.join([

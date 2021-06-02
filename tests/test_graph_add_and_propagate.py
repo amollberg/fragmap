@@ -1,11 +1,12 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
 import unittest
 from math import inf
 
-from fragmap.spg import DiffHunk, Node, CommitNodes
-
+from fragmap.graph import add_and_propagate
 from fragmap.span import Span
-
-from fragmap.graph import DiffSpan, add_and_propagate
+from fragmap.spg import DiffHunk, Node, CommitNodes
 
 
 class GraphAddAndPropagateTest(unittest.TestCase):
@@ -98,12 +99,13 @@ class GraphAddAndPropagateTest(unittest.TestCase):
                              actual: CommitNodes):
     self.assertEqual(expected.nodes, actual.nodes)
 
+
 def node(active: bool, old: Span, new: Span, generation: int):
   if active:
-    return Node.active(DiffHunk.from_tup(old.to_git(), new.to_git()), generation)
+    return Node.active(DiffHunk.from_tup(old.to_git(), new.to_git()),
+                       generation)
   else:
     return Node.inactive(old.to_git(), new.to_git(), generation)
-
 
 
 if __name__ == '__main__':

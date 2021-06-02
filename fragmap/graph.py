@@ -1,11 +1,14 @@
 #!/usr/bin/env python
+# encoding: utf-8
+
 # To be able to use the enclosing class type in class method type hints
 from __future__ import annotations
 
 from bisect import bisect_right
 from dataclasses import dataclass
-from typing import List, Dict, Union, Tuple
 from pprint import pprint, pformat
+from typing import List, Dict, Union, Tuple
+
 import pygit2
 from pygit2 import DiffHunk
 
@@ -175,11 +178,13 @@ class DiffSpan:
     return DiffSpan(old=Span.from_old(hunk),
                     new=Span.from_new(hunk))
 
+
 @dataclass
 class RowLutEntry:
   old: int
   new: int
   start_of_change: bool
+
 
 @dataclass
 class RowLut:
@@ -297,6 +302,7 @@ def add_and_propagate(prev_commit: CommitNodes,
     new_spans = moved_span(commit, prev_span)
     return [Node.inactive(prev_span.to_git(), new_span.to_git(), generation)
             for new_span in new_spans]
+
   propagated = [span
                 for prev_node in prev_commit.nodes
                 for span in propagate(prev_node)]
@@ -364,7 +370,7 @@ def update_file(file_spg: SPG,
     nodes_by_old = [Node.active_binary(filepatch.delta, generation)]
   else:
     nodes_by_old = sorted([Node.active(diff_hunk, generation)
-                             for diff_hunk in filepatch.hunks],
+                           for diff_hunk in filepatch.hunks],
                           key=node_by_old)
   prev_nodes_by_new = sorted([start for start, ends in file_spg.items()
                               if SINK in ends],

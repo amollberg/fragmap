@@ -1,6 +1,9 @@
 #!/usr/bin/env python
+# encoding: utf-8
+
 # To be able to use the enclosing class type in class method type hints
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -52,8 +55,8 @@ class Span:
 
   def overlap(self, other: Span) -> Overlap:
     if (
-      self.start == other.start or
-      self.end == other.end
+            self.start == other.start or
+            self.end == other.end
     ) or not (
             self.end <= other.start or
             other.end <= self.start

@@ -9,4 +9,4 @@ class CommitDiff(object):
     self.filepatches = [patch for patch in pygit_diff]
 
   def __repr__(self):
-    return "<CommitDiff: %s %s>" %(self.header, self.filepatches)
+    return "<CommitDiff: %s %s>" % (self.header, self.filepatches)

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
 import unittest
 
 from fragmap.graph import Overlap
@@ -36,7 +39,6 @@ class SpanTest(unittest.TestCase):
   def overlap(self, a, b):
     self.assertEqual(a.overlap(b), b.overlap(a))
     return a.overlap(b)
-
 
 
 if __name__ == '__main__':

@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
 import unittest
 from math import inf
 
+from fragmap.graph import moved_span
 from fragmap.span import Span
 from fragmap.spg import DiffHunk, Node, CommitNodes
-from fragmap.graph import moved_span
 
 
 class MovedSpanTest(unittest.TestCase):

@@ -1,19 +1,22 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
-from fragmap.commitdiff import CommitDiff
-from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
-from fragmap.generate_matrix import Fragmap, BriefFragmap, CellKind
-from infrastructure import find_commit_with_message, stage_all_changes, reset_hard
-import fragmap.debug as debug
-
-import unittest
-from mock import Mock
 import os
+import unittest
+
+from infrastructure import find_commit_with_message, stage_all_changes, \
+  reset_hard
+from mock import Mock
+
+import fragmap.debug as debug
+from fragmap.generate_matrix import Fragmap, BriefFragmap, CellKind
+from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 DIFF_DIR = os.path.join(TEST_DIR, 'diffs')
 
 debug.set_logging_categories('all')
+
 
 def read_diff(filename):
   filepath = os.path.join(TEST_DIR, 'diffs', filename)
@@ -36,26 +39,31 @@ def render_matrix_for_test(matrix):
       return '^'
     if cell.kind == CellKind.NO_CHANGE:
       return '.'
-    assert False, "Unexpected cell kind: %s" %(cell.kind)
+    assert False, "Unexpected cell kind: %s" % (cell.kind)
 
   for r in range(n_rows):
     for c in range(n_cols):
       m[r][c] = render_cell(matrix[r][c])
   return m
 
+
 START = 0
 END = 1
 
+
 def MockDiffFile(path):
   return Mock(path=path)
+
 
 def MockDiffDelta(old_file_path, new_file_path):
   return Mock(old_file=MockDiffFile(old_file_path),
               new_file=MockDiffFile(new_file_path),
               is_binary=False)
 
+
 def MockDiffLine(content):
   return Mock(content=content)
+
 
 def MockDiffHunk(old_start_and_lines, new_start_and_lines, mocklines):
   old_start, old_lines = old_start_and_lines
@@ -66,14 +74,16 @@ def MockDiffHunk(old_start_and_lines, new_start_and_lines, mocklines):
               new_start=new_start,
               new_lines=new_lines)
 
+
 def MockPatch(mockdelta, mockhunks):
   return Mock(delta=mockdelta, hunks=mockhunks)
+
 
 def MockCommit(hex, message):
   return Mock(hex=hex, message=message)
 
-class Test(unittest.TestCase):
 
+class Test(unittest.TestCase):
   # Append instead of replace default assertion failure message
   longMessage = True
 
@@ -247,7 +257,6 @@ class Test(unittest.TestCase):
                            ['.#',
                             '#.'])
 
-
   def test_030_brief(self):
     self.check_diff_brief('030-addmod-create-with-ab',
                           ['#'])
@@ -264,7 +273,7 @@ class Test(unittest.TestCase):
                             '032-addmod-change-bc-to-xy'],
                            ['##.',
                             '.^#',
-                           '.##'])
+                            '.##'])
 
   def test_030_033_brief(self):
     self.check_diffs_brief(['030-addmod-create-with-ab',
@@ -297,12 +306,12 @@ class Test(unittest.TestCase):
                             '....#'])
 
   def test_070_072_brief(self):
-      self.check_diffs_brief(['070-add-X-to-D',
-                              '071-add-X-to-A',
-                              '072-add-X-to-F'],
-                             ['.#.',
-                              '#..',
-                              '..#'])
+    self.check_diffs_brief(['070-add-X-to-D',
+                            '071-add-X-to-A',
+                            '072-add-X-to-F'],
+                           ['.#.',
+                            '#..',
+                            '..#'])
 
   def test_110_111_brief(self):
     self.check_diffs_brief(['110-realdiff-newfilebug-addfile',
@@ -363,7 +372,7 @@ class Test(unittest.TestCase):
     file_path = os.path.join(repo_path, filename)
     with open(file_path, 'w', newline='\n') as f:
       for line in lines:
-        print ("to file", file_path, "writing '", line, "'")
+        print("to file", file_path, "writing '", line, "'")
         f.write(line + '\n')
 
   def staged_change(self, filename, lines):
@@ -408,7 +417,6 @@ class Test(unittest.TestCase):
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
-
   def check_diffs_brief(self, commit_messages, matrix):
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
@@ -423,7 +431,8 @@ class Test(unittest.TestCase):
   def check_matrix(self, matrix, reference):
     joined_matrix = '\n'.join([''.join(row) for row in matrix])
     reference = '\n'.join(reference)
-    debug.get('test').debug("Actual: \n%s \nReference: \n%s", joined_matrix, reference)
+    debug.get('test').debug("Actual: \n%s \nReference: \n%s", joined_matrix,
+                            reference)
     self.assertEqual(joined_matrix, reference)
 
   def check_no_exceptions(self, commit_messages):
