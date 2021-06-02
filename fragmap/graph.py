@@ -2,19 +2,19 @@
 # To be able to use the enclosing class type in class method type hints
 from __future__ import annotations
 
-import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 
 from math import inf
-from typing import List, Dict, Type, Union
+from typing import List, Dict
 from pprint import pprint, pformat
 
 import pygit2
-from pygit2 import Oid, DiffHunk
+from pygit2 import DiffHunk
 
 from fragmap.commitdiff import CommitDiff
-from fragmap.load_commits import is_nullfile
+from fragmap.span import Span, Overlap
+from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, SOURCE
 from . import debug
 
 
@@ -42,61 +42,6 @@ class DiffLine:
 
 
 @dataclass(frozen=True)
-class Node:
-  hunk: Union[pygit2.DiffHunk, DiffHunk]
-  generation: int
-  active: bool
-
-  @staticmethod
-  def active(diff_hunk: pygit2.DiffHunk, generation: int):
-    return Node(diff_hunk, generation, active=True)
-
-  @staticmethod
-  def active_binary(diff_delta: pygit2.DiffDelta, generation: int):
-    return Node(
-      DiffHunk.from_tup(
-        (0,0) if is_nullfile(diff_delta.old_file) else (1,1),
-        (0,0) if is_nullfile(diff_delta.new_file) else (1,1)
-      ),
-      generation,
-      active=True)
-
-  @staticmethod
-  def inactive(old_start_and_lines, new_start_and_lines, generation: int):
-    return Node(
-      DiffHunk.from_tup(old_start_and_lines, new_start_and_lines),
-      generation,
-      active=False)
-
-  @staticmethod
-  def propagated(old_node: Node, generation: int):
-    return Node(
-      DiffHunk.from_tup(
-        (old_node.hunk.new_start, old_node.hunk.new_lines),
-        (old_node.hunk.new_start, old_node.hunk.new_lines)),
-      generation,
-      active=False)
-
-
-@dataclass(frozen=True)
-class DiffHunk:
-  old_start: int
-  old_lines: int
-  new_start: int
-  new_lines: int
-  lines: str = dataclasses.field(default_factory=lambda: tuple())
-
-  @staticmethod
-  def from_tup(old_start_and_lines, new_start_and_lines):
-    old_start, old_lines = old_start_and_lines
-    new_start, new_lines = new_start_and_lines
-    return DiffHunk(old_start=old_start,
-                    old_lines=old_lines,
-                    new_start=new_start,
-                    new_lines=new_lines)
-
-
-@dataclass(frozen=True)
 class Patch:
   delta: DiffDelta
   hunks: list[DiffHunk]
@@ -110,136 +55,6 @@ class Diff(list):
 class Commit:
   hex: str
   message: str
-
-class Overlap(Enum):
-  NO_OVERLAP = 0
-  POINT_OVERLAP = 1
-  INTERVAL_OVERLAP = 2
-
-@dataclass(frozen=True)
-class Span:
-  # Inclusive
-  start: int
-  # Exclusive
-  end: int
-
-  @staticmethod
-  def from_old(diff_hunk: DiffHunk):
-    start = diff_hunk.old_start
-    if diff_hunk.old_lines == 0:
-      start += 1
-    end = start + diff_hunk.old_lines
-    return Span(start, end)
-
-  @staticmethod
-  def from_new(diff_hunk: DiffHunk):
-    start = diff_hunk.new_start
-    if diff_hunk.new_lines == 0:
-      start += 1
-    end = start + diff_hunk.new_lines
-    return Span(start, end)
-
-  def is_empty(self):
-    return self.start == self.end
-
-  def adjacent_up_to(self, new_end):
-    return Span(self.end, new_end)
-
-  def adjacent_down_to(self, new_start):
-    return Span(new_start, self.start)
-
-  def to_git(self):
-    if self.start == self.end:
-      return [self.start - 1, 0]
-    return [self.start, self.end - self.start]
-
-  def overlap(self, other: Span) -> Overlap:
-    if (
-      self.start == other.start or
-      self.end == other.end
-    ) or not (
-            self.end <= other.start or
-            other.end <= self.start
-    ):
-      if self.is_empty() or other.is_empty():
-        return Overlap.POINT_OVERLAP
-      else:
-        return Overlap.INTERVAL_OVERLAP
-    else:
-      return Overlap.NO_OVERLAP
-
-SOURCE = Node.inactive((0, 0), (0, inf), -1)
-SINK = Node.inactive((0, inf), (0, 0), inf)
-
-
-def empty_spg() -> SPG:
-  return SPG({
-    SOURCE: [SINK],
-  }, downstream_from_active={
-    SOURCE: False
-  })
-
-
-def to_dot(spg: SPG, file_id: FileId):
-  def name(node):
-    if node == SOURCE:
-      return "s"
-    if node == SINK:
-      return "t"
-
-    prefix = ""
-    if node.active:
-      prefix += "A"
-    if spg.downstream_from_active[node]:
-      prefix += "d"
-    if prefix:
-      prefix = f"_{prefix}_"
-    old = Span.from_old(node.hunk)
-    new = Span.from_new(node.hunk)
-    return f"{prefix}n{node.generation}_" \
-           f"{old.start}_{old.end}_" \
-           f"{new.start}_{new.end}"
-
-  return f"""
-  # {file_id}
-  digraph G {{
-""" + \
-         '\n'.join([f"{name(start)} -> {name(end)};"
-                    for start, ends in spg.items()
-                    for end in ends]) + \
-         """
-    s [shape=Mdiamond];
-    t [shape=Msquare];
-  }
-"""
-
-
-def register(spg: SPG, prev_node, node):
-  if prev_node not in spg.nodes():
-    spg.graph[prev_node] = []
-  spg.graph[prev_node] = [item for item in spg.graph[prev_node]
-                          if item != SINK]
-  spg.graph[prev_node].append(node)
-  spg.propagate_active(prev_node, node)
-
-
-@dataclass
-class SPG:
-  graph: Dict[Node, List[Node]]
-  downstream_from_active: Dict[Node, bool] = dataclasses.field(default_factory=lambda: {})
-
-  def propagate_active(self, prev_node, node):
-    if not prev_node in self.downstream_from_active:
-      self.downstream_from_active[prev_node] = prev_node.active
-    if not node in self.downstream_from_active:
-      self.downstream_from_active[node] = node.active
-    self.downstream_from_active[node] |= self.downstream_from_active[prev_node]
-
-  def nodes(self):
-    return self.graph.keys()
-
-  def items(self):
-    return self.graph.items()
 
 
 def add_on_top_of(
@@ -260,7 +75,7 @@ def add_on_top_of(
       debug.get('update').debug(
         f"add_if_interval_overlap on {prev_range}? {do_register}")
     if do_register:
-      register(spg, prev_node, node)
+      spg.register(prev_node, node)
     return do_register
 
   def add_unless_point_to_downstream_active(prev_node):
@@ -274,7 +89,7 @@ def add_on_top_of(
       debug.get('update').debug(
         f"add_unless_point_to_downstream_active on {prev_range}? {do_register}")
     if do_register:
-      register(spg, prev_node, node)
+      spg.register(prev_node, node)
     return do_register
 
   def add_unless_point_to_active(prev_node):
@@ -288,7 +103,7 @@ def add_on_top_of(
       debug.get('update').debug(
         f"add_unless_point_to_active on {prev_range}? {do_register}")
     if do_register:
-      register(spg, prev_node, node)
+      spg.register(prev_node, node)
     return do_register
 
   def add_if_to_inactive(prev_node):
@@ -300,7 +115,7 @@ def add_on_top_of(
       debug.get('update').debug(
         f"add_if_to_inactive on {prev_range}? {do_register}")
     if do_register:
-      register(spg, prev_node, node)
+      spg.register(prev_node, node)
     return do_register
 
   def add_if_overlap(prev_node):
@@ -311,7 +126,7 @@ def add_on_top_of(
       debug.get('update').debug(
         f"add_if_overlap on {prev_range}? {do_register}")
     if do_register:
-      register(spg, prev_node, node)
+      spg.register(prev_node, node)
     return do_register
 
   if debug.is_logging('update'):
@@ -398,8 +213,8 @@ def update_dangling(file_spg: SPG,
         debug.get('update').debug(
           f"updating dangling to generation {generation}:\n"
           f" {pformat(prev_node)}")
-      register(file_spg, prev_node, propagated)
-      register(file_spg, propagated, SINK)
+      file_spg.register(prev_node, propagated)
+      file_spg.register(propagated, SINK)
 
 
 def update_unchanged_file(file_spg: SPG, generation):
@@ -455,15 +270,6 @@ def update_file(file_spg: SPG,
 
   debug.get('update').debug("------------------ done update_file")
   return file_spg
-
-
-@dataclass(frozen=True)
-class FileId:
-  commit: int
-  path: str
-
-  def tuple(self):
-    return tuple([self.path, self.commit])
 
 
 def update_commit_diff(
@@ -546,7 +352,7 @@ def update(spgs: Dict[FileId, SPG],
       debug.get('update_files').debug(
         f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
     if original_file_id not in spgs:
-      spgs[original_file_id] = empty_spg()
+      spgs[original_file_id] = SPG.empty()
       file_spg = spgs[original_file_id]
       # Create nodes for older commits where the file did not exist
       # yet (=unchanged)
@@ -606,7 +412,7 @@ def main():
   for i, diff in enumerate(diffs):
     update(spgs, files, diff, i)
     for file_id, spg in spgs.items():
-      print(to_dot(spg, file_id))
+      print(spg.to_dot(file_id))
     print("-------")
 
   pprint(files)

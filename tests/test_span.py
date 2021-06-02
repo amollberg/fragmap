@@ -1,6 +1,7 @@
 import unittest
 
-from fragmap.graph import Span, Overlap
+from fragmap.graph import Overlap
+from fragmap.span import Span
 
 
 class SpanTest(unittest.TestCase):

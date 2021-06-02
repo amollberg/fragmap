@@ -6,7 +6,8 @@ from pprint import pformat, pprint
 from typing import List, Dict, Type, TypeVar, Generic
 
 from .commitdiff import CommitDiff
-from .graph import FileId, Node, update_commit_diff, to_dot, all_paths
+from .graph import FileId, update_commit_diff, all_paths
+from .spg import Node
 from .stable_list_dict import StableListDict
 from .update_fragments import *
 from . import debug
@@ -206,7 +207,7 @@ class Fragmap:
       update_commit_diff(spgs, files, diff, i)
       if debug.is_logging('update'):
         for file_id, spg in spgs.items():
-          debug.get('update').debug(to_dot(spg, file_id))
+          debug.get('update').debug(spg.to_dot(file_id))
         debug.get('update').debug("-------")
 
     return Fragmap(diffs, spgs)
