@@ -6,14 +6,7 @@ from backports.shutil_get_terminal_size import get_terminal_size
 from fragmap.common_ui import first_line
 from fragmap.generate_matrix import ConnectedFragmap
 from .console_color import *
-
-
-
-def lzip(*args):
-  """
-  zip(...) but returns list of lists instead of list of tuples
-  """
-  return [list(el) for el in zip(*args)]
+from .datastructure_util import lzip
 
 
 def filter_consecutive_equal_columns(char_matrix):
@@ -44,11 +37,14 @@ def print_fragmap(fragmap, do_color):
     reported_terminal_column_size = 80
   # Note: Subtracting two because ConEmu/Cmder line wraps two columns before
   terminal_column_size = reported_terminal_column_size - 2
-  max_actual_commit_width = max([len(first_line(p.header.message)) for p in fragmap.patches])
+  max_actual_commit_width = max([len(first_line(p.header.message))
+                                 for p in fragmap.patches()])
   max_commit_width = max(0, min(max_actual_commit_width + 1,
-                                int(terminal_column_size/2),
-                                terminal_column_size - (hash_width + 1 + 1 + padded_matrix_width)))
+                                int(terminal_column_size / 2),
+                                terminal_column_size - (
+                                          hash_width + 1 + 1 + padded_matrix_width)))
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
+
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
     for i in range(len(matrix)):
@@ -58,19 +54,21 @@ def print_fragmap(fragmap, do_color):
       else:
         print(''.ljust(hash_width + 1 + max_commit_width), end='')
       print_matrix_action(i)
+
   def normal_layout(matrix, print_text_action, print_matrix_action):
     for r in range(len(matrix)):
       print_text_action(r)
       print_matrix_action(r)
+
   # Draw the text and matrix
   def print_line(r):
-    cur_patch = fragmap.patches[r].header
+    cur_patch = fragmap.patches()[r].header
     commit_msg = first_line(cur_patch.message)
     hash = cur_patch.hex
     # Pad short commit messages
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages
-    commit_msg = commit_msg[0:min(max_commit_width,len(commit_msg))]
+    commit_msg = commit_msg[0:min(max_commit_width, len(commit_msg))]
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
     if do_color:

@@ -2,30 +2,28 @@
 # encoding: utf-8
 
 
-from fragmap.generate_matrix import Fragmap, Cell, BriefFragmap, ConnectedFragmap
-from fragmap.web_ui import open_fragmap_page, start_fragmap_server
-from fragmap.console_ui import print_fragmap
+import argparse
+import os
+
 from fragmap.console_color import ANSI_UP
+from fragmap.console_ui import print_fragmap
+from fragmap.generate_matrix import ConnectedFragmap, Fragmap, BriefFragmap
 from fragmap.load_commits import CommitSelection, CommitLoader
+from fragmap.web_ui import open_fragmap_page, start_fragmap_server
+from getch.getch import getch
 from . import debug
 
-import argparse
-import copy
-import os
-import fileinput
-from getch.getch import getch
 
-import json
-
-def make_fragmap(diff_list, brief=False, infill=False):
+def make_fragmap(diff_list, brief=False, infill=False) -> Fragmap:
   fragmap = Fragmap.from_diffs(diff_list)
   # with open('fragmap_ast.json', 'wb') as f:
   #   json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
   if brief:
-    fragmap = BriefFragmap.group_by_patch_connection(fragmap)
+    fragmap = BriefFragmap(fragmap)
   if infill:
     fragmap = ConnectedFragmap(fragmap)
   return fragmap
+
 
 def main():
   if 'FRAGMAP_DEBUG' in os.environ:
@@ -38,12 +36,15 @@ def main():
   argparser = argparse.ArgumentParser(prog='fragmap',
                                       description='Visualize a timeline of Git commit changes on a grid',
                                       parents=parent_parsers)
-  inspecarg = argparser.add_argument_group('input', 'Specify the input commits or patch file')
-  inspecarg.add_argument('-u', '--until', metavar='END_COMMIT', action='store', required=False, dest='until',
+  inspecarg = argparser.add_argument_group('input',
+                                           'Specify the input commits or patch file')
+  inspecarg.add_argument('-u', '--until', metavar='END_COMMIT', action='store',
+                         required=False, dest='until',
                          help='Which commit to show until, inclusive.')
   inspecarg.add_argument('-n', metavar='NUMBER_OF_COMMITS', action='store',
                          help='How many previous commits to show. Uncommitted changes are shown in addition to these.')
-  inspecarg.add_argument('-s', '--since', metavar='START_COMMIT', action='store',
+  inspecarg.add_argument('-s', '--since', metavar='START_COMMIT',
+                         action='store',
                          help='Which commit to start showing from, exclusive.')
   argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
@@ -68,9 +69,11 @@ def main():
     max_count = 3
   lines_printed = [0]
   columns_printed = [0]
+
   def serve():
     def erase_current_line():
       print('\r' + ' ' * columns_printed[0] + '\r', end='')
+
     # Make way for status updates from below operations
     erase_current_line()
     selection = CommitSelection(since_ref=args.since,
@@ -91,6 +94,7 @@ def main():
     fm = make_fragmap(diff_list, not is_full, False)
     print('                      \r', end='')
     return fm
+
   fragmap = serve()
   if args.web:
     if args.live:
@@ -98,19 +102,18 @@ def main():
     else:
       open_fragmap_page(fragmap, args.live)
   else:
-    lines_printed[0], columns_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+    lines_printed[0], columns_printed[0] = print_fragmap(fragmap,
+                                                         do_color=not args.no_color)
     if args.live:
       while True:
         print('Press Enter to refresh', end='')
-        import sys
         key = getch()
         if ord(key) != 0xd:
           break
         fragmap = serve()
-        lines_printed[0], columns_printed[0] = print_fragmap(fragmap, do_color = not args.no_color)
+        lines_printed[0], columns_printed[0] = print_fragmap(fragmap,
+                                                             do_color=not args.no_color)
       print('')
-
-
 
 
 if __name__ == '__main__':

@@ -1,10 +1,20 @@
 #!/usr/bin/env python
-
-from .update_fragments import *
-from . import debug
-from .console_color import *
+# encoding: utf-8
 
 import collections
+from dataclasses import dataclass
+from enum import Enum
+from pprint import pformat, pprint
+from typing import List, Dict, TypeVar, Generic
+
+from . import debug
+from .commitdiff import CommitDiff
+from .console_color import *
+from .datastructure_util import flatten, lzip
+from .graph import FileId, update_commit_diff, all_paths
+from .spg import Node
+from .stable_list_dict import StableListDict
+
 
 # Hierarchy:
 # AST
@@ -39,21 +49,92 @@ def earliest_diff(node_lines):
   return min([nl._startdiff_i for nl in node_lines])
 
 
-def print_node_line_relation_table(node_lines):
-  """
-  Print a grid of '=' indicating which node_line
-  is equal to which.
-  """
-  N = len(node_lines)
-  grid = [['.' for i in range(N)] for j in range(N)]
-  for r in range(N):
-    for c in range(N):
-      if node_lines[r] == node_lines[c]:
-        grid[r][c] = '='
-  for row in grid:
-    print(''.join(row))
+CellType = TypeVar('CellType')
 
-def decorate_matrix(m):
+
+class Matrix(Generic[CellType], List[List[CellType]]):
+  def _transpose(self):
+    if 1 != len(list(set([len(col) for col in self]))):
+      debug.get('matrix').critical(f"All rows/columns are not equally long: \n"
+                                   f"{pformat(self)}")
+      assert (False)
+    return list(zip(*self))
+
+  def column_major(self):
+    if isinstance(self, ColumnMajorMatrix):
+      return self
+
+    if isinstance(self, RowMajorMatrix):
+      return ColumnMajorMatrix(self._transpose())
+
+  def row_major(self):
+    if isinstance(self, RowMajorMatrix):
+      return self
+
+    if isinstance(self, ColumnMajorMatrix):
+      return RowMajorMatrix(self._transpose())
+
+
+class ColumnMajorMatrix(Matrix[CellType]):
+  pass
+
+
+class RowMajorMatrix(Matrix[CellType]):
+  pass
+
+
+class CellKind(Enum):
+  NO_CHANGE = 100
+  CHANGE = 101
+  BETWEEN_CHANGES = 102
+
+
+@dataclass
+class Cell:
+  kind: CellKind
+
+
+@dataclass
+class SingleNodeCell(Cell):
+  file_id: FileId
+  node: Node = None
+
+  def __eq__(self, other):
+    if other is None:
+      return False
+    if self.kind != other.kind:
+      return False
+    if self.file_id != other.file_id:
+      return False
+    if self.kind == CellKind.NO_CHANGE:
+      return True
+    if self.node != other.node:
+      return False
+    return True
+
+  def __ne__(self, other):
+    return not (self == other)
+
+
+@dataclass
+class MultiNodeCell(Cell):
+  nodes: List[object]
+
+  def __eq__(self, other):
+    if other is None:
+      return False
+    if self.kind == other.kind:
+      if self.kind == CellKind.NO_CHANGE:
+        return True
+      if self.nodes == other.nodes:
+        return True
+    return False
+
+  def __ne__(self, other):
+    return not (self == other)
+
+
+def decorate_matrix(m: RowMajorMatrix[Cell]):
   debug.get('grid').debug("decorate_matrix")
   n_rows = len(m)
   if n_rows == 0:
@@ -64,75 +145,18 @@ def decorate_matrix(m):
   for r in range(n_rows):
     for c in range(n_cols):
       cell = m[r][c]
-      if cell.kind == Cell.CHANGE:
-        debug.get('grid').debug("last_patch %s %s %s", last_patch[c], c, r)
+      if cell.kind == CellKind.CHANGE:
+        if debug.is_logging('grid'):
+          debug.get('grid').debug("last_patch %s %s %s", last_patch[c], c, r)
         if last_patch[c] >= 0:
           # Mark the cells inbetween
           start = last_patch[c]
           end = r
           for i in range(start, end + 1):
             # If not yet decorated
-            if m[i][c].kind == Cell.NO_CHANGE:
-              m[i][c].kind = Cell.BETWEEN_CHANGES
+            if m[i][c].kind == CellKind.NO_CHANGE:
+              m[i][c].kind = CellKind.BETWEEN_CHANGES
         last_patch[c] = r
-
-
-
-# Group node lines that are equal, i.e. that at the first
-# common diff are at the same position and of the same kind.
-# As a note, at any subsequent diffs they will consequently be the same too.
-def group_fragment_bound_lines(node_lines):
-  node_lines = sorted(node_lines)
-  if debug.is_logging('grouping'):
-    print_node_line_relation_table(node_lines)
-  debug.get('sorting').debug("Sorted lines: %s", node_lines)
-  groups = []
-  for node_line in node_lines:
-    added = False
-    for group in groups:
-      if node_line == group[0]:
-        inter_diff_collision = False
-        for member in group:
-          if member._startdiff_i == node_line._startdiff_i \
-          and member._kind != node_line._kind:
-            inter_diff_collision = True
-            break
-        if not inter_diff_collision:
-          # Append to group
-          group += [node_line]
-          added = True
-          break
-    if not added:
-      # Create new group
-      groups += [[node_line]]
-  return groups
-
-
-class Cell(object):
-
-  NO_CHANGE=100
-  CHANGE=101
-  BETWEEN_CHANGES=102
-
-  def __init__(self, kind, node=None):
-    self.kind = kind
-    self.node = node
-
-  def __repr__(self):
-    return "<Cell kind=%s node=%s>" %(self.kind, self.node)
-
-  def __eq__(self, other):
-    if other is None:
-      return False
-    if self.kind == other.kind:
-      if self.kind == Cell.NO_CHANGE:
-        return True
-      if self.node == other.node:
-        return True
-    return False
-
-  def __ne__(self, other):
-    return not (self == other)
 
 
 class ConnectionStatus(object):
@@ -144,7 +168,9 @@ class ConnectionStatus(object):
 Status9Neighborhood = collections.namedtuple('Status9Neighborhood',
                                              ['up_left', 'up', 'up_right',
                                               'left', 'center', 'right',
-                                              'down_left', 'down', 'down_right'])
+                                              'down_left', 'down',
+                                              'down_right'])
+
 
 class ConnectedCell(Cell):
 
@@ -153,7 +179,7 @@ class ConnectedCell(Cell):
     self.changes = change_neighborhood
 
   def __repr__(self):
-    return "<ConnectedCell base=%s changes=%s>" %(self.base, self.changes)
+    return "<ConnectedCell base=%s changes=%s>" % (self.base, self.changes)
 
   def __eq__(self, other):
     if other is None:
@@ -168,81 +194,159 @@ class ConnectedCell(Cell):
 
 class ColumnItem(object):
 
-  def __init__(self, node_line, inside):
+  def __init__(self, node_line, inside: bool):
     self.node_line = node_line
     self.inside = inside
 
   def __repr__(self):
-    return "<Cell inside=%s node_line=%s>" %(self.inside, self.node_line)
+    return "<Cell inside=%s node_line=%s>" % (self.inside, self.node_line)
 
 
-class Fragmap():
+@dataclass
+class GraphPath:
+  nodes: List[Node]
+  file_id: FileId
 
-  def __init__(self, patches, grouped_node_lines):
-    self.patches = patches
-    self.grouped_node_lines = grouped_node_lines
-    debug.get('matrix').debug("Patches: %s", patches)
+
+@dataclass
+class Fragmap:
+  _patches: List[CommitDiff]
+  spgs: Dict[FileId, Dict[Node, List[Node]]]
 
   @staticmethod
-  def from_diffs(diffs):
-    node_lines = update_all_positions_to_latest(diffs)
-    grouped_lines = group_fragment_bound_lines(node_lines)
-    return Fragmap(diffs, grouped_lines)
+  def from_diffs(diffs: List[CommitDiff]):
+    files = {}
+    spgs = {}
+    for i, diff in enumerate(diffs):
+      update_commit_diff(spgs, files, diff, i)
+      if debug.is_logging('update'):
+        for file_id, spg in spgs.items():
+          debug.get('update').debug(spg.to_dot(file_id))
+        debug.get('update').debug("-------")
 
-  def get_n_patches(self):
-    return len(self.patches)
+    return Fragmap(diffs, spgs)
 
-  def get_patch(self, n):
-    return self.patches[n]
+  def patches(self):
+    return self._patches
 
-  def generate_column(self, col_index, prev_column=None):
-    c = col_index
-    n_rows = self.get_n_patches()
-    node_line_group = self.grouped_node_lines[c]
-    # Initialize inside_fragment
-    inside_fragment = prev_column
-    if prev_column is None:
-      if col_index <= 0:
-        inside_fragment = [None] * n_rows
-      else:
-        inside_fragment = self.generate_column(col_index - 1)
-    # For each row in the column
+  def paths(self) -> List[GraphPath]:
+    return [
+      GraphPath(path, file_id)
+      # Sort by file
+      for file_id, spg in
+      sorted(self.spgs.items(), key=lambda kv: kv[0].tuple())
+      for path in all_paths(spg)
+    ]
+
+  def _generate_columns(self) -> ColumnMajorMatrix:
+    paths = self.paths()
+    # Remove empty columns
+    paths = [path
+             for path in paths
+             if any([node.active for node in path.nodes])]
+    # All columns should be equally long
+    if 1 != len(list(set([len(col.nodes) for col in paths]))):
+      debug.get('matrix').critical(f"All columns are not equally long: \n"
+                                   f"{pformat(paths)}")
+      assert False
+    return ColumnMajorMatrix([
+      [SingleNodeCell(CellKind.CHANGE if node.active else CellKind.NO_CHANGE,
+                      path.file_id,
+                      node)
+       for node in path.nodes]
+      for path in paths
+    ])
+
+  def generate_matrix(self) -> RowMajorMatrix:
+    columns = self._generate_columns()
+    rows = columns.row_major()
+    m = RowMajorMatrix(rows[1:-1])
+    decorate_matrix(m)
+    return m
+
+  def render_for_console(self, colorize):
+    return self._render_for_console(self.generate_matrix(), colorize)
+
+  def _render_for_console(self, matrix: RowMajorMatrix[Cell], colorize: bool):
+    n_rows = len(matrix)
+    if n_rows == 0:
+      return []
+    n_cols = len(matrix[0])
+    m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
+
+    def render_cell(cell: SingleNodeCell):
+      if cell.kind == CellKind.CHANGE:
+        if colorize:
+          # Make background white
+          return ANSI_BG_WHITE + ' ' + ANSI_RESET
+        else:
+          return '#'
+      if cell.kind == CellKind.BETWEEN_CHANGES:
+        if colorize:
+          # Make background red
+          return ANSI_BG_RED + ' ' + ANSI_RESET
+        else:
+          return '.'
+      if cell.kind == CellKind.NO_CHANGE:
+        return '.'
+      assert False, "Unexpected cell kind: %s" % (cell.kind)
+
     for r in range(n_rows):
-      diff_i = r
-      debug.get('grid').debug("%d,%d: %s", r, c, node_line_group)
-      if True: #earliest_diff(node_line_group) <= diff_i:
-        for node_line in node_line_group:
-          # If node belongs in on this row
-          if node_line._startdiff_i == diff_i:
-            inside_fragment[r] = ColumnItem(node_line, node_line._kind == FragmentBoundNode.START)
-            debug.get('grid').debug("Setting inside_fragment = %s", inside_fragment)
-            # If it was updated to False:
-            if not inside_fragment[r].inside:
-              # False overrides True so that if start and end from same diff
-              # appear in same group we don't get stuck at True
-              break
-        debug.get('grid').debug("%d,%d: %d", r, c, inside_fragment[r])
-    return inside_fragment
+      for c in range(n_cols):
+        m[r][c] = render_cell(matrix[r][c])
+    return m
+
+  def str(self):
+    matrix = self.generate_matrix()
+    return '\n'.join([''.join(row) for row in matrix])
 
 
-  # Iterate over the list, placing markers at column i row j if i >= a start node of revision j and i < end node of same revision
-  def generate_matrix(self):
-    debug.get('matrix').debug("Grouped lines: %s", self.grouped_node_lines)
+@dataclass
+class BriefFragmap:
+  inner: Fragmap
 
-    n_rows = self.get_n_patches()
-    n_cols = len(self.grouped_node_lines)
-    debug.get('grid').debug("Matrix size: rows, cols: %d %d", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
-    prev_col = None
-    for c in range(n_cols):
-      column = self.generate_column(c, prev_col)
-      for r in range(n_rows):
-        if column[r] is not None and column[r].inside:
-          matrix[r][c].kind = Cell.CHANGE
-          matrix[r][c].node = column[r].node_line._nodehistory[r]
-      prev_col = column
-    decorate_matrix(matrix)
-    return matrix
+  def patches(self):
+    return self.inner.patches()
+
+  def generate_matrix(self) -> RowMajorMatrix:
+    full_matrix = self.inner.generate_matrix()
+    return BriefFragmap._group_by_patch_connection(
+      full_matrix.column_major()).row_major()
+
+  @staticmethod
+  def _group_by_patch_connection(columns: ColumnMajorMatrix[SingleNodeCell]) \
+          -> ColumnMajorMatrix:
+    def connection(column: List[Cell]):
+      return ''.join(['1' if r.kind == CellKind.CHANGE else '0'
+                      for r in column])
+
+    def groupby(l: List[List[Cell]], key) -> List[List[List[Cell]]]:
+      d = StableListDict()
+      for item in l:
+        d.add(key(item), item)
+      return [values for k, values in d.items()]
+
+    column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
+    if debug.is_logging('matrix'):
+      debug.get('matrix').debug(f"grouped columns: {pformat(column_groups)}")
+
+    def multi_cell_kind(cells: List[Cell]):
+      kinds = list(set([cell.kind for cell in cells]))
+      if len(kinds) != 1:
+        print("Cells have different kinds:", kinds)
+        pprint(cells)
+        assert False
+      return kinds[0]
+
+    def transpose(list_of_lists):
+      return list(zip(*list_of_lists))
+
+    return ColumnMajorMatrix([
+      [MultiNodeCell(multi_cell_kind(cell_group),
+                     [cell.node for cell in cell_group])
+       for cell_group in transpose(column_group)]
+      for column_group in column_groups
+    ])
 
   def render_for_console(self, colorize):
     return self._render_for_console(self.generate_matrix(), colorize)
@@ -254,100 +358,28 @@ class Fragmap():
     n_cols = len(matrix[0])
     m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
 
-    def render_cell(cell):
-      if cell.kind == Cell.CHANGE:
+    def render_cell(cell: MultiNodeCell):
+      if cell.kind == CellKind.CHANGE:
         if colorize:
           # Make background white
           return ANSI_BG_WHITE + ' ' + ANSI_RESET
         else:
           return '#'
-      if cell.kind == Cell.BETWEEN_CHANGES:
+      if cell.kind == CellKind.BETWEEN_CHANGES:
         if colorize:
           # Make background red
           return ANSI_BG_RED + ' ' + ANSI_RESET
         else:
           return '.'
-      if cell.kind == Cell.NO_CHANGE:
+      if cell.kind == CellKind.NO_CHANGE:
         return '.'
-      assert False, "Unexpected cell kind: %s" %(cell.kind)
+      assert False, "Unexpected cell kind: %s" % (cell.kind)
 
     for r in range(n_rows):
       for c in range(n_cols):
         m[r][c] = render_cell(matrix[r][c])
     return m
 
-  def str(self):
-    matrix = self.generate_matrix()
-    return '\n'.join([''.join(row) for row in matrix])
-
-class BriefFragmap(object):
-
-  def __init__(self, fragmap, connections, key_index):
-    assert isinstance(fragmap, Fragmap)
-    self.fragmap = fragmap
-    self.connections = connections
-    self.key_index = key_index
-    self.patches = fragmap.patches
-
-  @staticmethod
-  def group_by_patch_connection(fragmap):
-    def patch_connection_key(column):
-      inside = [it.inside if it is not None else False for it in column]
-      if inside == [False] * fragmap.get_n_patches():
-        # Skip empty columns
-        return False, None
-      # Convert from list of True,False to string of 1,0
-      return True, ''.join(['1' if b else '0' for b in inside])
-    return BriefFragmap(fragmap, *BriefFragmap._group_columns_by(fragmap, patch_connection_key))
-
-  @staticmethod
-  def group_by_fragment_connection(fragmap):
-    ## TODO: group all columns that have the same information, i.e. same diffs as well as same fragments
-    pass
-
-  @staticmethod
-  def _group_columns_by(fragmap, keyfunc):
-    groups = fragmap.grouped_node_lines
-    # connections : '01001000..010' -> [node, node, ..]
-    # The key strings are formatted such that
-    # character i is 1 if the node line group has a node with start from patch i, and
-    #                0 otherwise.
-    connections = {}
-    connections_key_index = []
-    prev_column = None
-    debug.get('matrix').debug("Group by connection: Before: %s", groups)
-    for c in range(len(groups)):
-      group = groups[c]
-      column = fragmap.generate_column(c, prev_column)
-      prev_column = column
-      valid, key = keyfunc(column)
-      if not valid:
-        continue
-      debug.get('matrix').debug('key: %s', key)
-      if key in list(connections.keys()):
-        # Append to existing dict entry
-        connections[key].extend(group)
-      else:
-        # Make a new entry in the dict
-        connections[key] = group
-        connections_key_index.append(key)
-    debug.get('matrix').debug("Group by connection: After: %s", connections)
-    return connections, connections_key_index
-
-  def generate_matrix(self):
-    n_rows = self.fragmap.get_n_patches()
-    n_cols = len(self.connections)
-    debug.get('grid').debug("Matrix size: rows, cols: %s %s", n_rows, n_cols)
-    matrix = [[Cell(Cell.NO_CHANGE) for _ in range(n_cols)] for _ in range(n_rows)]
-    for c in range(n_cols):
-      key = self.key_index[c]
-      for r in range(n_rows):
-        matrix[r][c].kind = Cell.CHANGE if key[r] == '1' else Cell.NO_CHANGE
-    decorate_matrix(matrix)
-    return matrix
-
-  def render_for_console(self, colorize):
-    return self.fragmap._render_for_console(self.generate_matrix(), colorize)
 
 def n_columns(matrix):
   if len(matrix) == 0:
@@ -358,6 +390,7 @@ def n_columns(matrix):
 def n_rows(matrix):
   return len(matrix)
 
+
 def in_range(matrix, r, c):
   if r < 0 or r >= n_rows(matrix):
     return False
@@ -365,39 +398,29 @@ def in_range(matrix, r, c):
     return False
   return True
 
+
 def equal_left_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c-1):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c - 1):
     return False
-  return matrix[r][c-1].node == matrix[r][c].node
+  return matrix[r][c - 1].node == matrix[r][c].node
 
 
 def equal_right_column(matrix, r, c):
-  if not in_range(matrix, r, c) or not in_range(matrix, r, c+1):
+  if not in_range(matrix, r, c) or not in_range(matrix, r, c + 1):
     return False
-  return matrix[r][c+1].node == matrix[r][c].node
+  return matrix[r][c + 1].node == matrix[r][c].node
+
 
 def change_at(matrix, r, c):
   if not in_range(matrix, r, c):
     return False
-  return matrix[r][c].kind == Cell.CHANGE
+  return matrix[r][c].kind == CellKind.CHANGE
+
 
 def no_change_at(matrix, r, c):
   if not in_range(matrix, r, c):
     return True
-  return matrix[r][c].kind == Cell.NO_CHANGE
-
-
-def lzip(*args):
-  """
-  zip(...) but returns list of lists instead of list of tuples
-  """
-  return [list(el) for el in zip(*args)]
-
-def flatten(list_of_lists):
-  """
-  Flatten list of lists into a list
-  """
-  return [el for inner in list_of_lists for el in inner]
+  return matrix[r][c].kind == CellKind.NO_CHANGE
 
 
 class ConnectedFragmap(object):
@@ -406,20 +429,21 @@ class ConnectedFragmap(object):
     self.fragmap = fragmap
     self.patches = fragmap.patches
 
-  def generate_matrix(self):
+  def generate_matrix(self) -> RowMajorMatrix:
     def status(connection=False, infill=False):
       if connection:
         return ConnectionStatus.CONNECTION
       if infill:
         return ConnectionStatus.INFILL
       return ConnectionStatus.EMPTY
+
     def create_cell(matrix, r, c):
       base_cell = matrix[r][c]
       change_center = not no_change_at(matrix, r, c)
-      change_up = not no_change_at(matrix, r-1, c)
-      change_down = not no_change_at(matrix, r+1, c)
-      change_left = change_at(matrix, r, c-1)
-      change_right = change_at(matrix, r, c+1)
+      change_up = not no_change_at(matrix, r - 1, c)
+      change_down = not no_change_at(matrix, r + 1, c)
+      change_left = change_at(matrix, r, c - 1)
+      change_right = change_at(matrix, r, c + 1)
       equal_left = equal_left_column(matrix, r, c)
       equal_right = equal_right_column(matrix, r, c)
       infill_up_left = equal_left and not no_change_at(matrix, r, c-1) and change_up and not no_change_at(matrix, r-1, c-1) and change_center
@@ -430,22 +454,28 @@ class ConnectedFragmap(object):
                                          up = status(connection=change_up and change_center),
                                          up_right = status(infill=infill_up_right),
                                          left = status(connection=equal_left and change_center and change_left, infill=infill_up_left),
-                                         center = status(connection=change_at(matrix, r, c), infill=matrix[r][c].kind == Cell.BETWEEN_CHANGES),
+                                         center = status(connection=change_at(matrix, r, c), infill=matrix[r][c].kind == CellKind.BETWEEN_CHANGES),
                                          right = status(connection=equal_right and change_center and change_right, infill=infill_up_right),
                                          down_left = status(infill=infill_down_left),
                                          down = status(connection=change_down and change_center),
                                          down_right = status(infill=infill_down_right),
       )
       return ConnectedCell(base_cell, change_neigh)
+
     base_matrix = self.fragmap.generate_matrix()
     cols = n_columns(base_matrix)
     rows = n_rows(base_matrix)
-    return [[create_cell(base_matrix, r, c) for c in range(cols)] for r in range(rows)]
+    return RowMajorMatrix([
+      [create_cell(base_matrix, r, c)
+       for c in range(cols)]
+      for r in range(rows)
+    ])
 
   def render_for_console(self, colorize):
     connection_matrix = self.generate_matrix()
-    def create_cell_description(cell):
-      def character(position, status):
+
+    def create_cell_description(cell) -> List[List[str]]:
+      def character(position, status) -> str:
         if status == ConnectionStatus.EMPTY:
           return ' '
         if status == ConnectionStatus.INFILL:
@@ -455,7 +485,7 @@ class ConnectedFragmap(object):
         if position in ['up_left', 'up_right', 'down_left', 'down_right']:
           if status == ConnectionStatus.CONNECTION:
             # Should not happen
-            #assert False
+            # assert False
             return '!'
         if position in ['up', 'down']:
           if status == ConnectionStatus.CONNECTION:
@@ -480,9 +510,10 @@ class ConnectedFragmap(object):
                 return ANSI_BG_WHITE + ' ' + ANSI_RESET
               else:
                 return '#'
-        #assert False
+        # assert False
         # Should not happen
         return '!'
+
       return [[character('up_left', cell.changes.up_left),
                character('up', cell.changes.up),
                character('up_right', cell.changes.up_right)],
@@ -493,5 +524,6 @@ class ConnectedFragmap(object):
                character('down', cell.changes.down),
                character('down_right', cell.changes.down_right)]]
 
-    return flatten([[flatten(v) for v in lzip(*[create_cell_description(cell) for cell in row])]
+    return flatten([[flatten(v) for v in
+                     lzip(*[create_cell_description(cell) for cell in row])]
                     for row in connection_matrix])

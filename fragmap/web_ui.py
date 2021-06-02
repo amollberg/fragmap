@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from yattag import Doc
-from .generate_matrix import Cell, BriefFragmap, ConnectedFragmap, ConnectedCell, ConnectionStatus
-from .http import start_server
-from .common_ui import first_line
-
 import os
 import re
-import io
+
+from yattag import Doc
+
+from .common_ui import first_line
+from .generate_matrix import CellKind, BriefFragmap, ConnectedFragmap, \
+  ConnectionStatus
+from .httphelper import start_server
 
 
 def nop():
@@ -18,30 +19,36 @@ def nop():
 def render_cell_graphics(tag, connected_cell, inner):
   kind = connected_cell.base.kind
   changes = connected_cell.changes
+
   def etag(*args, **kwargs):
     with tag(*args, **kwargs):
       pass
+
   def hideempty(status):
     if status == ConnectionStatus.EMPTY:
       return "invisible"
     return ""
+
   def passinfill(status):
     if status == ConnectionStatus.INFILL:
       return "visibility:hidden"
     return ""
+
   def activitymarker(status):
     if status == ConnectionStatus.CONNECTION:
       return "active"
     return ""
 
-  if kind != Cell.NO_CHANGE:
+  if kind != CellKind.NO_CHANGE:
     inner()
     with tag('div', klass="cell " + activitymarker(changes.center)):
       etag('div', klass="top " + hideempty(changes.up))
-      etag('div', klass="left " + hideempty(changes.left), style=passinfill(changes.left))
+      etag('div', klass="left " + hideempty(changes.left),
+           style=passinfill(changes.left))
       with tag('div', klass="inner", style=(passinfill(changes.center))):
         etag('div', klass="dot")
-      etag('div', klass="right " + hideempty(changes.right), style=passinfill(changes.right))
+      etag('div', klass="right " + hideempty(changes.right),
+           style=passinfill(changes.right))
       etag('div', klass="bottom " + hideempty(changes.down))
 
 
@@ -79,15 +86,16 @@ def make_fragmap_page(fragmap):
       with tag('div', klass='code'):
         if cell.base.node:
           text(str(cell.base.node))
-          for line in cell.base.node._fragment.lines:
+          for line in cell.base.node.hunk.lines:
             colorized_line(line)
+
     render_cell_graphics(tag, cell, inner)
 
   def get_first_filename(matrix, c):
     for r in range(len(matrix)):
       cell = matrix[r][c]
-      if cell.base.kind != Cell.NO_CHANGE:
-        return cell.base.node._filename
+      if cell.base.kind != CellKind.NO_CHANGE:
+        return cell.base.file_id.path
     return None
 
   def generate_first_filename_spans(matrix):
@@ -108,9 +116,11 @@ def make_fragmap_page(fragmap):
 
   def render_filename_start_row(filenames):
     for fn in filenames:
-      with tag('th', klass='filename_start', colspan=fn['span'], style='vertical-align: top; overflow: hidden'):
+      with tag('th', klass='filename_start', colspan=fn['span'],
+               style='vertical-align: top; overflow: hidden'):
         with tag('div', style="position: relative; width: inherit"):
-          with tag('div', style="overflow: hidden; position: absolute; right: 10px; width: 10000px; text-align: right"):
+          with tag('div',
+                   style="overflow: hidden; position: absolute; right: 10px; width: 10000px; text-align: right"):
             if fn['filename'] is not None:
               text(fn['filename'])
 
@@ -119,7 +129,6 @@ def make_fragmap_page(fragmap):
       if c == fn['start']:
         return 'filename_start '
     return ''
-
 
   def get_html():
     doc.asis('<!DOCTYPE html>')
@@ -143,7 +152,7 @@ def make_fragmap_page(fragmap):
               if len(matrix) > 0:
                 render_filename_start_row(start_filenames)
             for r in range(len(matrix)):
-              cur_patch = fragmap.patches[r].header
+              cur_patch = fragmap.patches()[r].header
               commit_msg = first_line(cur_patch.message)
               hash = cur_patch.hex
               with tag('tr'):
@@ -154,7 +163,8 @@ def make_fragmap_page(fragmap):
                   with tag('span', klass='commit_message'):
                     text(commit_msg)
                 for c in range(len(matrix[r])):
-                  with tag('td', klass=filename_header_td_class(start_filenames, c),
+                  with tag('td',
+                           klass=filename_header_td_class(start_filenames, c),
                            onclick="javascript:show(this)"):
                     render_cell(matrix[r][c], r, c)
         with tag('div', id='code_window'):
@@ -165,9 +175,11 @@ def make_fragmap_page(fragmap):
 
   return get_html()
 
+
 def start_fragmap_server(fragmap_callback):
   def html_callback():
     return make_fragmap_page(fragmap_callback())
+
   server = start_server(html_callback)
   address = 'http://%s:%s' % server.server_address
   os.startfile(address)
@@ -175,8 +187,8 @@ def start_fragmap_server(fragmap_callback):
   print("Press 'r' to re-launch the page")
   print('Press any other key to terminate')
   from getch.getch import getch
-  while(ord(getch()) == ord('r')):
-      os.startfile(address)
+  while (ord(getch()) == ord('r')):
+    os.startfile(address)
   server.shutdown()
 
 
@@ -313,13 +325,15 @@ def javascript():
     """
 
 
-
 def css():
-  cellwidth=25
-  scale=cellwidth/360.0
+  cellwidth = 25
+  scale = cellwidth / 360.0
+
   def scale_number(m):
     return str(int(m.group(1)) * scale)
+
   return re.sub(r'{{(\d+)}}', scale_number, raw_css())
+
 
 def raw_css():
   return \

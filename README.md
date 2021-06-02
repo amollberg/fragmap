@@ -17,7 +17,7 @@ See the help screen for command line options:
 
 - Git
 
-- Python 3.4 or later
+- Python 3.6 or later
 
 # Develop fragmap
 

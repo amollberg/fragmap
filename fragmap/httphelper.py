@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
 
 class HtmlHandler(BaseHTTPRequestHandler):
   def do_GET(self):
@@ -13,13 +15,16 @@ class HtmlHandler(BaseHTTPRequestHandler):
     self.end_headers()
     self.wfile.write(str.encode(html))
 
+
 def start_server(html_callback):
   # Port 0 means select an arbitrary unused port
   port = 0
   server = HTTPServer(('127.0.0.1', port), HtmlHandler)
   server.html_callback = html_callback
+
   def serve_requests():
     server.serve_forever()
+
   import threading
   threading.Thread(target=serve_requests).start()
   return server
