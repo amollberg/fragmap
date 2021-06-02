@@ -88,7 +88,7 @@ def make_fragmap_page(fragmap):
     for r in range(len(matrix)):
       cell = matrix[r][c]
       if cell.base.kind != CellKind.NO_CHANGE:
-        return cell.base.node._filename
+        return cell.base.file_id.path
     return None
 
   def generate_first_filename_spans(matrix):

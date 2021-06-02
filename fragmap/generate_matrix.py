@@ -94,17 +94,21 @@ class Cell:
 
 @dataclass
 class SingleNodeCell(Cell):
+  file_id: FileId
   node: Node = None
 
   def __eq__(self, other):
     if other is None:
       return False
-    if self.kind == other.kind:
-      if self.kind == CellKind.NO_CHANGE:
-        return True
-      if self.node == other.node:
-        return True
-    return False
+    if self.kind != other.kind:
+      return False
+    if self.file_id != other.file_id:
+      return False
+    if self.kind == CellKind.NO_CHANGE:
+      return True
+    if self.node != other.node:
+        return False
+    return True
 
   def __ne__(self, other):
     return not (self == other)
@@ -196,6 +200,12 @@ class ColumnItem(object):
 
 
 @dataclass
+class GraphPath:
+  nodes: List[Node]
+  file_id: FileId
+
+
+@dataclass
 class Fragmap:
   _patches: List[CommitDiff]
   spgs: Dict[FileId, Dict[Node, List[Node]]]
@@ -216,30 +226,31 @@ class Fragmap:
   def patches(self):
     return self._patches
 
-  def paths(self):
+  def paths(self) -> List[GraphPath]:
     return [
-      path
+      GraphPath(path, file_id)
       # Sort by file
-      for _, spg in sorted(self.spgs.items(), key=lambda kv:kv[0].tuple())
+      for file_id, spg in sorted(self.spgs.items(), key=lambda kv:kv[0].tuple())
       for path in all_paths(spg)
     ]
 
   def _generate_columns(self) -> ColumnMajorMatrix:
-    columns = self.paths()
+    paths = self.paths()
     # Remove empty columns
-    columns = [column
-               for column in columns
-               if any([node.active for node in column])]
+    paths = [path
+             for path in paths
+             if any([node.active for node in path.nodes])]
     # All columns should be equally long
-    if 1 != len(list(set([len(col) for col in columns]))):
+    if 1 != len(list(set([len(col.nodes) for col in paths]))):
       debug.get('matrix').critical(f"All columns are not equally long: \n"
-                                   f"{pformat(columns)}")
+                                   f"{pformat(paths)}")
       assert False
     return ColumnMajorMatrix([
       [SingleNodeCell(CellKind.CHANGE if node.active else CellKind.NO_CHANGE,
+                      path.file_id,
                       node)
-       for node in column]
-      for column in columns
+       for node in path.nodes]
+      for path in paths
     ])
 
   def generate_matrix(self) -> RowMajorMatrix:
