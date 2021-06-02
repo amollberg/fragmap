@@ -348,6 +348,13 @@ class Test(unittest.TestCase):
                             '^#',
                             '##'])
 
+  # === Exception tests on more complex commits ===
+
+  def test_1622573011(self):
+    self.check_no_exceptions(['Prepare for smarter propagation',
+                              'WIP: add_and_propagate',
+                              'Format graph.py'])
+
   # === Helper functions ===
 
   def unstaged_change(self, filename, lines):
@@ -370,31 +377,31 @@ class Test(unittest.TestCase):
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
     reset_hard(repo_path)
 
-  def check_diff(self, diff_filename, matrix):
+  def check_diff(self, commit_message, matrix):
     cl = CommitLoader()
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
-    commit_hex = find_commit_with_message(repo_path, diff_filename)
+    commit_hex = find_commit_with_message(repo_path, commit_message)
     diffs = cl.load(repo_path, ExplicitCommitSelection([commit_hex]))
     h = Fragmap.from_diffs(diffs)
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
-  def check_diff_brief(self, diff_filename, matrix):
+  def check_diff_brief(self, commit_message, matrix):
     cl = CommitLoader()
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
-    commit_hex = find_commit_with_message(repo_path, diff_filename)
+    commit_hex = find_commit_with_message(repo_path, commit_message)
     diffs = cl.load(repo_path, ExplicitCommitSelection([commit_hex]))
     h = BriefFragmap(Fragmap.from_diffs(diffs))
     actual_matrix = h.generate_matrix()
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
-  def check_diffs(self, diff_filenames, matrix):
+  def check_diffs(self, commit_messages, matrix):
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
-    commit_hexes = [find_commit_with_message(repo_path, diff_filename)
-                    for diff_filename in diff_filenames]
+    commit_hexes = [find_commit_with_message(repo_path, commit_message)
+                    for commit_message in commit_messages]
     cl = CommitLoader()
     diffs = cl.load(repo_path, ExplicitCommitSelection(commit_hexes))
     h = Fragmap.from_diffs(diffs)
@@ -402,11 +409,11 @@ class Test(unittest.TestCase):
     self.check_matrix(render_matrix_for_test(actual_matrix), matrix)
 
 
-  def check_diffs_brief(self, diff_filenames, matrix):
+  def check_diffs_brief(self, commit_messages, matrix):
     test_name = self.id().split('.')[-1]
     repo_path = os.path.join(DIFF_DIR, "build", test_name)
-    commit_hexes = [find_commit_with_message(repo_path, diff_filename)
-                    for diff_filename in diff_filenames]
+    commit_hexes = [find_commit_with_message(repo_path, commit_message)
+                    for commit_message in commit_messages]
     cl = CommitLoader()
     diffs = cl.load(repo_path, ExplicitCommitSelection(commit_hexes))
     h = BriefFragmap(Fragmap.from_diffs(diffs))
@@ -418,3 +425,13 @@ class Test(unittest.TestCase):
     reference = '\n'.join(reference)
     debug.get('test').debug("Actual: \n%s \nReference: \n%s", joined_matrix, reference)
     self.assertEqual(joined_matrix, reference)
+
+  def check_no_exceptions(self, commit_messages):
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, "build", test_name)
+    commit_hexes = [find_commit_with_message(repo_path, commit_message)
+                    for commit_message in commit_messages]
+    cl = CommitLoader()
+    diffs = cl.load(repo_path, ExplicitCommitSelection(commit_hexes))
+    h = BriefFragmap(Fragmap.from_diffs(diffs))
+    h.generate_matrix()
