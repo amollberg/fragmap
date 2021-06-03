@@ -162,6 +162,10 @@ class Staged(FakeCommit):
     return repo.index.diff_to_tree(repo.head.peel().tree, **kwargs)
 
 
+class CommitSelectionError(RuntimeError):
+  pass
+
+
 class CommitSelection(object):
   def __init__(self, since_ref, until_ref, max_count, include_staged,
                include_unstaged):
@@ -187,6 +191,12 @@ class CommitSelection(object):
     if self.max_count:
       # Limit the number of commits
       commits = commits[0:self.max_count]
+
+    for c in commits:
+      if len(c.parent_ids) > 1:
+        raise CommitSelectionError(
+          f"Error: Commit selection includes {c.id} which is a merge commit "
+          f"and cannot be handled.")
 
     def add_if_nonempty(commit):
       if len(commit.get_diff(repo)) > 0:

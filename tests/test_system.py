@@ -4,12 +4,17 @@
 import mock
 import pytest
 
+from fragmap.load_commits import CommitSelectionError
+
 
 def run(args):
   with mock.patch('sys.argv',
                   ['dummypath/main.py'] + args):
     import fragmap.main
-    fragmap.main.main()
+    try:
+      fragmap.main.main()
+    except CommitSelectionError:
+      pytest.skip("Invalid commit selection")
 
 
 def test_invalid_arg():
