@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from pygit2._pygit2 import DiffHunk
+from pygit2 import DiffHunk
 
 
 class Overlap(Enum):
