@@ -54,7 +54,7 @@ CellType = TypeVar('CellType')
 
 class Matrix(Generic[CellType], List[List[CellType]]):
   def _transpose(self):
-    if 1 != len(list(set([len(col) for col in self]))):
+    if len(list(set([len(col) for col in self]))) > 1:
       debug.get('matrix').critical(f"All rows/columns are not equally long: \n"
                                    f"{pformat(self)}")
       assert (False)
@@ -244,11 +244,12 @@ class Fragmap:
     paths = [path
              for path in paths
              if any([node.active for node in path.nodes])]
-    # All columns should be equally long
-    if 1 != len(list(set([len(col.nodes) for col in paths]))):
-      debug.get('matrix').critical(f"All columns are not equally long: \n"
-                                   f"{pformat(paths)}")
-      assert False
+    if paths:
+      # All columns should be equally long
+      if 1 != len(list(set([len(col.nodes) for col in paths]))):
+        debug.get('matrix').critical(f"All columns are not equally long: \n"
+                                     f"{pformat(paths)}")
+        assert False
     return ColumnMajorMatrix([
       [SingleNodeCell(CellKind.CHANGE if node.active else CellKind.NO_CHANGE,
                       path.file_id,

@@ -199,6 +199,10 @@ class Test(unittest.TestCase):
                       '#..',
                       '..#'])
 
+  def test_080(self):
+    self.check_diffs(['080-rename-empty-file'],
+                     [''])
+
   # == Test brief fragmaps ==
 
   def test_016_004_brief(self):
