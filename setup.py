@@ -15,7 +15,7 @@ def read(fname):
 
 setup(
     name = "fragmap",
-    version = "0.4.0",
+    version = "0.4.1",
     author = "Alexander Mollberg",
     author_email = "amollberg@users.noreply.github.com",
     description = ("Visualize a timeline of Git commit changes on a grid"),
