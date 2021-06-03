@@ -181,6 +181,7 @@ class CommitSelection(object):
       walker.hide(repo.revparse_single(self.start).hex)
     if not (self.start or self.end):
       walker.hide(repo.revparse_single('HEAD~' + str(self.max_count)).hex)
+    walker.simplify_first_parent()
     # Collect all selected commits
     commits = [commit for commit in walker]
     if self.max_count:
