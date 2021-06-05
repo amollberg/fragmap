@@ -4,7 +4,7 @@
 import unittest
 from math import inf
 
-from fragmap.graph import add_and_propagate
+from fragmap.update import add_and_propagate
 from fragmap.span import Span
 from fragmap.spg import DiffHunk, Node, CommitNodes
 
