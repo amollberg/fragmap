@@ -16,6 +16,8 @@
 import argparse
 import os
 import sys
+from queue import Queue
+from threading import Semaphore, Thread, Lock
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
@@ -112,6 +114,21 @@ def main():
       erase_current_line()
     return fm
 
+  kb_command_queue = Queue()
+
+  def watch_keyboard():
+    while True:
+      print('Press Enter to refresh', end='')
+      sys.stdout.flush()
+      key = getch()
+      if ord(key) != 0xd:
+        kb_command_queue.put('QUIT')
+        break
+      kb_command_queue.put('REFRESH')
+      kb_command_queue.join()
+    print('')
+
+
   fragmap = serve()
   if args.web:
     if args.live:
@@ -119,20 +136,21 @@ def main():
     else:
       open_fragmap_page(fragmap, args.live)
   else:
-    lines_printed[0], columns_printed[0] = print_fragmap(fragmap,
-                                                         do_color=not args.no_color)
+    lines_printed[0], columns_printed[0] = \
+      print_fragmap(fragmap, do_color=not args.no_color)
     if args.live:
+      kb_monitor = Thread(target=watch_keyboard)
+      kb_monitor.start()
+
       while True:
-        print('Press Enter to refresh', end='')
-        sys.stdout.flush()
-        key = getch()
-        if ord(key) != 0xd:
+        command = kb_command_queue.get()
+        if command == 'QUIT':
+          kb_command_queue.task_done()
           break
         fragmap = serve()
-        lines_printed[0], columns_printed[0] = print_fragmap(fragmap,
-                                                             do_color=not args.no_color)
-      print('')
-
+        lines_printed[0], columns_printed[0] = \
+          print_fragmap(fragmap, do_color=not args.no_color)
+        kb_command_queue.task_done()
 
 if __name__ == '__main__':
   main()
