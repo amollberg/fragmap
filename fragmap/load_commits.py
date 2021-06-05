@@ -26,6 +26,7 @@ from typing import List
 
 import pygit2
 
+from fragmap.datastructure_util import up_to_and_including
 from .commitdiff import CommitDiff
 
 UNSTAGED_HEX = '0000000000000000000000000000000000000000'
@@ -188,6 +189,15 @@ class CommitSelection(object):
     walker.simplify_first_parent()
     # Collect all selected commits
     commits = [commit for commit in walker]
+    if self.end:
+      end_commit = repo.revparse_single(self.end)
+      cut_commits = up_to_and_including(commits, lambda c: c == end_commit)
+      if end_commit.id not in [c.id for c in cut_commits]:
+        raise CommitSelectionError(
+          f"Error: 'until' commit {end_commit.hex} is not a descendant from "
+          f"the selected start commit so the selection does not make sense.")
+      commits = cut_commits
+
     if self.max_count:
       # Limit the number of commits
       commits = commits[0:self.max_count]
