@@ -11,9 +11,10 @@ from . import debug
 from .commitdiff import CommitDiff
 from .console_color import *
 from .datastructure_util import flatten, lzip
+from .file_selection import FileSelection
 from .graph import FileId, update_commit_diff, all_paths
+from .list_dict import StableListDict
 from .spg import Node
-from .stable_list_dict import StableListDict
 
 
 # Hierarchy:
@@ -214,7 +215,7 @@ class Fragmap:
   spgs: Dict[FileId, Dict[Node, List[Node]]]
 
   @staticmethod
-  def from_diffs(diffs: List[CommitDiff]):
+  def from_diffs(diffs: List[CommitDiff], files_arg: List[str] = None):
     files = {}
     spgs = {}
     for i, diff in enumerate(diffs):
@@ -224,7 +225,11 @@ class Fragmap:
           debug.get('update').debug(spg.to_dot(file_id))
         debug.get('update').debug("-------")
 
-    return Fragmap(diffs, spgs)
+    selected_files = FileSelection.from_files_arg(files_arg)
+    selected_file_spgs = {file_id: spg
+                          for file_id, spg in spgs.items()
+                          if selected_files.contains(file_id, files)}
+    return Fragmap(diffs, selected_file_spgs)
 
   def patches(self):
     return self._patches

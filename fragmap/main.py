@@ -7,6 +7,7 @@ import os
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
+from fragmap.file_selection import FileSelection
 from fragmap.generate_matrix import ConnectedFragmap, Fragmap, BriefFragmap
 from fragmap.load_commits import CommitSelection, CommitLoader
 from fragmap.web_ui import open_fragmap_page, start_fragmap_server
@@ -14,8 +15,8 @@ from getch.getch import getch
 from . import debug
 
 
-def make_fragmap(diff_list, brief=False, infill=False) -> Fragmap:
-  fragmap = Fragmap.from_diffs(diff_list)
+def make_fragmap(diff_list, files_arg, brief=False, infill=False) -> Fragmap:
+  fragmap = Fragmap.from_diffs(diff_list, files_arg)
   # with open('fragmap_ast.json', 'wb') as f:
   #   json.dump(fragmap.patches, f, cls=DictCoersionEncoder)
   if brief:
@@ -55,6 +56,10 @@ def main():
                          help='Show the full fragmap, disabling deduplication of the columns.')
   outformatarg.add_argument('-w', '--web', action='store_true', required=False,
                             help='Generate and open an HTML document instead of printing to console. Implies -f')
+  argparser.add_argument('-i', '--files', metavar='FILE',
+                         nargs='+', action='store', required=False,
+                         dest='files', help="Which files to show changes "
+                                            "from. The default is all files.")
 
   args = argparser.parse_args()
   # Load commits
@@ -91,7 +96,7 @@ def main():
       print(ANSI_UP, end='')
       erase_current_line()
     print('... Generating fragmap\r', end='')
-    fm = make_fragmap(diff_list, not is_full, False)
+    fm = make_fragmap(diff_list, args.files, not is_full, False)
     print('                      \r', end='')
     return fm
 

@@ -10,7 +10,9 @@ from mock import Mock
 
 import fragmap.debug as debug
 from fragmap.generate_matrix import Fragmap, BriefFragmap, CellKind
-from fragmap.load_commits import CommitLoader, ExplicitCommitSelection
+from fragmap.load_commits import CommitLoader, ExplicitCommitSelection, \
+  CommitSelection
+from fragmap.spg import FileId
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
 DIFF_DIR = os.path.join(TEST_DIR, 'diffs')
@@ -361,6 +363,22 @@ class Test(unittest.TestCase):
                             '^#',
                             '##'])
 
+  # === Tests of file selection ===
+
+  def test_016_004_files(self):
+    start = '0e427042'
+    self.check_file_selection({FileId(-1, 'empty.txt')}, ['empty.txt'], start)
+    self.check_file_selection({FileId(-1, 'empty.txt')}, ['other.txt'], start)
+    self.check_file_selection({FileId(-1, 'empty.txt')}, None, start)
+    self.check_file_selection(set(), ['non-existent-file.txt'], start)
+
+  def test_050_054_files(self):
+    start = '0e427042'
+    self.check_file_selection({FileId(-1, 'file_a.txt')}, ['file_a.txt'], start)
+    self.check_file_selection({FileId(0, 'file_b.txt')}, ['file_b.txt'], start)
+    self.check_file_selection({FileId(0, 'file_b.txt'),
+                               FileId(-1, 'file_a.txt')}, None, start)
+
   # === Exception tests on more complex commits ===
 
   def test_1622573011(self):
@@ -448,3 +466,12 @@ class Test(unittest.TestCase):
     diffs = cl.load(repo_path, ExplicitCommitSelection(commit_hexes))
     h = BriefFragmap(Fragmap.from_diffs(diffs))
     h.generate_matrix()
+
+  def check_file_selection(self, expected_ids, file_arg, start_commit):
+    test_name = self.id().split('.')[-1]
+    repo_path = os.path.join(DIFF_DIR, "build", test_name)
+    cl = CommitLoader()
+    all_commits_in_repo = CommitSelection(start_commit, None, 999, True, True)
+    diffs = cl.load(repo_path, all_commits_in_repo)
+    h = Fragmap.from_diffs(diffs, file_arg)
+    self.assertEqual(set(h.spgs.keys()), expected_ids)
