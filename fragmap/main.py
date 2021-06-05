@@ -17,7 +17,9 @@ import argparse
 import os
 import sys
 from queue import Queue
-from threading import Semaphore, Thread, Lock
+from threading import Thread
+
+from fsmonitor import FSMonitorThread
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
@@ -114,20 +116,29 @@ def main():
       erase_current_line()
     return fm
 
-  kb_command_queue = Queue()
+  is_refreshing = False
+  command_queue = Queue()
+
+  def print_kb_instruction():
+    print('\rAutomatically refreshes when files change. Press Enter to force '
+          'refresh', end='')
+    sys.stdout.flush()
 
   def watch_keyboard():
     while True:
-      print('Press Enter to refresh', end='')
-      sys.stdout.flush()
+      print_kb_instruction()
       key = getch()
       if ord(key) != 0xd:
-        kb_command_queue.put('QUIT')
+        command_queue.put('QUIT')
         break
-      kb_command_queue.put('REFRESH')
-      kb_command_queue.join()
+      command_queue.put('REFRESH')
+      command_queue.join()
     print('')
 
+  def fs_callback(event):
+    # Ignore events received while still redrawing
+    if not is_refreshing:
+      command_queue.put('REFRESH')
 
   fragmap = serve()
   if args.web:
@@ -141,16 +152,23 @@ def main():
     if args.live:
       kb_monitor = Thread(target=watch_keyboard)
       kb_monitor.start()
+      fs_monitor = FSMonitorThread(callback=fs_callback)
+      fs_monitor.add_dir_watch(os.getcwd())
 
       while True:
-        command = kb_command_queue.get()
+        command = command_queue.get()
         if command == 'QUIT':
-          kb_command_queue.task_done()
+          fs_monitor.stop()
+          command_queue.task_done()
           break
+        is_refreshing = True
         fragmap = serve()
         lines_printed[0], columns_printed[0] = \
           print_fragmap(fragmap, do_color=not args.no_color)
-        kb_command_queue.task_done()
+        print_kb_instruction()
+
+        is_refreshing = False
+        command_queue.task_done()
 
 if __name__ == '__main__':
   main()
