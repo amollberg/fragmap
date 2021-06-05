@@ -370,7 +370,7 @@ class Test(unittest.TestCase):
     self.check_file_selection({FileId(-1, 'empty.txt')}, ['empty.txt'], start)
     self.check_file_selection({FileId(-1, 'empty.txt')}, ['other.txt'], start)
     self.check_file_selection({FileId(-1, 'empty.txt')}, None, start)
-    self.check_file_selection({}, ['non-existent-file.txt'], start)
+    self.check_file_selection(set(), ['non-existent-file.txt'], start)
 
   def test_050_054_files(self):
     start = '0e427042'
@@ -473,5 +473,5 @@ class Test(unittest.TestCase):
     cl = CommitLoader()
     all_commits_in_repo = CommitSelection(start_commit, None, 999, True, True)
     diffs = cl.load(repo_path, all_commits_in_repo)
-    h = Fragmap.from_diffs(diffs)
+    h = Fragmap.from_diffs(diffs, file_arg)
     self.assertEqual(set(h.spgs.keys()), expected_ids)

@@ -14,7 +14,7 @@ import pygit2
 
 from fragmap.load_commits import is_nullfile
 from fragmap.span import Span
-from fragmap.stable_list_dict import StableListDict
+from fragmap.list_dict import StableListDict
 
 
 @dataclass(frozen=True)
