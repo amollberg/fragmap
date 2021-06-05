@@ -11,9 +11,10 @@ from . import debug
 from .commitdiff import CommitDiff
 from .console_color import *
 from .datastructure_util import flatten, lzip
+from .file_selection import FileSelection
 from .graph import FileId, update_commit_diff, all_paths
+from .list_dict import StableListDict
 from .spg import Node
-from .list_dict import StableListDict, ListDict
 
 
 # Hierarchy:
@@ -208,26 +209,6 @@ class GraphPath:
   file_id: FileId
 
 
-def select_file(file_id: FileId,
-                to_earlier_file: Dict[FileId, FileId],
-                files_arg: List[str]):
-  if files_arg is None:
-    return True
-  grouped_by_orig_file = ListDict()
-  for key in to_earlier_file.keys():
-    grouped_by_orig_file.add(to_earlier_file[key], key)
-
-  def is_path_in_group(file_path: str, group: List[FileId]):
-    return any([f.path == file_path for f in group])
-
-  group = grouped_by_orig_file.kv_map[to_earlier_file[file_id]]
-  assert file_id in group
-  for path in files_arg:
-    if is_path_in_group(path, group):
-      return True
-  return False
-
-
 @dataclass
 class Fragmap:
   _patches: List[CommitDiff]
@@ -244,9 +225,10 @@ class Fragmap:
           debug.get('update').debug(spg.to_dot(file_id))
         debug.get('update').debug("-------")
 
+    selected_files = FileSelection.from_files_arg(files_arg)
     selected_file_spgs = {file_id: spg
                           for file_id, spg in spgs.items()
-                          if select_file(file_id, files, files_arg)}
+                          if selected_files.contains(file_id, files)}
     return Fragmap(diffs, selected_file_spgs)
 
   def patches(self):

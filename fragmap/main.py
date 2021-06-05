@@ -7,6 +7,7 @@ import os
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
+from fragmap.file_selection import FileSelection
 from fragmap.generate_matrix import ConnectedFragmap, Fragmap, BriefFragmap
 from fragmap.load_commits import CommitSelection, CommitLoader
 from fragmap.web_ui import open_fragmap_page, start_fragmap_server
