@@ -37,7 +37,7 @@ def render_matrix_for_test(matrix):
   def render_cell(cell):
     if cell.kind == CellKind.CHANGE:
       return '#'
-    if cell.kind == CellKind.BETWEEN_CHANGES:
+    if cell.kind in [CellKind.BETWEEN_CHANGES, CellKind.BETWEEN_SQUASHABLE]:
       return '^'
     if cell.kind == CellKind.NO_CHANGE:
       return '.'

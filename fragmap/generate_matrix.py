@@ -89,6 +89,7 @@ class CellKind(Enum):
   NO_CHANGE = 100
   CHANGE = 101
   BETWEEN_CHANGES = 102
+  BETWEEN_SQUASHABLE = 103
 
 
 @dataclass
@@ -136,8 +137,55 @@ class MultiNodeCell(Cell):
     return not (self == other)
 
 
-def decorate_matrix(m: RowMajorMatrix[Cell]):
-  debug.get('grid').debug("decorate_matrix")
+def changes_at_row(m: RowMajorMatrix[Cell], r: int):
+  n_rows = len(m)
+  if n_rows == 0:
+    return []
+  n_cols = len(m[0])
+  return set([c for c in range(n_cols)
+              if m[r][c].kind == CellKind.CHANGE])
+
+
+def collisions_between(m: RowMajorMatrix[Cell],
+                       row: int,
+                       earlier_row: int):
+  changed_at_end_row = changes_at_row(m, row)
+  for row_i in range(earlier_row + 1, row):
+    if changes_at_row(m, row_i) & changed_at_end_row:
+      return True
+  return False
+
+
+def is_subset_of_earlier(m: RowMajorMatrix[Cell], row: int, earlier_row: int):
+  changed_at_end_row = changes_at_row(m, row)
+  changed_at_earlier_row = changes_at_row(m, earlier_row)
+  return not (changed_at_end_row - changed_at_earlier_row)
+
+
+def mark_squashable(m: RowMajorMatrix[Cell]):
+  """
+  Mark cells between squashable changes.
+  Squashable in this case means:
+    * that there are no collisions between the commits, and
+    * that the lines that changes in the commit are a subset of
+      the lines that changes in the earlier commit.
+  Assumes the matrix has already been decorated with BETWEEN_CHANGES.
+  """
+  n_rows = len(m)
+  for r in range(n_rows):
+    changes = changes_at_row(m, r)
+    for earlier_r in reversed(range(r)):
+      if collisions_between(m, r, earlier_r):
+        break
+      if is_subset_of_earlier(m, r, earlier_r):
+        for r_to_mark in range(earlier_r + 1, r):
+          for c in changes:
+            if m[r_to_mark][c].kind == CellKind.BETWEEN_CHANGES:
+              m[r_to_mark][c].kind = CellKind.BETWEEN_SQUASHABLE
+
+
+
+def mark_cells_between_changes(m: RowMajorMatrix[Cell]):
   n_rows = len(m)
   if n_rows == 0:
     return m
@@ -159,6 +207,12 @@ def decorate_matrix(m: RowMajorMatrix[Cell]):
             if m[i][c].kind == CellKind.NO_CHANGE:
               m[i][c].kind = CellKind.BETWEEN_CHANGES
         last_patch[c] = r
+
+
+def decorate_matrix(m: RowMajorMatrix[Cell]):
+  debug.get('grid').debug("decorate_matrix")
+  mark_cells_between_changes(m)
+  mark_squashable(m)
 
 
 class ConnectionStatus(object):
@@ -294,6 +348,12 @@ class Fragmap:
           return ANSI_BG_RED + ' ' + ANSI_RESET
         else:
           return '|'
+      if cell.kind == CellKind.BETWEEN_SQUASHABLE:
+        if colorize:
+          # Make background yellow
+          return ANSI_BG_DARK_YELLOW + ' ' + ANSI_RESET
+        else:
+          return '^'
       if cell.kind == CellKind.NO_CHANGE:
         return '.'
       assert False, "Unexpected cell kind: %s" % (cell.kind)
@@ -378,6 +438,12 @@ class BriefFragmap:
           return ANSI_BG_RED + ' ' + ANSI_RESET
         else:
           return '|'
+      if cell.kind == CellKind.BETWEEN_SQUASHABLE:
+        if colorize:
+          # Make background yellow
+          return ANSI_BG_DARK_YELLOW + ' ' + ANSI_RESET
+        else:
+          return '^'
       if cell.kind == CellKind.NO_CHANGE:
         return '.'
       assert False, "Unexpected cell kind: %s" % (cell.kind)
