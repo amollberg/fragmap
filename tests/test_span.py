@@ -3,7 +3,7 @@
 
 import unittest
 
-from fragmap.graph import Overlap
+from fragmap.update import Overlap
 from fragmap.span import Span
 
 

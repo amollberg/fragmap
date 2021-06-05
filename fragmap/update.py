@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from dataclasses import dataclass
-from pprint import pprint, pformat
+from pprint import pformat
 from typing import List, Dict, Union, Tuple
 
 import pygit2
@@ -15,7 +15,7 @@ from pygit2 import DiffHunk
 from fragmap.commitdiff import CommitDiff
 from fragmap.datastructure_util import flatten
 from fragmap.span import Span, Overlap
-from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, SOURCE, CommitNodes
+from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, CommitNodes
 from . import debug
 
 
@@ -500,62 +500,3 @@ def node_by_new(node: Node):
                 spans.old.start,
                 spans.new.end,
                 spans.old.end])
-
-
-def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
-  if source == SINK:
-    return [[SINK]]
-  paths = [[source] + path
-           for end in sorted(spg.graph[source], key=node_by_new)
-           for path in all_paths(spg, end)]
-  if debug.is_logging('grouping'):
-    debug.get('grouping').debug(f"paths: \n{pformat(paths)}")
-  return paths
-
-
-def print_fragmap(spg: SPG):
-  paths = all_paths(spg)
-  columns = [tuple(node.active
-                   for node in path)
-             for path in paths]
-  columns = list(set(columns))
-  rows = list(zip(*columns))
-  for row in rows[1:-1]:
-    print(''.join([
-      '#' if cell else '.'
-      for cell in row]))
-
-
-def main():
-  diffs = [
-    Diff([
-      Patch(DiffDelta.from_paths("B1", "b1"), [
-        DiffHunk.from_tup((100, 0), (100, 2), 0),
-      ]),
-      Patch(DiffDelta.from_paths("f1", "F1"), [
-        DiffHunk.from_tup((1, 0), (1, 1), 0),
-        DiffHunk.from_tup((4, 0), (5, 2), 0),
-      ]),
-    ]),
-    Diff([
-      Patch(DiffDelta.from_paths("F1", "F1"), [
-        DiffHunk.from_tup((1, 3), (1, 3), 1),
-      ]),
-    ]),
-  ]
-  spgs = {}
-  files = {}
-  for i, diff in enumerate(diffs):
-    update(spgs, files, diff, i)
-    for file_id, spg in spgs.items():
-      print(spg.to_dot(file_id))
-    print("-------")
-
-  pprint(files)
-  for spg in spgs.values():
-    pprint(all_paths(spg))
-    print_fragmap(spg)
-
-
-if __name__ == '__main__':
-  main()
