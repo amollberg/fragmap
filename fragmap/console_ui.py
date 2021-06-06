@@ -17,14 +17,15 @@
 from backports.shutil_get_terminal_size import get_terminal_size
 
 from fragmap.common_ui import first_line
-from fragmap.generate_matrix import ConnectedFragmap
+from fragmap.generate_matrix import ConnectedFragmap, find_squashable, \
+  RowMajorMatrix, ColumnMajorMatrix
 from .console_color import *
-from .datastructure_util import lzip
 
 
-def filter_consecutive_equal_columns(char_matrix):
-  transposed_matrix = lzip(*char_matrix)
-  filtered_matrix = []
+def filter_consecutive_equal_columns(char_matrix: RowMajorMatrix[str]) \
+        -> RowMajorMatrix[str]:
+  transposed_matrix = char_matrix.column_major()
+  filtered_matrix = ColumnMajorMatrix([])
   for col in transposed_matrix:
     if filtered_matrix == []:
       filtered_matrix.append(col)
@@ -33,7 +34,7 @@ def filter_consecutive_equal_columns(char_matrix):
     if (''.join(col)).strip('. ') == '':
       continue
     filtered_matrix.append(col)
-  return lzip(*filtered_matrix)
+  return filtered_matrix.row_major()
 
 
 def print_fragmap(fragmap, do_color):
@@ -55,8 +56,11 @@ def print_fragmap(fragmap, do_color):
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 int(terminal_column_size / 2),
                                 terminal_column_size - (
-                                          hash_width + 1 + 1 + padded_matrix_width)))
+                                        hash_width + 1 + 1 + padded_matrix_width)))
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
+
+  squashable = [r for earlier_r, r in
+                find_squashable(fragmap.generate_matrix())]
 
   def infill_layout(matrix, print_text_action, print_matrix_action):
     r = 0
@@ -82,6 +86,8 @@ def print_fragmap(fragmap, do_color):
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages
     commit_msg = commit_msg[0:min(max_commit_width, len(commit_msg))]
+    if do_color and r in squashable:
+      commit_msg = ANSI_FG_BRIGHT_BLACK + commit_msg + ANSI_RESET
     # Print hash, commit, matrix row
     hash = hash[0:hash_width]
     if do_color:

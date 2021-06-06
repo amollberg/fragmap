@@ -17,17 +17,17 @@ import collections
 from dataclasses import dataclass
 from enum import Enum
 from pprint import pformat, pprint
-from typing import List, Dict, TypeVar, Generic
+from typing import List, Dict, TypeVar, Generic, Sequence, Tuple
 
 from . import debug
 from .commitdiff import CommitDiff
 from .console_color import *
 from .datastructure_util import flatten, lzip
-from .file_selection import FileSelection
-from .update import FileId, update_commit_diff
 from .enumerate_paths import all_paths
+from .file_selection import FileSelection
 from .list_dict import StableListDict
 from .spg import Node
+from .update import FileId, update_commit_diff
 
 
 # Hierarchy:
@@ -174,27 +174,36 @@ def is_subset_of_earlier(m: RowMajorMatrix[Cell], row: int, earlier_row: int):
   return not (changed_at_end_row - changed_at_earlier_row)
 
 
-def mark_squashable(m: RowMajorMatrix[Cell]):
+def find_squashable(m: RowMajorMatrix[Cell]) -> Sequence[Tuple[int, int]]:
   """
-  Mark cells between squashable changes.
+  Find pairs of squashable commits.
   Squashable in this case means:
     * that there are no collisions between the commits, and
-    * that the lines that changes in the commit are a subset of
+    * that the lines that changes in the later commit are a subset of
       the lines that changes in the earlier commit.
   Assumes the matrix has already been decorated with BETWEEN_CHANGES.
   """
   n_rows = len(m)
   for r in range(n_rows):
-    changes = changes_at_row(m, r)
     for earlier_r in reversed(range(r)):
       if collisions_between(m, r, earlier_r):
         break
       if is_subset_of_earlier(m, r, earlier_r):
-        for r_to_mark in range(earlier_r + 1, r):
-          for c in changes:
-            if m[r_to_mark][c].kind == CellKind.BETWEEN_CHANGES:
-              m[r_to_mark][c].kind = CellKind.BETWEEN_SQUASHABLE
+        yield tuple([earlier_r, r])
 
+
+def mark_squashable(m: RowMajorMatrix[Cell],
+                    squashable_tuples: Sequence[Tuple[int, int]]):
+  """
+  Mark cells between squashable changes.
+  See :py:func: find_squashable
+  """
+  for earlier_r, r in squashable_tuples:
+    changes = changes_at_row(m, r)
+    for r_to_mark in range(earlier_r + 1, r):
+      for c in changes:
+        if m[r_to_mark][c].kind == CellKind.BETWEEN_CHANGES:
+          m[r_to_mark][c].kind = CellKind.BETWEEN_SQUASHABLE
 
 
 def mark_cells_between_changes(m: RowMajorMatrix[Cell]):
@@ -224,7 +233,7 @@ def mark_cells_between_changes(m: RowMajorMatrix[Cell]):
 def decorate_matrix(m: RowMajorMatrix[Cell]):
   debug.get('grid').debug("decorate_matrix")
   mark_cells_between_changes(m)
-  mark_squashable(m)
+  mark_squashable(m, find_squashable(m))
 
 
 class ConnectionStatus(object):
@@ -337,15 +346,16 @@ class Fragmap:
     decorate_matrix(m)
     return m
 
-  def render_for_console(self, colorize):
+  def render_for_console(self, colorize) -> RowMajorMatrix[str]:
     return self._render_for_console(self.generate_matrix(), colorize)
 
-  def _render_for_console(self, matrix: RowMajorMatrix[Cell], colorize: bool):
+  def _render_for_console(self, matrix: RowMajorMatrix[Cell], colorize: bool) \
+          -> RowMajorMatrix[str]:
     n_rows = len(matrix)
     if n_rows == 0:
       return []
     n_cols = len(matrix[0])
-    m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
+    m = RowMajorMatrix([['.' for _ in range(n_cols)] for _ in range(n_rows)])
 
     def render_cell(cell: SingleNodeCell):
       if cell.kind == CellKind.CHANGE:
@@ -427,15 +437,15 @@ class BriefFragmap:
       for column_group in column_groups
     ])
 
-  def render_for_console(self, colorize):
+  def render_for_console(self, colorize) -> RowMajorMatrix[str]:
     return self._render_for_console(self.generate_matrix(), colorize)
 
-  def _render_for_console(self, matrix, colorize):
+  def _render_for_console(self, matrix, colorize) -> RowMajorMatrix[str]:
     n_rows = len(matrix)
     if n_rows == 0:
       return []
     n_cols = len(matrix[0])
-    m = [['.' for _ in range(n_cols)] for _ in range(n_rows)]
+    m = RowMajorMatrix([['.' for _ in range(n_cols)] for _ in range(n_rows)])
 
     def render_cell(cell: MultiNodeCell):
       if cell.kind == CellKind.CHANGE:
