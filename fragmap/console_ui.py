@@ -56,7 +56,7 @@ def print_fragmap(fragmap, do_color):
   max_commit_width = max(0, min(max_actual_commit_width + 1,
                                 int(terminal_column_size / 2),
                                 terminal_column_size - (
-                                          hash_width + 1 + 1 + padded_matrix_width)))
+                                        hash_width + 1 + 1 + padded_matrix_width)))
   actual_total_width = hash_width + 1 + max_commit_width + 1 + padded_matrix_width
 
   squashable = [r for earlier_r, r in
