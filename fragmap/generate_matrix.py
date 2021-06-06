@@ -23,11 +23,11 @@ from . import debug
 from .commitdiff import CommitDiff
 from .console_color import *
 from .datastructure_util import flatten, lzip
-from .file_selection import FileSelection
-from .update import FileId, update_commit_diff
 from .enumerate_paths import all_paths
+from .file_selection import FileSelection
 from .list_dict import StableListDict
 from .spg import Node
+from .update import FileId, update_commit_diff
 
 
 # Hierarchy:
