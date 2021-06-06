@@ -15,6 +15,7 @@
 # limitations under the License.
 import argparse
 import os
+import sys
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
@@ -101,14 +102,14 @@ def main():
     debug.get('console').debug(selection)
     diff_list = cl.load(os.getcwd(), selection)
     debug.get('console').debug(diff_list)
+    print('... Generating fragmap\r', end='')
+    fm = make_fragmap(diff_list, args.files, not is_full, False)
+    print('                      \r', end='')
     # Erase each line and move cursor up to overwrite previous fragmap
     erase_current_line()
     for i in range(lines_printed[0]):
       print(ANSI_UP, end='')
       erase_current_line()
-    print('... Generating fragmap\r', end='')
-    fm = make_fragmap(diff_list, args.files, not is_full, False)
-    print('                      \r', end='')
     return fm
 
   fragmap = serve()
@@ -123,6 +124,7 @@ def main():
     if args.live:
       while True:
         print('Press Enter to refresh', end='')
+        sys.stdout.flush()
         key = getch()
         if ord(key) != 0xd:
           break
