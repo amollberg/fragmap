@@ -17,11 +17,11 @@ from pprint import pformat
 from typing import List
 
 from fragmap import debug
-from fragmap.spg import SPG, SOURCE, Node, SINK
+from fragmap.spg import Spg, SOURCE, Node, SINK
 from fragmap.update import node_by_new
 
 def _all_paths_without_deduplication(
-        spg: SPG,
+        spg: Spg,
         source: Node) -> List[List[Node]]:
   if source == SINK:
     return [[SINK]]
@@ -33,7 +33,7 @@ def _all_paths_without_deduplication(
   return paths
 
 
-def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
+def all_paths(spg: Spg, source=SOURCE) -> List[List[Node]]:
   """
   Enumerates all paths through the SPG. All inactive nodes are treated as
   idential and identical paths are skipped, so all returned paths will have a

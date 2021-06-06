@@ -28,7 +28,7 @@ from pygit2 import DiffHunk
 from fragmap.commitdiff import CommitDiff
 from fragmap.datastructure_util import flatten
 from fragmap.span import Span, Overlap
-from fragmap.spg import SPG, Node, DiffHunk, SINK, FileId, CommitNodes
+from fragmap.spg import Spg, Node, DiffHunk, SINK, FileId, CommitNodes
 from . import debug
 
 
@@ -72,7 +72,7 @@ class Commit:
 
 
 def add_on_top_of(
-        spg: SPG,
+        spg: Spg,
         nodes_from_previous_commit: List[Node],
         node: Node):
   cur_range = Span.from_old(node.hunk)
@@ -324,7 +324,7 @@ def add_and_propagate(prev_commit: CommitNodes,
   return CommitNodes(new_nodes)
 
 
-def update_dangling(file_spg: SPG,
+def update_dangling(file_spg: Spg,
                     nodes: List[Node],
                     generation: int):
   for prev_node in nodes:
@@ -341,7 +341,7 @@ def update_dangling(file_spg: SPG,
       file_spg.register(propagated, SINK)
 
 
-def update_unchanged_file(file_spg: SPG, generation):
+def update_unchanged_file(file_spg: Spg, generation):
   prev_nodes_by_new = \
     sorted([start for start, ends in file_spg.items()
             if SINK in ends],
@@ -366,7 +366,7 @@ def update_unchanged_file(file_spg: SPG, generation):
   update_dangling(file_spg, prev_nodes_by_new, generation)
 
 
-def update_file(file_spg: SPG,
+def update_file(file_spg: Spg,
                 filepatch: Patch,
                 generation: int):
   def get_first_node(nodes):
@@ -410,14 +410,14 @@ def update_file(file_spg: SPG,
 
 
 def update_commit_diff(
-        spgs: Dict[FileId, SPG],
+        spgs: Dict[FileId, Spg],
         files: Dict[FileId, FileId],
         commit_diff: CommitDiff,
         diff_i: int):
   return update(spgs, files, Diff(commit_diff.filepatches), diff_i)
 
 
-def update(spgs: Dict[FileId, SPG],
+def update(spgs: Dict[FileId, Spg],
            files: Dict[FileId, FileId],
            diff: Diff,
            diff_i: int):
@@ -489,7 +489,7 @@ def update(spgs: Dict[FileId, SPG],
       debug.get('update_files').debug(
         f"changed {new_patch_file_id(filepatch)} in commit {diff_i}")
     if original_file_id not in spgs:
-      spgs[original_file_id] = SPG.empty()
+      spgs[original_file_id] = Spg.empty()
       file_spg = spgs[original_file_id]
       # Create nodes for older commits where the file did not exist
       # yet (=unchanged)

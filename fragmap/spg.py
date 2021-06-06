@@ -104,14 +104,14 @@ SINK = Node.inactive((0, inf), (0, 0), inf)
 
 
 @dataclass
-class SPG:
+class Spg:
   graph: Dict[Node, List[Node]]
   downstream_from_active: Dict[Node, bool] = \
     dataclasses.field(default_factory=lambda: {})
 
   @staticmethod
-  def empty() -> SPG:
-    return SPG({
+  def empty() -> Spg:
+    return Spg({
       SOURCE: [SINK],
     }, downstream_from_active={
       SOURCE: False
