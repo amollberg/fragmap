@@ -133,7 +133,7 @@ class SingleNodeCell(Cell):
 
 @dataclass
 class MultiNodeCell(Cell):
-  nodes: List[object]
+  cells: List[SingleNodeCell]
 
   def __eq__(self, other):
     if other is None:
@@ -141,7 +141,7 @@ class MultiNodeCell(Cell):
     if self.kind == other.kind:
       if self.kind == CellKind.NO_CHANGE:
         return True
-      if self.nodes == other.nodes:
+      if self.cells == other.cells:
         return True
     return False
 
@@ -331,13 +331,20 @@ class Fragmap:
         debug.get('matrix').critical(f"All columns are not equally long: \n"
                                      f"{pformat(paths)}")
         assert False
-    return ColumnMajorMatrix([
+    columns = [
       [SingleNodeCell(CellKind.CHANGE if node.active else CellKind.NO_CHANGE,
                       path.file_id,
                       node)
        for node in path.nodes]
       for path in paths
-    ])
+    ]
+    def single_file_id(column):
+      file_ids = {cell.file_id
+                  for cell in column
+                  if cell.node}
+      return file_ids if file_ids else None
+    columns = sorted(columns, key=single_file_id)
+    return ColumnMajorMatrix(columns)
 
   def generate_matrix(self) -> RowMajorMatrix:
     columns = self._generate_columns()
@@ -430,12 +437,19 @@ class BriefFragmap:
     def transpose(list_of_lists):
       return list(zip(*list_of_lists))
 
-    return ColumnMajorMatrix([
-      [MultiNodeCell(multi_cell_kind(cell_group),
-                     [cell.node for cell in cell_group])
+    columns = [
+      [MultiNodeCell(multi_cell_kind(cell_group), cell_group)
        for cell_group in transpose(column_group)]
       for column_group in column_groups
-    ])
+    ]
+    def single_file_id(column):
+      file_ids = {cell.file_id
+                  for multicell in column
+                  for cell in multicell.cells
+                  if cell.node}
+      return file_ids if file_ids else None
+    columns = sorted(columns, key=single_file_id)
+    return ColumnMajorMatrix(columns)
 
   def render_for_console(self, colorize) -> RowMajorMatrix[str]:
     return self._render_for_console(self.generate_matrix(), colorize)
@@ -497,13 +511,13 @@ def in_range(matrix, r, c):
 def equal_left_column(matrix, r, c):
   if not in_range(matrix, r, c) or not in_range(matrix, r, c - 1):
     return False
-  return matrix[r][c - 1].node == matrix[r][c].node
+  return matrix[r][c - 1] == matrix[r][c]
 
 
 def equal_right_column(matrix, r, c):
   if not in_range(matrix, r, c) or not in_range(matrix, r, c + 1):
     return False
-  return matrix[r][c + 1].node == matrix[r][c].node
+  return matrix[r][c + 1] == matrix[r][c]
 
 
 def change_at(matrix, r, c):
@@ -549,7 +563,11 @@ class ConnectedFragmap(object):
                                          up = status(connection=change_up and change_center),
                                          up_right = status(infill=infill_up_right),
                                          left = status(connection=equal_left and change_center and change_left, infill=infill_up_left),
-                                         center = status(connection=change_at(matrix, r, c), infill=matrix[r][c].kind == CellKind.BETWEEN_CHANGES),
+                                         center = status(
+                                           connection=change_at(matrix, r, c),
+                                           infill=matrix[r][c].kind in [
+                                             CellKind.BETWEEN_CHANGES,
+                                             CellKind.BETWEEN_SQUASHABLE]),
                                          right = status(connection=equal_right and change_center and change_right, infill=infill_up_right),
                                          down_left = status(infill=infill_down_left),
                                          down = status(connection=change_down and change_center),

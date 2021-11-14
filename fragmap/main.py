@@ -98,7 +98,7 @@ def main():
                                 max_count=max_count,
                                 include_staged=not args.until,
                                 include_unstaged=not args.until)
-    is_full = args.full or args.web
+    is_full = args.full
     debug.get('console').debug(selection)
     diff_list = cl.load(os.getcwd(), selection)
     debug.get('console').debug(diff_list)

@@ -20,7 +20,7 @@ from yattag import Doc
 
 from .common_ui import first_line
 from .generate_matrix import CellKind, BriefFragmap, ConnectedFragmap, \
-  ConnectionStatus
+  ConnectionStatus, MultiNodeCell, SingleNodeCell
 from .httphelper import start_server
 
 
@@ -94,12 +94,19 @@ def make_fragmap_page(fragmap):
       pass
 
   def render_cell(cell, r, c):
+    def single_cell_content(single_cell: SingleNodeCell):
+      if single_cell.node:
+        text(str(single_cell.node))
+        for line in single_cell.node.hunk.lines:
+          colorized_line(line)
+
     def inner():
       with tag('div', klass='code'):
-        if cell.base.node:
-          text(str(cell.base.node))
-          for line in cell.base.node.hunk.lines:
-            colorized_line(line)
+        if is_brief:
+          for single_cell in cell.base.cells:
+            single_cell_content(single_cell)
+        else:
+          single_cell_content(cell.base)
 
     render_cell_graphics(tag, cell, inner)
 
@@ -107,7 +114,15 @@ def make_fragmap_page(fragmap):
     for r in range(len(matrix)):
       cell = matrix[r][c]
       if cell.base.kind != CellKind.NO_CHANGE:
-        return cell.base.file_id.path
+        if isinstance(cell.base, MultiNodeCell):
+          file_ids = set([cell.file_id for cell in cell.base.cells])
+          if len(file_ids) == 1:
+            return list(file_ids)[0].path
+          else:
+            return "..."
+        else:
+          return cell.base.file_id.path
+
     return None
 
   def generate_first_filename_spans(matrix):
