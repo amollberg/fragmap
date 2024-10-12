@@ -18,7 +18,8 @@
 import subprocess
 
 DEFAULT_GIT_CONFIG_STRING = ["-c", "user.name='Foo Bar'", "-c",
-                             "user.email='foo@example.com'"]
+                             "user.email='foo@example.com'",
+                             "-c", "safe.directory=*"]
 DEFAULT_GIT_ENV = {'GIT_COMMITTER_NAME': 'Foo Bar',
                    'GIT_COMMITTER_EMAIL': 'foo@example.com',
                    'GIT_CONFIG_NOSYSTEM': '1'}

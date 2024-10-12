@@ -18,7 +18,7 @@
 # AST
 #  ._patches : Patch          .commitdiffs[] : CommitDiff (diff of one commit and its parent + metadata)
 #   PatchHeader                 .header : Commit
-#    _hash                        .hex
+#    _hash                        .id
 #   FilePatch                   .filepatches[] : Patch
 #     FilePatchHeader             .delta : DiffDelta
 #      _oldfile                     .old_file.path
@@ -152,7 +152,7 @@ class BinaryHunk(object):
 
 class FakeCommit(object):
   def __init__(self, hex):
-    self.hex = hex
+    self.id = pygit2.Oid(hex=hex)
     self.message = ''
     # Add more fields here as required
 
@@ -195,11 +195,11 @@ class CommitSelection(object):
     walker = repo.walk(repo.head.target,
                        pygit2.GIT_SORT_TOPOLOGICAL | pygit2.GIT_SORT_REVERSE)
     if self.end:
-      walker.push(repo.revparse_single(self.end).hex)
+      walker.push(repo.revparse_single(self.end).id)
     if self.start:
-      walker.hide(repo.revparse_single(self.start).hex)
+      walker.hide(repo.revparse_single(self.start).id)
     if not (self.start or self.end):
-      walker.hide(repo.revparse_single('HEAD~' + str(self.max_count)).hex)
+      walker.hide(repo.revparse_single('HEAD~' + str(self.max_count)).id)
     walker.simplify_first_parent()
     # Collect all selected commits
     commits = [commit for commit in walker]
@@ -208,7 +208,7 @@ class CommitSelection(object):
       cut_commits = up_to_and_including(commits, lambda c: c == end_commit)
       if end_commit.id not in [c.id for c in cut_commits]:
         raise CommitSelectionError(
-          f"Error: 'until' commit {end_commit.hex} is not a descendant from "
+          f"Error: 'until' commit {end_commit.id} is not a descendant from "
           f"the selected start commit so the selection does not make sense.")
       commits = cut_commits
 
