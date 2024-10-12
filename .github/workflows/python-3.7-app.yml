@@ -5,9 +5,9 @@ name: Python 3.7 package
 
 on:
   push:
-    branches: [ "github-actions" ]
+    branches: [ "**" ]
   pull_request:
-    branches: [ "github-actions" ]
+    branches: [ "**" ]
 
 jobs:
   build:
