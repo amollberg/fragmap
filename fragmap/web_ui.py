@@ -166,7 +166,7 @@ def make_fragmap_page(fragmap):
             for r in range(len(matrix)):
               cur_patch = fragmap.patches()[r].header
               commit_msg = first_line(cur_patch.message)
-              hash = cur_patch.hex
+              hash = str(cur_patch.id)
               with tag('tr'):
                 with tag('th'):
                   with tag('span', klass='commit_hash'):

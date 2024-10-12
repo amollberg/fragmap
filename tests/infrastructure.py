@@ -107,13 +107,13 @@ def update_repos(test_dir):
 def find_commit_with_message(repo_path, message):
   def all_commits(repo):
     ref_names = [ref for ref in repo.references]
-    known_commit_hexes = set([])
+    known_commit_ids = set([])
     for ref_name in ref_names:
       tip_commit = repo.references[ref_name].target
       for commit in repo.walk(tip_commit, pygit2.GIT_SORT_TOPOLOGICAL):
-        if commit.hex in known_commit_hexes:
+        if commit.id in known_commit_ids:
           break
-        known_commit_hexes.add(commit.hex)
+        known_commit_ids.add(commit.id)
         yield commit
 
   if message == 'STAGED':
@@ -123,7 +123,7 @@ def find_commit_with_message(repo_path, message):
   repo = pygit2.Repository(repo_path)
   for commit in all_commits(repo):
     if first_line(commit.message) == message:
-      return commit.hex
+      return str(commit.id)
   raise RuntimeError(
     "No commit with message '%s' in repo %s" % (message, repo_path))
 

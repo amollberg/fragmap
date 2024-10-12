@@ -81,7 +81,7 @@ def print_fragmap(fragmap, do_color):
   def print_line(r):
     cur_patch = fragmap.patches()[r].header
     commit_msg = first_line(cur_patch.message)
-    hash = cur_patch.hex
+    hash = str(cur_patch.id)
     # Pad short commit messages
     commit_msg = commit_msg.ljust(max_commit_width, ' ')
     # Truncate long commit messages
