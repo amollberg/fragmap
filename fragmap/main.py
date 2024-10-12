@@ -37,6 +37,12 @@ def make_fragmap(diff_list, files_arg, brief=False, infill=False) -> Fragmap:
     fragmap = ConnectedFragmap(fragmap)
   return fragmap
 
+def disable_owner_validation():
+  import pygit2
+  try:
+    pygit2.option(pygit2.enums.Option.SET_OWNER_VALIDATION, False)
+  except AttributeError:
+    pass
 
 def main():
   if 'FRAGMAP_DEBUG' in os.environ:
@@ -61,6 +67,8 @@ def main():
                          help='Which commit to start showing from, exclusive.')
   argparser.add_argument('--no-color', action='store_true', required=False,
                          help='Disable color coding of the output.')
+  argparser.add_argument('-d','--no-owner-validation', action='store_true', required=False,
+                         help='Disable checking that the repository is owned by the current user.')
   argparser.add_argument('-l', '--live', action='store_true', required=False,
                          help='Keep running and enable refreshing of the displayed fragmap')
   outformatarg = argparser.add_mutually_exclusive_group(required=False)
@@ -74,6 +82,9 @@ def main():
                                             "from. The default is all files.")
 
   args = argparser.parse_args()
+  if args.no_owner_validation:
+    disable_owner_validation()
+
   # Load commits
   cl = CommitLoader()
   if args.until and not args.since:

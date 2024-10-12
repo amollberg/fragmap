@@ -24,6 +24,13 @@ import pygit2
 from fragmap.common_ui import first_line
 from fragmap.load_commits import UNSTAGED_HEX, STAGED_HEX
 
+try:
+  # Ownership check may flag directories in network drive mounts
+  # so disable it for tests
+  pygit2.option(pygit2.enums.Option.SET_OWNER_VALIDATION, False)
+except AttributeError:
+  pass
+
 
 def subdirs(dir_path):
   for e in os.walk(dir_path):
