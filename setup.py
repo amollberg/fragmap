@@ -24,7 +24,7 @@ setup(
     url = "https://github.com/amollberg/fragmap",
     packages=find_packages(),
     long_description=read('README.md'),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     classifiers=[
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Version Control",
