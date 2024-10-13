@@ -17,7 +17,7 @@ import collections
 from dataclasses import dataclass
 from enum import Enum
 from pprint import pformat, pprint
-from typing import Dict, Generic, List, Sequence, Tuple, TypeVar
+from typing import Dict, Generic, Iterable, List, TypeVar
 
 from . import debug
 from .commitdiff import CommitDiff
@@ -176,7 +176,13 @@ def is_subset_of_earlier(m: RowMajorMatrix[Cell], row: int, earlier_row: int):
     return not (changed_at_end_row - changed_at_earlier_row)
 
 
-def find_squashable(m: RowMajorMatrix[Cell]) -> Sequence[Tuple[int, int]]:
+@dataclass
+class SquashablePair:
+    earlier_row: int
+    row: int
+
+
+def find_squashable(m: RowMajorMatrix[Cell]) -> Iterable[SquashablePair]:
     """
     Find pairs of squashable commits.
     Squashable in this case means:
@@ -191,19 +197,19 @@ def find_squashable(m: RowMajorMatrix[Cell]) -> Sequence[Tuple[int, int]]:
             if collisions_between(m, r, earlier_r):
                 break
             if is_subset_of_earlier(m, r, earlier_r):
-                yield tuple([earlier_r, r])
+                yield SquashablePair(earlier_row=earlier_r, row=r)
 
 
 def mark_squashable(
-    m: RowMajorMatrix[Cell], squashable_tuples: Sequence[Tuple[int, int]]
+    m: RowMajorMatrix[Cell], squashable_pairs: Iterable[SquashablePair]
 ):
     """
     Mark cells between squashable changes.
     See :py:func: find_squashable
     """
-    for earlier_r, r in squashable_tuples:
-        changes = changes_at_row(m, r)
-        for r_to_mark in range(earlier_r + 1, r):
+    for pair in squashable_pairs:
+        changes = changes_at_row(m, pair.row)
+        for r_to_mark in range(pair.earlier_row + 1, pair.row):
             for c in changes:
                 if m[r_to_mark][c].kind == CellKind.BETWEEN_CHANGES:
                     m[r_to_mark][c].kind = CellKind.BETWEEN_SQUASHABLE

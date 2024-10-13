@@ -73,7 +73,7 @@ def print_fragmap(fragmap, do_color):
     )
 
     squashable = [
-        r for earlier_r, r in find_squashable(fragmap.generate_matrix())
+        pair.row for pair in find_squashable(fragmap.generate_matrix())
     ]
 
     def infill_layout(matrix, print_text_action, print_matrix_action):
