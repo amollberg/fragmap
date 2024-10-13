@@ -1,2 +1,5 @@
-pytest
+black
+isort
 mock
+pylint
+pytest

@@ -1,0 +1,8 @@
+[tool.isort]
+line_length = 80
+# skip_gitignore = true: Treat project as a git repository and ignore files listed in .gitignore
+skip_gitignore = true
+profile = "black"
+
+[tool.black]
+line_length = 80

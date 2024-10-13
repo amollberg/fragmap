@@ -3,6 +3,7 @@
 *.pyc
 .*
 !.github
+!.pylintrc
 build/*
 dist/*
 *.orig
