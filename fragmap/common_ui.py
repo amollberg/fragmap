@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def first_line(string_with_newlines):
-  return string_with_newlines.split('\n', 1)[0]
+    return string_with_newlines.split("\n", 1)[0]
 
 
-assert (first_line('abcd\ne') == 'abcd')
-assert (first_line('ab') == 'ab')
-assert (first_line('') == '')
+assert first_line("abcd\ne") == "abcd"
+assert first_line("ab") == "ab"
+assert first_line("") == ""
