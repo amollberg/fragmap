@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from pathlib import PurePath, Path
+from pathlib import Path, PurePath
 from typing import Dict, List, Union
 
 from fragmap.list_dict import ListDict
@@ -22,54 +22,46 @@ from fragmap.spg import FileId
 
 
 def file_matches(path: PurePath, pattern: PurePath):
-  if path.parent == path:
-    return path == pattern
-  else:
-    return path == pattern or file_matches(path.parent, pattern)
+    if path.parent == path:
+        return path == pattern
+    else:
+        return path == pattern or file_matches(path.parent, pattern)
 
 
 @dataclass
 class FilePatterns:
-  patterns: Union[List[PurePath], None]
+    patterns: Union[List[PurePath], None]
 
-  @staticmethod
-  def from_files_arg(files_arg: Union[List[str], None], cwd: str = '.'):
-    return FilePatterns(None if files_arg is None
-                        else [PurePath(cwd, p)
-                              for p in files_arg])
+    @staticmethod
+    def from_files_arg(files_arg: Union[List[str], None], cwd: str = "."):
+        return FilePatterns(
+            None if files_arg is None else [PurePath(cwd, p) for p in files_arg]
+        )
 
-  def matches(self, absolute_file: str):
-    if self.patterns is None:
-      return True
-    abs_file = Path(absolute_file)
-    return any([file_matches(abs_file, pattern)
-                for pattern in self.patterns])
+    def matches(self, absolute_file: str):
+        if self.patterns is None:
+            return True
+        abs_file = Path(absolute_file)
+        return any(
+            [file_matches(abs_file, pattern) for pattern in self.patterns]
+        )
 
 
 @dataclass
 class FileSelection:
-  patterns: FilePatterns
+    patterns: FilePatterns
 
-  # Note: Defined after the class definition
-  ALL = None
+    @staticmethod
+    def from_files_arg(files_arg: Union[List[str], None]):
+        return FileSelection(FilePatterns.from_files_arg(files_arg))
 
-  @staticmethod
-  def from_files_arg(files_arg: Union[List[str], None]):
-    return FileSelection(FilePatterns.from_files_arg(files_arg))
+    def contains(self, file_id: FileId, to_earlier_file: Dict[FileId, FileId]):
+        if self.patterns.patterns is None:
+            return True
+        grouped_by_orig_file = ListDict()
+        for key in to_earlier_file.keys():
+            grouped_by_orig_file.add(to_earlier_file[key], key)
 
-  def contains(self,
-               file_id: FileId,
-               to_earlier_file: Dict[FileId, FileId]):
-    if self.patterns.patterns is None:
-      return True
-    grouped_by_orig_file = ListDict()
-    for key in to_earlier_file.keys():
-      grouped_by_orig_file.add(to_earlier_file[key], key)
-
-    group = grouped_by_orig_file.kv_map[to_earlier_file[file_id]]
-    assert file_id in group
-    return any([self.patterns.matches(f.path)
-                for f in group])
-
-
-FileSelection.ALL = FileSelection.from_files_arg(None)
+        group = grouped_by_orig_file.kv_map[to_earlier_file[file_id]]
+        assert file_id in group
+        return any([self.patterns.matches(f.path) for f in group])

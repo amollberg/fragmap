@@ -19,200 +19,207 @@ import re
 from yattag import Doc
 
 from .common_ui import first_line
-from .generate_matrix import CellKind, BriefFragmap, ConnectedFragmap, \
-  ConnectionStatus
+from .generate_matrix import CellKind, ConnectedFragmap, ConnectionStatus
 from .httphelper import start_server
 
 
 def nop():
-  pass
+    pass
 
 
 def render_cell_graphics(tag, connected_cell, inner):
-  kind = connected_cell.base.kind
-  changes = connected_cell.changes
+    kind = connected_cell.base.kind
+    changes = connected_cell.changes
 
-  def etag(*args, **kwargs):
-    with tag(*args, **kwargs):
-      pass
+    def etag(*args, **kwargs):
+        with tag(*args, **kwargs):
+            pass
 
-  def hideempty(status):
-    if status == ConnectionStatus.EMPTY:
-      return "invisible"
-    return ""
+    def hideempty(status):
+        if status == ConnectionStatus.EMPTY:
+            return "invisible"
+        return ""
 
-  def passinfill(status):
-    if status == ConnectionStatus.INFILL:
-      return "visibility:hidden"
-    return ""
+    def passinfill(status):
+        if status == ConnectionStatus.INFILL:
+            return "visibility:hidden"
+        return ""
 
-  def activitymarker(status):
-    if status == ConnectionStatus.CONNECTION:
-      return "active"
-    return ""
+    def activitymarker(status):
+        if status == ConnectionStatus.CONNECTION:
+            return "active"
+        return ""
 
-  if kind != CellKind.NO_CHANGE:
-    inner()
-    with tag('div', klass="cell " + activitymarker(changes.center)):
-      etag('div', klass="top " + hideempty(changes.up))
-      etag('div', klass="left " + hideempty(changes.left),
-           style=passinfill(changes.left))
-      with tag('div', klass="inner", style=(passinfill(changes.center))):
-        etag('div', klass="dot")
-      etag('div', klass="right " + hideempty(changes.right),
-           style=passinfill(changes.right))
-      etag('div', klass="bottom " + hideempty(changes.down))
+    if kind != CellKind.NO_CHANGE:
+        inner()
+        with tag("div", klass="cell " + activitymarker(changes.center)):
+            etag("div", klass="top " + hideempty(changes.up))
+            etag(
+                "div",
+                klass="left " + hideempty(changes.left),
+                style=passinfill(changes.left),
+            )
+            with tag("div", klass="inner", style=(passinfill(changes.center))):
+                etag("div", klass="dot")
+            etag(
+                "div",
+                klass="right " + hideempty(changes.right),
+                style=passinfill(changes.right),
+            )
+            etag("div", klass="bottom " + hideempty(changes.down))
 
 
 def make_fragmap_page(fragmap):
-  is_brief = isinstance(fragmap, BriefFragmap)
-  matrix = ConnectedFragmap(fragmap).generate_matrix()
+    matrix = ConnectedFragmap(fragmap).generate_matrix()
 
-  doc, tag, text = Doc().tagtext()
+    doc, tag, text = Doc().tagtext()
 
-  def colorized_line(line_object):
-    origin = line_object.origin
-    line = origin + line_object.content
+    def colorized_line(line_object):
+        origin = line_object.origin
+        line = origin + line_object.content
 
-    if line == '':
-      return
-    if origin == '-':
-      with tag('pre', klass='codeline codeline_removed'):
-        text(line)
-    if origin == '+':
-      with tag('pre', klass='codeline codeline_added'):
-        text(line)
-    if origin == '':
-      with tag('pre', klass='codeline'):
-        text(line)
+        if line == "":
+            return
+        if origin == "-":
+            with tag("pre", klass="codeline codeline_removed"):
+                text(line)
+        if origin == "+":
+            with tag("pre", klass="codeline codeline_added"):
+                text(line)
+        if origin == "":
+            with tag("pre", klass="codeline"):
+                text(line)
 
-  def etag(*args, **kwargs):
-    """
-    Generate a tag with empty content
-    """
-    with tag(*args, **kwargs):
-      pass
+    def render_cell(cell, r, c):  # pylint: disable=unused-argument
+        def inner():
+            with tag("div", klass="code"):
+                if cell.base.node:
+                    text(str(cell.base.node))
+                    for line in cell.base.node.hunk.lines:
+                        colorized_line(line)
 
-  def render_cell(cell, r, c):
-    def inner():
-      with tag('div', klass='code'):
-        if cell.base.node:
-          text(str(cell.base.node))
-          for line in cell.base.node.hunk.lines:
-            colorized_line(line)
+        render_cell_graphics(tag, cell, inner)
 
-    render_cell_graphics(tag, cell, inner)
+    def get_first_filename(matrix, c):
+        for r in range(len(matrix)):
+            cell = matrix[r][c]
+            if cell.base.kind != CellKind.NO_CHANGE:
+                return cell.base.file_id.path
+        return None
 
-  def get_first_filename(matrix, c):
-    for r in range(len(matrix)):
-      cell = matrix[r][c]
-      if cell.base.kind != CellKind.NO_CHANGE:
-        return cell.base.file_id.path
-    return None
+    def generate_first_filename_spans(matrix):
+        filenames = []
+        if len(matrix) == 0:
+            return filenames
+        for c in range(len(matrix[0])):
+            fn = get_first_filename(matrix, c)
+            if len(filenames) == 0:
+                filenames.append({"filename": fn, "span": 1, "start": c})
+                continue
+            if filenames[-1]["filename"] == fn or fn is None:
+                filenames[-1]["span"] += 1
+                continue
+            if fn is not None:
+                filenames.append({"filename": fn, "span": 1, "start": c})
+        return filenames
 
-  def generate_first_filename_spans(matrix):
-    filenames = []
-    if len(matrix) == 0:
-      return filenames
-    for c in range(len(matrix[0])):
-      fn = get_first_filename(matrix, c)
-      if len(filenames) == 0:
-        filenames.append({'filename': fn, 'span': 1, 'start': c})
-        continue
-      if filenames[-1]['filename'] == fn or fn is None:
-        filenames[-1]['span'] += 1
-        continue
-      if fn is not None:
-        filenames.append({'filename': fn, 'span': 1, 'start': c})
-    return filenames
+    def render_filename_start_row(filenames):
+        for fn in filenames:
+            with tag(
+                "th",
+                klass="filename_start",
+                colspan=fn["span"],
+                style="vertical-align: top; overflow: hidden",
+            ):
+                with tag("div", style="position: relative; width: inherit"):
+                    with tag(
+                        "div",
+                        style="overflow: hidden; position: absolute; right: 10px; width: 10000px; text-align: right",
+                    ):
+                        if fn["filename"] is not None:
+                            text(fn["filename"])
 
-  def render_filename_start_row(filenames):
-    for fn in filenames:
-      with tag('th', klass='filename_start', colspan=fn['span'],
-               style='vertical-align: top; overflow: hidden'):
-        with tag('div', style="position: relative; width: inherit"):
-          with tag('div',
-                   style="overflow: hidden; position: absolute; right: 10px; width: 10000px; text-align: right"):
-            if fn['filename'] is not None:
-              text(fn['filename'])
+    def filename_header_td_class(filenames, c):
+        for fn in filenames:
+            if c == fn["start"]:
+                return "filename_start "
+        return ""
 
-  def filename_header_td_class(filenames, c):
-    for fn in filenames:
-      if c == fn['start']:
-        return 'filename_start '
-    return ''
+    def get_html():
+        doc.asis("<!DOCTYPE html>")
+        with tag("html"):
+            with tag("head"):
+                with tag("meta", charset="utf-8"):
+                    pass
+                with tag("title"):
+                    text("Fragmap - " + os.getcwd())
+                with tag("style", type="text/css"):
+                    doc.asis(css())
+            with tag("body"):
+                with tag("div", id="map_window"):
+                    with tag("table"):
+                        start_filenames = generate_first_filename_spans(matrix)
+                        with tag("tr"):
+                            with tag("th", style="font-weight: bold"):
+                                text("Hash")
+                            with tag("th", style="font-weight: bold"):
+                                text("Message")
+                            if len(matrix) > 0:
+                                render_filename_start_row(start_filenames)
+                        for r in range(len(matrix)):
+                            cur_patch = fragmap.patches()[r].header
+                            commit_msg = first_line(cur_patch.message)
+                            hash_string = str(cur_patch.id)
+                            with tag("tr"):
+                                with tag("th"):
+                                    with tag("span", klass="commit_hash"):
+                                        text(hash_string[0:8])
+                                with tag("th", klass="message_cell"):
+                                    with tag("span", klass="commit_message"):
+                                        text(commit_msg)
+                                for c in range(len(matrix[r])):
+                                    with tag(
+                                        "td",
+                                        klass=filename_header_td_class(
+                                            start_filenames, c
+                                        ),
+                                        onclick="javascript:show(this)",
+                                    ):
+                                        render_cell(matrix[r][c], r, c)
+                with tag("div", id="code_window"):
+                    text("")
+                with tag("script"):
+                    doc.asis(javascript())
+        return doc.getvalue()
 
-  def get_html():
-    doc.asis('<!DOCTYPE html>')
-    with tag('html'):
-      with tag('head'):
-        with tag('meta', charset='utf-8'):
-          pass
-        with tag('title'):
-          text('Fragmap - ' + os.getcwd())
-        with tag('style', type='text/css'):
-          doc.asis(css())
-      with tag('body'):
-        with tag('div', id='map_window'):
-          with tag('table'):
-            start_filenames = generate_first_filename_spans(matrix)
-            with tag('tr'):
-              with tag('th', style="font-weight: bold"):
-                text('Hash')
-              with tag('th', style="font-weight: bold"):
-                text('Message')
-              if len(matrix) > 0:
-                render_filename_start_row(start_filenames)
-            for r in range(len(matrix)):
-              cur_patch = fragmap.patches()[r].header
-              commit_msg = first_line(cur_patch.message)
-              hash = str(cur_patch.id)
-              with tag('tr'):
-                with tag('th'):
-                  with tag('span', klass='commit_hash'):
-                    text(hash[0:8])
-                with tag('th', klass="message_cell"):
-                  with tag('span', klass='commit_message'):
-                    text(commit_msg)
-                for c in range(len(matrix[r])):
-                  with tag('td',
-                           klass=filename_header_td_class(start_filenames, c),
-                           onclick="javascript:show(this)"):
-                    render_cell(matrix[r][c], r, c)
-        with tag('div', id='code_window'):
-          text('')
-        with tag('script'):
-          doc.asis(javascript())
-    return doc.getvalue()
-
-  return get_html()
+    return get_html()
 
 
 def start_fragmap_server(fragmap_callback):
-  def html_callback():
-    return make_fragmap_page(fragmap_callback())
+    def html_callback():
+        return make_fragmap_page(fragmap_callback())
 
-  server = start_server(html_callback)
-  address = 'http://%s:%s' % server.server_address
-  os.startfile(address)
-  print('Serving fragmap at', address)
-  print("Press 'r' to re-launch the page")
-  print('Press any other key to terminate')
-  from getch.getch import getch
-  while (ord(getch()) == ord('r')):
+    server = start_server(html_callback)
+    address = "http://%s:%s" % server.server_address
     os.startfile(address)
-  server.shutdown()
+    print("Serving fragmap at", address)
+    print("Press 'r' to re-launch the page")
+    print("Press any other key to terminate")
+    from getch.getch import getch
+
+    while ord(getch()) == ord("r"):
+        os.startfile(address)
+    server.shutdown()
 
 
-def open_fragmap_page(fragmap, live):
-  with open('fragmap.html', 'wb') as f:
-    f.write(make_fragmap_page(fragmap).encode())
-    os.startfile(f.name)
+def open_fragmap_page(fragmap, live):  # pylint: disable=unused-argument
+    with open("fragmap.html", "wb") as f:
+        f.write(make_fragmap_page(fragmap).encode())
+        os.startfile(f.name)
 
 
 def javascript():
-  return \
-    """
+    return """
     prev_source = null;
     function show(source) {
       if (prev_source) {
@@ -338,18 +345,17 @@ def javascript():
 
 
 def css():
-  cellwidth = 25
-  scale = cellwidth / 360.0
+    cellwidth = 25
+    scale = cellwidth / 360.0
 
-  def scale_number(m):
-    return str(int(m.group(1)) * scale)
+    def scale_number(m):
+        return str(int(m.group(1)) * scale)
 
-  return re.sub(r'{{(\d+)}}', scale_number, raw_css())
+    return re.sub(r"{{(\d+)}}", scale_number, raw_css())
 
 
 def raw_css():
-  return \
-    """
+    return """
     body {
       background: black;
       color: #e5e5e5;
