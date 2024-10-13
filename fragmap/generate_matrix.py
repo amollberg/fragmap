@@ -82,12 +82,16 @@ class Matrix(Generic[CellType], List[List[CellType]]):
         if isinstance(self, RowMajorMatrix):
             return ColumnMajorMatrix(self._transpose())
 
+        raise TypeError(f"Unexpected matrix type: {type(self)}")
+
     def row_major(self):
         if isinstance(self, RowMajorMatrix):
             return self
 
         if isinstance(self, ColumnMajorMatrix):
             return RowMajorMatrix(self._transpose())
+
+        raise TypeError(f"Unexpected matrix type: {type(self)}")
 
 
 class ColumnMajorMatrix(Matrix[CellType]):
