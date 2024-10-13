@@ -19,12 +19,7 @@ import re
 from yattag import Doc
 
 from .common_ui import first_line
-from .generate_matrix import (
-    BriefFragmap,
-    CellKind,
-    ConnectedFragmap,
-    ConnectionStatus,
-)
+from .generate_matrix import CellKind, ConnectedFragmap, ConnectionStatus
 from .httphelper import start_server
 
 
@@ -75,7 +70,6 @@ def render_cell_graphics(tag, connected_cell, inner):
 
 
 def make_fragmap_page(fragmap):
-    is_brief = isinstance(fragmap, BriefFragmap)
     matrix = ConnectedFragmap(fragmap).generate_matrix()
 
     doc, tag, text = Doc().tagtext()
@@ -96,14 +90,7 @@ def make_fragmap_page(fragmap):
             with tag("pre", klass="codeline"):
                 text(line)
 
-    def etag(*args, **kwargs):
-        """
-        Generate a tag with empty content
-        """
-        with tag(*args, **kwargs):
-            pass
-
-    def render_cell(cell, r, c):
+    def render_cell(cell, r, c):  # pylint: disable=unused-argument
         def inner():
             with tag("div", klass="code"):
                 if cell.base.node:
@@ -182,11 +169,11 @@ def make_fragmap_page(fragmap):
                         for r in range(len(matrix)):
                             cur_patch = fragmap.patches()[r].header
                             commit_msg = first_line(cur_patch.message)
-                            hash = str(cur_patch.id)
+                            hash_string = str(cur_patch.id)
                             with tag("tr"):
                                 with tag("th"):
                                     with tag("span", klass="commit_hash"):
-                                        text(hash[0:8])
+                                        text(hash_string[0:8])
                                 with tag("th", klass="message_cell"):
                                     with tag("span", klass="commit_message"):
                                         text(commit_msg)
@@ -225,7 +212,7 @@ def start_fragmap_server(fragmap_callback):
     server.shutdown()
 
 
-def open_fragmap_page(fragmap, live):
+def open_fragmap_page(fragmap, live):  # pylint: disable=unused-argument
     with open("fragmap.html", "wb") as f:
         f.write(make_fragmap_page(fragmap).encode())
         os.startfile(f.name)

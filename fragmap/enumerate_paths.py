@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pprint import pformat
-from typing import List
+from typing import Iterable, List
 
 from fragmap import debug
 from fragmap.spg import SINK, SOURCE, SPG, Node
@@ -32,11 +32,11 @@ def _all_paths_without_deduplication(
         for path in _all_paths_without_deduplication(spg, end)
     ]
     if debug.is_logging("grouping"):
-        debug.get("grouping").debug(f"paths: \n{pformat(paths)}")
+        debug.get("grouping").debug("paths: \n%s", pformat(paths))
     return paths
 
 
-def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
+def all_paths(spg: SPG, source=SOURCE) -> Iterable[List[Node]]:
     """
     Enumerates all paths through the SPG. All inactive nodes are treated as
     idential and identical paths are skipped, so all returned paths will have a
@@ -48,7 +48,7 @@ def all_paths(spg: SPG, source=SOURCE) -> List[List[Node]]:
             [
                 (
                     tuple([node.generation, node_by_new(node)])
-                    if node.active
+                    if node.is_active
                     else tuple()
                 )
                 for node in path

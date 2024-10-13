@@ -36,7 +36,7 @@ class DiffHunk:
     old_lines: int
     new_start: int
     new_lines: int
-    lines: str = dataclasses.field(default_factory=lambda: tuple())
+    lines: str = dataclasses.field(default_factory=tuple)
 
     @staticmethod
     def from_tup(old_start_and_lines, new_start_and_lines):
@@ -54,11 +54,11 @@ class DiffHunk:
 class Node:
     hunk: Union[pygit2.DiffHunk, DiffHunk]
     generation: int
-    active: bool
+    is_active: bool
 
     @staticmethod
     def active(diff_hunk: pygit2.DiffHunk, generation: int):
-        return Node(diff_hunk, generation, active=True)
+        return Node(diff_hunk, generation, is_active=True)
 
     @staticmethod
     def active_binary(diff_delta: pygit2.DiffDelta, generation: int):
@@ -68,7 +68,7 @@ class Node:
                 (0, 0) if is_nullfile(diff_delta.new_file) else (1, 1),
             ),
             generation,
-            active=True,
+            is_active=True,
         )
 
     @staticmethod
@@ -76,7 +76,7 @@ class Node:
         return Node(
             DiffHunk.from_tup(old_start_and_lines, new_start_and_lines),
             generation,
-            active=False,
+            is_active=False,
         )
 
     @staticmethod
@@ -87,7 +87,7 @@ class Node:
                 (old_node.hunk.new_start, old_node.hunk.new_lines),
             ),
             generation,
-            active=False,
+            is_active=False,
         )
 
 
@@ -136,9 +136,9 @@ class SPG:
 
     def propagate_active(self, prev_node, node):
         if not prev_node in self.downstream_from_active:
-            self.downstream_from_active[prev_node] = prev_node.active
+            self.downstream_from_active[prev_node] = prev_node.is_active
         if not node in self.downstream_from_active:
-            self.downstream_from_active[node] = node.active
+            self.downstream_from_active[node] = node.is_active
         self.downstream_from_active[node] |= self.downstream_from_active[
             prev_node
         ]
@@ -169,7 +169,7 @@ class SPG:
                 return "t"
 
             prefix = ""
-            if node.active:
+            if node.is_active:
                 prefix += "A"
             if self.downstream_from_active[node]:
                 prefix += "d"

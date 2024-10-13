@@ -23,7 +23,6 @@ from pprint import pformat
 from typing import Dict, List, Tuple, Union
 
 import pygit2
-from pygit2 import DiffHunk
 
 from fragmap.commitdiff import CommitDiff
 from fragmap.datastructure_util import flatten
@@ -87,7 +86,8 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
         do_register = overlap == Overlap.INTERVAL_OVERLAP
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"add_if_interval_overlap on {prev_range}? {do_register}"
+                "add_if_interval_overlap on %(prev_range)s? %(do_register)s",
+                {"prev_range": prev_range, "do_register": do_register},
             )
         if do_register:
             spg.register(prev_node, node)
@@ -103,7 +103,8 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
         )
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"add_unless_point_to_downstream_active on {prev_range}? {do_register}"
+                "add_unless_point_to_downstream_active on %(prev_range)s? %(do_register)s",
+                {"prev_range": prev_range, "do_register": do_register},
             )
         if do_register:
             spg.register(prev_node, node)
@@ -115,11 +116,12 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
         do_register = overlap != Overlap.NO_OVERLAP and not (
             overlap == Overlap.POINT_OVERLAP
             and overlap_on_border(cur_range, prev_range)
-            and prev_node.active
+            and prev_node.is_active
         )
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"add_unless_point_to_active on {prev_range}? {do_register}"
+                "add_unless_point_to_active on %(prev_range)s? %(do_register)s",
+                {"prev_range": prev_range, "do_register": do_register},
             )
         if do_register:
             spg.register(prev_node, node)
@@ -128,10 +130,11 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
     def add_if_to_inactive(prev_node):
         prev_range = Span.from_new(prev_node.hunk)
         overlap = cur_range.overlap(prev_range)
-        do_register = overlap != Overlap.NO_OVERLAP and not prev_node.active
+        do_register = overlap != Overlap.NO_OVERLAP and not prev_node.is_active
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"add_if_to_inactive on {prev_range}? {do_register}"
+                "add_if_to_inactive on %(prev_range)s? %(do_register)s",
+                {"prev_range": prev_range, "do_register": do_register},
             )
         if do_register:
             spg.register(prev_node, node)
@@ -143,7 +146,8 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
         do_register = overlap != Overlap.NO_OVERLAP
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"add_if_overlap on {prev_range}? {do_register}"
+                "add_if_overlap on %(prev_range)s? %(do_register)s",
+                {"prev_range": prev_range, "do_register": do_register},
             )
         if do_register:
             spg.register(prev_node, node)
@@ -151,7 +155,8 @@ def add_on_top_of(spg: SPG, nodes_from_previous_commit: List[Node], node: Node):
 
     if debug.is_logging("update"):
         debug.get("update").debug(
-            f"Adding {node} {cur_range} on top of previous"
+            "Adding %(node)s %(cur_range)s on top of previous",
+            {"node": node, "cur_range": cur_range},
         )
     for prev_node in nodes_from_previous_commit:
         some_overlap = add_if_interval_overlap(prev_node) or some_overlap
@@ -365,15 +370,23 @@ def update_dangling(file_spg: SPG, nodes: List[Node], generation: int):
     for prev_node in nodes:
         if debug.is_logging("update"):
             debug.get("update").debug(
-                f"Checking dangling: {prev_node}: "
-                f"{file_spg.graph[prev_node]}"
+                "Checking dangling: %(prev_node)s: %(prev_graph)s",
+                {
+                    "prev_node": prev_node,
+                    "prev_graph": file_spg.graph[prev_node],
+                },
             )
         if SINK in file_spg.graph[prev_node]:
             propagated = Node.propagated(prev_node, generation)
             if debug.is_logging("update"):
                 debug.get("update").debug(
-                    f"updating dangling to generation {generation}:\n"
-                    f" {pformat(prev_node)} {DiffSpan.from_hunk(prev_node.hunk)}"
+                    "updating dangling to generation %(generation)s:\n"
+                    " %(prev_node)s %(prev_span)s",
+                    {
+                        "generation": generation,
+                        "prev_node": pformat(prev_node),
+                        "prev_span": DiffSpan.from_hunk(prev_node.hunk),
+                    },
                 )
             file_spg.register(prev_node, propagated)
             file_spg.register(propagated, SINK)
@@ -386,8 +399,12 @@ def update_unchanged_file(file_spg: SPG, generation):
     )
     if debug.is_logging("update"):
         debug.get("update").debug(
-            f"propagating unchanged to generation {generation}:\n"
-            f" {pformat(prev_nodes_by_new)}"
+            "propagating unchanged to generation %(generation)s:\n"
+            " %(prev_nodes)s",
+            {
+                "generation": generation,
+                "prev_nodes": pformat(prev_nodes_by_new),
+            },
         )
     new_commit = add_and_propagate(
         CommitNodes(prev_nodes_by_new),
@@ -398,8 +415,8 @@ def update_unchanged_file(file_spg: SPG, generation):
 
     if debug.is_logging("update"):
         debug.get("update").debug(
-            f"updating unchanged to generation {generation}:\n"
-            f" {pformat(nodes_by_old)}"
+            "updating unchanged to generation %(generation)s:\n %(nodes)s",
+            {"generation": generation, "nodes": pformat(nodes_by_old)},
         )
 
     for cur_node in nodes_by_old:

@@ -51,9 +51,6 @@ class FilePatterns:
 class FileSelection:
     patterns: FilePatterns
 
-    # Note: Defined after the class definition
-    ALL = None
-
     @staticmethod
     def from_files_arg(files_arg: Union[List[str], None]):
         return FileSelection(FilePatterns.from_files_arg(files_arg))
@@ -68,6 +65,3 @@ class FileSelection:
         group = grouped_by_orig_file.kv_map[to_earlier_file[file_id]]
         assert file_id in group
         return any([self.patterns.matches(f.path) for f in group])
-
-
-FileSelection.ALL = FileSelection.from_files_arg(None)

@@ -17,14 +17,13 @@
 from backports.shutil_get_terminal_size import get_terminal_size
 
 from fragmap.common_ui import first_line
+from fragmap.console_color import ANSI_FG_BRIGHT_BLACK, ANSI_FG_CYAN, ANSI_RESET
 from fragmap.generate_matrix import (
     ColumnMajorMatrix,
     ConnectedFragmap,
     RowMajorMatrix,
     find_squashable,
 )
-
-from .console_color import *
 
 
 def filter_consecutive_equal_columns(
@@ -95,7 +94,7 @@ def print_fragmap(fragmap, do_color):
     def print_line(r):
         cur_patch = fragmap.patches()[r].header
         commit_msg = first_line(cur_patch.message)
-        hash = str(cur_patch.id)
+        hash_string = str(cur_patch.id)
         # Pad short commit messages
         commit_msg = commit_msg.ljust(max_commit_width, " ")
         # Truncate long commit messages
@@ -103,10 +102,10 @@ def print_fragmap(fragmap, do_color):
         if do_color and r in squashable:
             commit_msg = ANSI_FG_BRIGHT_BLACK + commit_msg + ANSI_RESET
         # Print hash, commit, matrix row
-        hash = hash[0:hash_width]
+        hash_string = hash_string[0:hash_width]
         if do_color:
-            hash = ANSI_FG_CYAN + hash + ANSI_RESET
-        print(hash, commit_msg, end="")
+            hash_string = ANSI_FG_CYAN + hash_string + ANSI_RESET
+        print(hash_string, commit_msg, end="")
 
     def print_matrix(r):
         print("".join(matrix[r]), " ")

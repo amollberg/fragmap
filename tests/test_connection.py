@@ -15,7 +15,14 @@
 # limitations under the License.
 import unittest
 
-from fragmap.generate_matrix import *
+from fragmap.generate_matrix import (
+    CellKind,
+    ConnectedCell,
+    ConnectedFragmap,
+    ConnectionStatus,
+    SingleNodeCell,
+    Status9Neighborhood,
+)
 
 # Test helpers
 

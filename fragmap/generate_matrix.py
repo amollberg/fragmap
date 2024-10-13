@@ -17,16 +17,23 @@ import collections
 from dataclasses import dataclass
 from enum import Enum
 from pprint import pformat, pprint
-from typing import Dict, Generic, Iterable, List, TypeVar
+from typing import Dict, Generic, Iterable, List, Optional, Set, TypeVar
 
 from . import debug
 from .commitdiff import CommitDiff
-from .console_color import *
+from .console_color import (
+    ANSI_BG_DARK_YELLOW,
+    ANSI_BG_MAGENTA,
+    ANSI_BG_RED,
+    ANSI_BG_WHITE,
+    ANSI_FG_BLUE,
+    ANSI_RESET,
+)
 from .datastructure_util import flatten, lzip
 from .enumerate_paths import all_paths
 from .file_selection import FileSelection
 from .list_dict import StableListDict
-from .spg import Node
+from .spg import SPG, Node
 from .update import FileId, update_commit_diff
 
 # Hierarchy:
@@ -59,18 +66,14 @@ from .update import FileId, update_commit_diff
 #     (see above)
 
 
-def earliest_diff(node_lines):
-    return min([nl._startdiff_i for nl in node_lines])
-
-
-CellType = TypeVar("CellType")
+CellType = TypeVar("CellType", covariant=True)
 
 
 class Matrix(Generic[CellType], List[List[CellType]]):
     def _transpose(self):
         if len(list(set([len(col) for col in self]))) > 1:
             debug.get("matrix").critical(
-                f"All rows/columns are not equally long: \n" f"{pformat(self)}"
+                "All rows/columns are not equally long: \n%s", pformat(self)
             )
             assert False
         return list(zip(*self))
@@ -117,7 +120,7 @@ class Cell:
 @dataclass
 class SingleNodeCell(Cell):
     file_id: FileId
-    node: Node = None
+    node: Optional[Node] = None
 
     def __eq__(self, other):
         if other is None:
@@ -154,10 +157,9 @@ class MultiNodeCell(Cell):
         return not (self == other)
 
 
-def changes_at_row(m: RowMajorMatrix[Cell], r: int):
-    n_rows = len(m)
-    if n_rows == 0:
-        return []
+def changes_at_row(m: RowMajorMatrix[Cell], r: int) -> Set[int]:
+    if n_rows(m) == 0:
+        return set([])
     n_cols = len(m[0])
     return set([c for c in range(n_cols) if m[r][c].kind == CellKind.CHANGE])
 
@@ -191,8 +193,7 @@ def find_squashable(m: RowMajorMatrix[Cell]) -> Iterable[SquashablePair]:
         the lines that changes in the earlier commit.
     Assumes the matrix has already been decorated with BETWEEN_CHANGES.
     """
-    n_rows = len(m)
-    for r in range(n_rows):
+    for r in range(n_rows(m)):
         for earlier_r in reversed(range(r)):
             if collisions_between(m, r, earlier_r):
                 break
@@ -216,13 +217,12 @@ def mark_squashable(
 
 
 def mark_cells_between_changes(m: RowMajorMatrix[Cell]):
-    n_rows = len(m)
-    if n_rows == 0:
+    if n_rows(m) == 0:
         return m
     n_cols = len(m[0])
     # Mark dots between conflicts
     last_patch = [-1] * n_cols
-    for r in range(n_rows):
+    for r in range(n_rows(m)):
         for c in range(n_cols):
             cell = m[r][c]
             if cell.kind == CellKind.CHANGE:
@@ -306,10 +306,12 @@ class GraphPath:
 @dataclass
 class Fragmap:
     _patches: List[CommitDiff]
-    spgs: Dict[FileId, Dict[Node, List[Node]]]
+    spgs: Dict[FileId, SPG]
 
     @staticmethod
-    def from_diffs(diffs: List[CommitDiff], files_arg: List[str] = None):
+    def from_diffs(
+        diffs: List[CommitDiff], files_arg: Optional[List[str]] = None
+    ):
         files = {}
         spgs = {}
         for i, diff in enumerate(diffs):
@@ -344,20 +346,26 @@ class Fragmap:
         paths = self.paths()
         # Remove empty columns
         paths = [
-            path for path in paths if any([node.active for node in path.nodes])
+            path
+            for path in paths
+            if any([node.is_active for node in path.nodes])
         ]
         if paths:
             # All columns should be equally long
             if 1 != len(list(set([len(col.nodes) for col in paths]))):
                 debug.get("matrix").critical(
-                    f"All columns are not equally long: \n" f"{pformat(paths)}"
+                    "All columns are not equally long: \n %s", pformat(paths)
                 )
                 assert False
         return ColumnMajorMatrix(
             [
                 [
                     SingleNodeCell(
-                        CellKind.CHANGE if node.active else CellKind.NO_CHANGE,
+                        (
+                            CellKind.CHANGE
+                            if node.is_active
+                            else CellKind.NO_CHANGE
+                        ),
                         path.file_id,
                         node,
                     )
@@ -380,12 +388,11 @@ class Fragmap:
     def _render_for_console(
         self, matrix: RowMajorMatrix[Cell], colorize: bool
     ) -> RowMajorMatrix[str]:
-        n_rows = len(matrix)
-        if n_rows == 0:
-            return []
+        if n_rows(matrix) == 0:
+            return RowMajorMatrix([])
         n_cols = len(matrix[0])
         m = RowMajorMatrix(
-            [["." for _ in range(n_cols)] for _ in range(n_rows)]
+            [["." for _ in range(n_cols)] for _ in range(n_rows(matrix))]
         )
 
         def render_cell(cell: SingleNodeCell):
@@ -409,9 +416,9 @@ class Fragmap:
                     return "^"
             if cell.kind == CellKind.NO_CHANGE:
                 return "."
-            assert False, "Unexpected cell kind: %s" % (cell.kind)
+            assert False, f"Unexpected cell kind: {cell.kind}"
 
-        for r in range(n_rows):
+        for r in range(n_rows(matrix)):
             for c in range(n_cols):
                 m[r][c] = render_cell(matrix[r][c])
         return m
@@ -452,7 +459,7 @@ class BriefFragmap:
         column_groups = ColumnMajorMatrix(groupby(columns, key=connection))
         if debug.is_logging("matrix"):
             debug.get("matrix").debug(
-                f"grouped columns: {pformat(column_groups)}"
+                "grouped columns: %s", pformat(column_groups)
             )
 
         def multi_cell_kind(cells: List[Cell]):
@@ -483,12 +490,11 @@ class BriefFragmap:
         return self._render_for_console(self.generate_matrix(), colorize)
 
     def _render_for_console(self, matrix, colorize) -> RowMajorMatrix[str]:
-        n_rows = len(matrix)
-        if n_rows == 0:
-            return []
+        if n_rows(matrix) == 0:
+            return RowMajorMatrix([])
         n_cols = len(matrix[0])
         m = RowMajorMatrix(
-            [["." for _ in range(n_cols)] for _ in range(n_rows)]
+            [["." for _ in range(n_cols)] for _ in range(n_rows(matrix))]
         )
 
         def render_cell(cell: MultiNodeCell):
@@ -514,7 +520,7 @@ class BriefFragmap:
                 return "."
             assert False, "Unexpected cell kind: %s" % (cell.kind)
 
-        for r in range(n_rows):
+        for r in range(n_rows(matrix)):
             for c in range(n_cols):
                 m[r][c] = render_cell(matrix[r][c])
         return m

@@ -19,7 +19,6 @@ import sys
 
 from fragmap.console_color import ANSI_UP
 from fragmap.console_ui import print_fragmap
-from fragmap.file_selection import FileSelection
 from fragmap.generate_matrix import BriefFragmap, ConnectedFragmap, Fragmap
 from fragmap.load_commits import CommitLoader, CommitSelection
 from fragmap.web_ui import open_fragmap_page, start_fragmap_server
@@ -171,7 +170,7 @@ def main():
         print("                      \r", end="")
         # Erase each line and move cursor up to overwrite previous fragmap
         erase_current_line()
-        for i in range(lines_printed[0]):
+        for _ in range(lines_printed[0]):
             print(ANSI_UP, end="")
             erase_current_line()
         return fm
