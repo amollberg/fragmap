@@ -36,4 +36,4 @@ jobs:
         isort --check .
     - name: Lint with pylint
       run: |
-        pylint .
+        pylint fragmap/*.py tests/*.py getch/*.py *.py
